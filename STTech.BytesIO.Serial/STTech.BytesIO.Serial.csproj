@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Version>2.6.0</Version>
+
+		<Company>深圳市舜太科技  Stdiag(Shenzhen, China)</Company>
+		<Authors>Guijie Lee</Authors>
+		<Copyright>Copyright © 2019-2022 Stdiag, All Rights Reserved.</Copyright>
+		<PackageIcon>stdiag.png</PackageIcon>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Description>串口通信库，提供通信事件、异步收发等功能；</Description>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<None Include="stdiag.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
+
+	<!--仅在netstandard2.0环境时使用-->
+	<ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+		<PackageReference Include="System.IO.Ports" Version="6.0.0" />
+	</ItemGroup>
+	
+</Project>

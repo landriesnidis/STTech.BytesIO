@@ -1,0 +1,94 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32519.379
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Core", "STTech.BytesIO.Core\STTech.BytesIO.Core.csproj", "{2DD119D7-42ED-486D-81CD-3B908041185E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Tcp", "STTech.BytesIO.Tcp\STTech.BytesIO.Tcp.csproj", "{94F0F307-1EE8-4DE0-86E1-8BE335035693}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Tcp.Test", "STTech.BytesIO.Tcp.Test\STTech.BytesIO.Tcp.Test.csproj", "{A0313645-A895-4464-A23C-563E19175C40}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.CodePlus", "..\STTech.CodePlus\STTech.CodePlus.csproj", "{F1B836EE-34B4-49E7-A236-59ED6C96A95A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "引用项目", "引用项目", "{F50E0BC1-0094-4208-AED3-43034BE95571}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Tcp.Doip", "STTech.BytesIO.Tcp.DoIp\STTech.BytesIO.Tcp.Doip.csproj", "{86DB20DB-4DC2-49A4-9B25-09681CC94BD3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Serial", "STTech.BytesIO.Serial\STTech.BytesIO.Serial.csproj", "{040D665E-A81F-46C2-903D-2A2C83138430}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "测试项目", "测试项目", "{675D7F5F-80D1-4C04-9544-EE5C143CD600}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{48B2FAC0-769D-4EF9-9ADC-606BE1D816EA}"
+	ProjectSection(SolutionItems) = preProject
+		待完善.txt = 待完善.txt
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.BytesIO.Serial.TestApp", "STTech.BytesIO.Serial.TestApp\STTech.BytesIO.Serial.TestApp.csproj", "{59CF043E-6EE6-4203-9526-7F8C56D24876}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Tcp.WebSocket", "STTech.BytesIO.Tcp.WebSocket\STTech.BytesIO.Tcp.WebSocket.csproj", "{54B3AC0A-EEAA-4FF6-8B3C-5C43531DE5A6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Extensions.KFTP", "STTech.BytesIO.Extensions.KFTP\STTech.BytesIO.Extensions.KFTP.csproj", "{B514736F-EB1A-40C1-88B8-B5C2108D596B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KarFans.Protocols.KFTP", "..\STTech.Protocols\KarFans.Protocols.KFTP\KarFans.Protocols.KFTP.csproj", "{C936EFC5-7905-43BE-8CD1-282F22C4B6EC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2DD119D7-42ED-486D-81CD-3B908041185E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DD119D7-42ED-486D-81CD-3B908041185E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DD119D7-42ED-486D-81CD-3B908041185E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DD119D7-42ED-486D-81CD-3B908041185E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94F0F307-1EE8-4DE0-86E1-8BE335035693}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94F0F307-1EE8-4DE0-86E1-8BE335035693}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94F0F307-1EE8-4DE0-86E1-8BE335035693}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94F0F307-1EE8-4DE0-86E1-8BE335035693}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0313645-A895-4464-A23C-563E19175C40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0313645-A895-4464-A23C-563E19175C40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0313645-A895-4464-A23C-563E19175C40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0313645-A895-4464-A23C-563E19175C40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1B836EE-34B4-49E7-A236-59ED6C96A95A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1B836EE-34B4-49E7-A236-59ED6C96A95A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1B836EE-34B4-49E7-A236-59ED6C96A95A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1B836EE-34B4-49E7-A236-59ED6C96A95A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86DB20DB-4DC2-49A4-9B25-09681CC94BD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86DB20DB-4DC2-49A4-9B25-09681CC94BD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86DB20DB-4DC2-49A4-9B25-09681CC94BD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86DB20DB-4DC2-49A4-9B25-09681CC94BD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{040D665E-A81F-46C2-903D-2A2C83138430}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{040D665E-A81F-46C2-903D-2A2C83138430}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{040D665E-A81F-46C2-903D-2A2C83138430}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{040D665E-A81F-46C2-903D-2A2C83138430}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59CF043E-6EE6-4203-9526-7F8C56D24876}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59CF043E-6EE6-4203-9526-7F8C56D24876}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59CF043E-6EE6-4203-9526-7F8C56D24876}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59CF043E-6EE6-4203-9526-7F8C56D24876}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54B3AC0A-EEAA-4FF6-8B3C-5C43531DE5A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54B3AC0A-EEAA-4FF6-8B3C-5C43531DE5A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54B3AC0A-EEAA-4FF6-8B3C-5C43531DE5A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54B3AC0A-EEAA-4FF6-8B3C-5C43531DE5A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B514736F-EB1A-40C1-88B8-B5C2108D596B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B514736F-EB1A-40C1-88B8-B5C2108D596B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B514736F-EB1A-40C1-88B8-B5C2108D596B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B514736F-EB1A-40C1-88B8-B5C2108D596B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C936EFC5-7905-43BE-8CD1-282F22C4B6EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C936EFC5-7905-43BE-8CD1-282F22C4B6EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C936EFC5-7905-43BE-8CD1-282F22C4B6EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C936EFC5-7905-43BE-8CD1-282F22C4B6EC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A0313645-A895-4464-A23C-563E19175C40} = {675D7F5F-80D1-4C04-9544-EE5C143CD600}
+		{F1B836EE-34B4-49E7-A236-59ED6C96A95A} = {F50E0BC1-0094-4208-AED3-43034BE95571}
+		{59CF043E-6EE6-4203-9526-7F8C56D24876} = {675D7F5F-80D1-4C04-9544-EE5C143CD600}
+		{C936EFC5-7905-43BE-8CD1-282F22C4B6EC} = {F50E0BC1-0094-4208-AED3-43034BE95571}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C0CE3315-64B5-40C5-9B3B-B01C0ECABED6}
+	EndGlobalSection
+EndGlobal
