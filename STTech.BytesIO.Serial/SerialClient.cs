@@ -288,6 +288,22 @@ namespace STTech.BytesIO.Serial
         protected override void ReceiveDataCompletedHandle() { }
 
         protected override void ReceiveDataHandle() { }
+
+        /// <summary>
+        /// 丢弃来自串行驱动程序的接收缓冲区的数据
+        /// </summary>
+        public void DiscardInBuffer()
+        {
+            innerClient.DiscardInBuffer();
+        }
+
+        /// <summary>
+        /// 丢弃来自串行驱动程序的传输缓冲区的数据
+        /// </summary>
+        public void DiscardOutBuffer()
+        {
+            innerClient.DiscardOutBuffer();
+        }
     }
 
     /// <summary>

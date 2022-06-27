@@ -6,8 +6,7 @@ namespace STTech.BytesIO.Core.Exceptions
 {
     public class PerformCallbackException : Exception
     {
-        public PerformCallbackException(Exception ex):base($"An exception occurred while the callback method was executing. {ex.Message}", ex)
-        {
-        }
+        private const string errorMessage = "An exception occurred while the callback method was executing.";
+        public PerformCallbackException(Exception ex) : base(errorMessage, ex) { }
     }
 }

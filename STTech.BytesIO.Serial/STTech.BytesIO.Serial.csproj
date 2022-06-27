@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.6.0</Version>
+		<Version>2.8.0</Version>
 
 		<Company>深圳市舜太科技  Stdiag(Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
@@ -12,6 +12,12 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>串口通信库，提供通信事件、异步收发等功能；</Description>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-    <Version>2.7.1-alpha</Version>
+    <Version>2.8.0</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
     <Company>深圳市舜太科技  Stdiag(Shenzhen, China)</Company>
@@ -13,27 +13,27 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>通信核心库，提供基于字节数组通信的标准接口，内置异步收发、通信事件、协议解包器等功能。</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Utils\**" />
-    <EmbeddedResource Remove="Utils\**" />
-    <None Remove="Utils\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Extensions\SendResponseExtension.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\STTech.CodePlus\STTech.CodePlus.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
     <None Include="stdiag.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="STTech.CodePlus" Version="1.3.3" />
   </ItemGroup>
 
 </Project>
