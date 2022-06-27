@@ -11,13 +11,12 @@
     <Copyright>Copyright © 2019-2022 Stdiag, All Rights Reserved.</Copyright>
     <PackageIcon>stdiag.png</PackageIcon>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Description>通信核心库，提供基于字节数组通信的标准接口，内置异步收发、通信事件、协议解包器等功能。</Description>
+    <Description>通信核心库，提供基于字节数组通信的标准接口；内置协议解包器等组件；提供异步通信、同步通信、心跳发送、心跳检测、自动重连等众多实用的扩展功能。</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
   </PropertyGroup>
 

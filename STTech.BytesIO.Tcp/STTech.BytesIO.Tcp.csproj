@@ -10,13 +10,12 @@
 		<Copyright>Copyright © 2019-2022 Stdiag, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Description>TCP通信库，提供通信事件、异步收发等功能；</Description>
+		<Description>BytesIO TCP通信库，提供通信事件、异步通信、同步通信等功能。支持SSL/TLS通信。</Description>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
 	</PropertyGroup>
 
