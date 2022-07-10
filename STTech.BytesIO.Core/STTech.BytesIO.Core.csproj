@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
-    <Version>2.8.0</Version>
+    <Version>2.8.2-beta0710</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
-    <Company>深圳市舜太科技  Stdiag(Shenzhen, China)</Company>
+    <Company>深圳市智驾实业有限公司 KarFans(Shenzhen, China)</Company>
     <Authors>Guijie Lee</Authors>
     <Copyright>Copyright © 2019-2022 Stdiag, All Rights Reserved.</Copyright>
     <PackageIcon>stdiag.png</PackageIcon>
