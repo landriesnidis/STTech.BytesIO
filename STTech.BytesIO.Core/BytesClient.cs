@@ -54,17 +54,16 @@ namespace STTech.BytesIO.Core
         /// <returns></returns>
         public virtual Task ConnectAsync()
         {
-            lock (asyncConnectLocker)
+            return Task.Run(() =>
             {
-                if (IsConnected)
+                lock (asyncConnectLocker)
                 {
-                    return Task.FromResult(true);
+                    if (!IsConnected)
+                    {
+                        Connect();
+                    }
                 }
-                else
-                {
-                    return Task.Run(() => Connect());
-                }
-            }
+            });
         }
 
         /// <summary>
