@@ -21,13 +21,19 @@ namespace STTech.BytesIO.Core
         /// 异步接收数据任务取消令牌
         /// </summary>
         private CancellationToken _asyncReceiveDataCancellationToken;
+        private CancellationTokenSource _cancellationTokenSource;
 
         /// <summary>
         /// 启动异步数据接收任务
         /// </summary>
         protected virtual void StartReceiveDataTask()
         {
-            _asyncReceiveDataCancellationToken = _cancellationTokenSource.Value.Token;
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = new CancellationTokenSource();
+
+            CancelReceiveDataTask();
+            _asyncReceiveDataCancellationToken = _cancellationTokenSource.Token;
+
             Task task = new Task(() => SafelyInvokeCallback(() => { ReceiveDataHandle(); }), _asyncReceiveDataCancellationToken);
             var awaiter = task.GetAwaiter();
             awaiter.OnCompleted(() =>
