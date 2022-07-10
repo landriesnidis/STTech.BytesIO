@@ -9,7 +9,7 @@ namespace STTech.BytesIO.Core
     /// <summary>
     /// 字节数组通信客户端
     /// </summary>
-    public abstract partial class BytesClient: IBytesClient
+    public abstract partial class BytesClient : IBytesClient
     {
         /// <summary>
         /// 当前是否已连接
@@ -36,19 +36,12 @@ namespace STTech.BytesIO.Core
         /// </summary>
         /// <param name="time">手动设置时间戳</param>
         protected void UpdateLastMessageTimestamp(DateTime? time = null) => LastMessageReceivedTime = time ?? DateTime.Now;
-
-        /// <summary>
-        /// 异步任务取消令牌源
-        /// </summary>
-        private Lazy<CancellationTokenSource> _cancellationTokenSource = new Lazy<CancellationTokenSource>(true);
     }
 
-    public abstract partial class BytesClient 
+    public abstract partial class BytesClient
     {
-        /// <summary>
-        /// 异步连接任务取消令牌
-        /// </summary>
-        private CancellationToken _asyncConnectCancellationToken;
+        // 异步连接Locker
+        private readonly object asyncConnectLocker = new object();
 
         /// <summary>
         /// 建立连接
@@ -61,14 +54,17 @@ namespace STTech.BytesIO.Core
         /// <returns></returns>
         public virtual Task ConnectAsync()
         {
-            // 关闭异步连接任务
-            if (_asyncConnectCancellationToken != null && _asyncConnectCancellationToken.IsCancellationRequested)
+            lock (asyncConnectLocker)
             {
-                _asyncConnectCancellationToken.ThrowIfCancellationRequested();
+                if (IsConnected)
+                {
+                    return Task.FromResult(true);
+                }
+                else
+                {
+                    return Task.Run(() => Connect());
+                }
             }
-
-            _asyncConnectCancellationToken = _cancellationTokenSource.Value.Token;
-            return Task.Run(() => Connect(), _asyncConnectCancellationToken);
         }
 
         /// <summary>
