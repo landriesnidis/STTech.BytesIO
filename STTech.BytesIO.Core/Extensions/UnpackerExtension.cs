@@ -84,9 +84,6 @@ namespace STTech.BytesIO.Core
             // 信号事件
             AutoResetEvent evt = new AutoResetEvent(false);
 
-            // 创建两个支持取消的任务：超时计时任务、被当做唤醒触发的空任务
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
             // 接收到数据的回调
             dataParsedHandle = (sender, e) =>
             {
@@ -110,19 +107,39 @@ namespace STTech.BytesIO.Core
             // 创建Task等待被阻塞的信号事件
             // 通过条件一：信号事件的阻塞解除（接收到有效数据）
             // 通过条件二：超时
-            Task.Run(() =>
-            {
-                // 阻塞等待信号
-                evt.WaitOne();
-            }).Wait(timeout, cancellationTokenSource.Token);
+            // 阻塞等待信号
+            evt.WaitOne(timeout);
 
             // 再次主动移除监听（避免因超时结束但监听未注销）
             unpackerSupport.Unpacker.OnDataParsed -= dataParsedHandle;
 
-            // 取消所有任务并释放
-            cancellationTokenSource.Cancel();
-
             return new Reply<TRecv>(client, isCompleted ? ReplyStatus.Completed : ReplyStatus.Timeout, buffer);
+        }
+
+        /// <summary>
+        /// 发送数据
+        /// 异步等待单次发送的响应结果
+        /// <code>
+        /// ctor:
+        /// this.Unpacker = this.CreateUnpacker&lt;T&gt;(()=>{});
+        /// </code>
+        /// </summary>
+        /// <param name="unpackerSupport"></param>
+        /// <param name="request">数据</param>
+        /// <param name="timeout">超时时间(ms)</param>
+        /// <param name="matchHandler">收发数据匹配回调。
+        /// 每次接收到的数据帧不一定就是对上一条发送数据的响应（如心跳包等），
+        /// 所以需要根据协议编写对收发数据帧匹配的回调用以确定正确的响应数据。
+        /// 包括不限于以下方式：
+        /// 1.对发送数据的命令位于接受数据的命令位进行对比；
+        /// 2.对发送数据的任务号及通信计数与接收数据的对应位进行对比；
+        /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
+        /// </param>
+        /// <returns>单次发送数据并等待远端响应的任务</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static Task<Reply<TRecv>> SendAsync<TSend, TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, TSend request, int timeout, ReplyMatchHandler<TSend, TRecv> matchHandler = null) where TSend : IRequest where TRecv : Response
+        {
+            return Task.Run(() => unpackerSupport.Send(request, timeout, matchHandler));
         }
     }
 }
