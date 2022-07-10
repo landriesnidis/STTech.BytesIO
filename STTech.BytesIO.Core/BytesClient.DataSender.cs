@@ -56,9 +56,6 @@ namespace STTech.BytesIO.Core
             // 信号事件
             AutoResetEvent evt = new AutoResetEvent(false);
 
-            // 创建两个支持取消的任务：超时计时任务、被当做唤醒触发的空任务
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
             // 接收到数据的回调
             dataReceivedHandle = (sender, e) =>
             {
@@ -82,17 +79,10 @@ namespace STTech.BytesIO.Core
             // 创建Task等待被阻塞的信号事件
             // 通过条件一：信号事件的阻塞解除（接收到有效数据）
             // 通过条件二：超时
-            Task.Run(() =>
-            {
-                // 阻塞等待信号
-                evt.WaitOne();
-            }).Wait(timeout, cancellationTokenSource.Token);
+            evt.WaitOne(timeout);
 
             // 再次主动移除监听（避免因超时结束但监听未注销）
             OnDataReceived -= dataReceivedHandle;
-
-            // 取消所有任务并释放
-            cancellationTokenSource.Cancel();
 
             return new Reply<byte[]>(this, isCompleted ? ReplyStatus.Completed : ReplyStatus.Timeout, buffer);
         }
