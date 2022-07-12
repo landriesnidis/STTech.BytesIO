@@ -24,7 +24,7 @@ namespace STTech.BytesIO.Core
         /// 发送数据
         /// </summary>
         /// <param name="data"></param>
-        public void Send(T data);
+        // public void Send(T data);
     }
 
     /// <summary>

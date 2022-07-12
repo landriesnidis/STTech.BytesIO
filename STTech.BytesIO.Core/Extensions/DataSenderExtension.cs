@@ -5,20 +5,37 @@ namespace STTech.BytesIO.Core
 {
     /// <summary>
     /// 数据发送器接口扩展
-    /// 对原有的发送器的同步方法提供异步的扩展
+    /// 提供数据发送器接口中指定的类型的发送方法
     /// </summary>
     public static class DataSenderExtension
     {
         /// <summary>
-        /// 异步发送数据
+        /// 发送请求实体
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="sender"></param>
+        /// <typeparam name="TClient"></typeparam>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="client"></param>
+        /// <param name="request"></param>
+        public static void Send<TClient, TRequest>(this TClient client, TRequest request)
+            where TClient : BytesClient, IDataSender<TRequest>
+            where TRequest : IRequest
+        {
+            client.Send(request.GetBytes());
+        }
+
+        /// <summary>
+        /// 异步发送请求实体
+        /// </summary>
+        /// <typeparam name="TClient"></typeparam>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="client"></param>
         /// <param name="request"></param>
         /// <returns></returns>
-        public static Task SendAsync<T>(IDataSender<T> sender, T request)
+        public static Task SendAsync<TClient, TRequest>(this TClient client, TRequest request)
+            where TClient : BytesClient, IDataSender<TRequest>
+            where TRequest : IRequest
         {
-            return Task.Run(() => sender.Send(request));
+            return Task.Run(() => client.Send(request));
         }
 
         /// <summary>
