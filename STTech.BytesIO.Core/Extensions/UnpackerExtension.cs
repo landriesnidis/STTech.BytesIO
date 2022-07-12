@@ -15,21 +15,39 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 创建解包器
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TRecv"></typeparam>
         /// <param name="client"></param>
         /// <param name="calculatePacketLengthHandler"></param>
         /// <returns></returns>
-        public static Unpacker<T> CreateUnpacker<T>(this BytesClient client, Func<IEnumerable<byte>, int> calculatePacketLengthHandler) where T : Response
+        [Obsolete("不建议使用该方法，请继承Unpacker实现自定义解包器类型，再使用BindUnpacker方法将实例与BytesClient进行绑定。")]
+        public static Unpacker<TRecv> CreateUnpacker<TClient, TRecv>(this TClient client, Func<IEnumerable<byte>, int> calculatePacketLengthHandler)
+            where TClient : BytesClient, IUnpackerSupport<TRecv>
+            where TRecv : Response
         {
-            var unpacker = new Unpacker<T>(client, calculatePacketLengthHandler);
+            var unpacker = new Unpacker<TRecv>(client, calculatePacketLengthHandler);
 
+            client.BindUnpacker(unpacker);
+
+            return unpacker;
+        }
+
+        /// <summary>
+        /// 为基于BytesClient的客户端绑定解包器
+        /// </summary>
+        /// <typeparam name="TClient"></typeparam>
+        /// <typeparam name="TRecv"></typeparam>
+        /// <param name="client"></param>
+        /// <param name="unpacker"></param>
+        public static void BindUnpacker<TClient, TRecv>(this TClient client, Unpacker<TRecv> unpacker)
+            where TClient : BytesClient, IUnpackerSupport<TRecv>
+            where TRecv : Response
+        {
             client.OnDataReceived += (s, e) =>
             {
                 unpacker.Input(e.Data);
             };
-
-            return unpacker;
         }
+
 
         /// <summary>
         /// 发送数据
@@ -52,17 +70,14 @@ namespace STTech.BytesIO.Core
         /// </param>
         /// <returns>单次发送数据的远端响应</returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static Reply<TRecv> Send<TSend, TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, TSend request, int timeout, ReplyMatchHandler<TSend, TRecv> matchHandler = null) where TSend : IRequest where TRecv : Response
+        public static Reply<TRecv> Send<TSend, TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, TSend request, int timeout, ReplyMatchHandler<TSend, TRecv> matchHandler = null)
+            where TSend : IRequest
+            where TRecv : Response
         {
             if (unpackerSupport is null)
             {
                 throw new ArgumentNullException(nameof(unpackerSupport));
             }
-
-            //if (!(unpackerSupport is BytesClient))
-            //{
-            //    throw new Exception("实现IUnpackerSupport<TRecv>的对象必须是基于BytesClient的子类型");
-            //}
 
             if (unpackerSupport.Unpacker is null)
             {

@@ -209,7 +209,7 @@ namespace STTech.BytesIO.Core.Component
         /// <summary>
         /// 构造解包器
         /// </summary>
-        public Unpacker(BytesClient client, Func<IEnumerable<byte>, int> calculatePacketLengthHandler)
+        public Unpacker(BytesClient client, Func<IEnumerable<byte>, int> calculatePacketLengthHandler = null)
         {
             base.OnDataParsed += Unpacker_OnDataParsed;
             Client = client;
