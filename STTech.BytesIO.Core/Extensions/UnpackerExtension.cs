@@ -15,6 +15,7 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 创建解包器
         /// </summary>
+        /// <typeparam name="TClient"></typeparam>
         /// <typeparam name="TRecv"></typeparam>
         /// <param name="client"></param>
         /// <param name="calculatePacketLengthHandler"></param>
@@ -34,13 +35,9 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 为基于BytesClient的客户端绑定解包器
         /// </summary>
-        /// <typeparam name="TClient"></typeparam>
-        /// <typeparam name="TRecv"></typeparam>
         /// <param name="client"></param>
         /// <param name="unpacker"></param>
-        public static void BindUnpacker<TClient, TRecv>(this TClient client, Unpacker<TRecv> unpacker)
-            where TClient : BytesClient, IUnpackerSupport<TRecv>
-            where TRecv : Response
+        public static void BindUnpacker(this BytesClient client, Unpacker unpacker)
         {
             client.OnDataReceived += (s, e) =>
             {
