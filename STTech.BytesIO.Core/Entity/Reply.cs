@@ -5,8 +5,7 @@ namespace STTech.BytesIO.Core.Entity
     /// <summary>
     /// 单次发送数据的远端响应
     /// </summary>
-    /// <typeparam name="T">响应数据的类型</typeparam>
-    public class Reply<T>
+    public class BaseReply
     {
         /// <summary>
         /// 触发客户端
@@ -26,7 +25,7 @@ namespace STTech.BytesIO.Core.Entity
         /// <summary>
         /// 响应数据
         /// </summary>
-        public T Data { get; }
+        protected object Value { get; }
 
         /// <summary>
         /// 构造失败的响应
@@ -34,9 +33,10 @@ namespace STTech.BytesIO.Core.Entity
         /// <param name="client"></param>
         /// <param name="status"></param>
         /// <param name="exception"></param>
-        public Reply(IBytesClient client, ReplyStatus status, Exception exception)
+        protected BaseReply(IBytesClient client, ReplyStatus status, Exception exception)
         {
             Client = client;
+            Status = status;
             Exception = exception;
         }
 
@@ -45,14 +45,83 @@ namespace STTech.BytesIO.Core.Entity
         /// </summary>
         /// <param name="client"></param>
         /// <param name="status"></param>
-        /// <param name="data"></param>
-        public Reply(IBytesClient client, ReplyStatus status, T data = default(T))
+        /// <param name="value"></param>
+        protected BaseReply(IBytesClient client, ReplyStatus status, object value)
         {
             Client = client;
             Status = status;
-            Data = data;
+            Value = value;
         }
     }
+
+
+
+    /// <summary>
+    /// 单次发送数据的远端响应
+    /// </summary>
+    /// <typeparam name="T">响应数据的类型</typeparam>
+    public class BaseReply<T> : BaseReply
+    {
+        /// <summary>
+        /// 响应结果
+        /// </summary>
+        public T Data => (T)Value;
+
+        /// <summary>
+        /// 构造失败的响应
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="status"></param>
+        /// <param name="exception"></param>
+        protected BaseReply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
+
+        /// <summary>
+        /// 构造成功的响应
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="status"></param>
+        /// <param name="data"></param>
+        protected BaseReply(IBytesClient client, ReplyStatus status, T data) : base(client, status, data) { }
+
+        protected T GetData() => (T)Value;
+    }
+
+    public class Reply : BaseReply<Response>
+    {
+        protected Reply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
+        protected Reply(IBytesClient client, ReplyStatus status, Response data) : base(client, status, data) { }
+
+        /// <summary>
+        /// 获取响应对象
+        /// </summary>
+        /// <returns></returns>
+        public Response GetResponse() => GetData();
+    }
+
+    public class Reply<T> : BaseReply<T> where T : Response
+    {
+        public Reply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
+        public Reply(IBytesClient client, ReplyStatus status, T data) : base(client, status, data) { }
+
+        /// <summary>
+        /// 获取响应对象
+        /// </summary>
+        /// <returns></returns>
+        public T GetResponse() => GetData();
+    }
+
+    public class ReplyBytes : BaseReply<byte[]>
+    {
+        public ReplyBytes(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
+        public ReplyBytes(IBytesClient client, ReplyStatus status, byte[] data) : base(client, status, data) { }
+
+        /// <summary>
+        /// 获取响应对象
+        /// </summary>
+        /// <returns></returns>
+        public byte[] GetBytes() => GetData();
+    }
+
 
     /// <summary>
     /// 响应状态
