@@ -6,12 +6,21 @@ namespace STTech.BytesIO.Core.Entity
 {
     public abstract class Response
     {
-        public IEnumerable<byte> OriginalData { get; }
+        /// <summary>
+        /// 原始数据
+        /// </summary>
+        protected IEnumerable<byte> OriginalData { get; }
 
         protected Response(IEnumerable<byte> bytes)
         {
             OriginalData = bytes;
         }
+
+        /// <summary>
+        /// 获取原始数据
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<byte> GetOriginalData() => OriginalData;
     }
 
     public interface IRequest
