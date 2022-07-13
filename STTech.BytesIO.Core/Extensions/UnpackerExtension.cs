@@ -15,21 +15,26 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 创建解包器
         /// </summary>
-        /// <typeparam name="TClient"></typeparam>
         /// <typeparam name="TRecv"></typeparam>
-        /// <param name="client"></param>
+        /// <param name="unpackerSupport"></param>
         /// <param name="calculatePacketLengthHandler"></param>
         /// <returns></returns>
         [Obsolete("不建议使用该方法，请继承Unpacker实现自定义解包器类型，再使用BindUnpacker方法将实例与BytesClient进行绑定。")]
-        public static Unpacker<TRecv> CreateUnpacker<TClient, TRecv>(this TClient client, Func<IEnumerable<byte>, int> calculatePacketLengthHandler)
-            where TClient : BytesClient, IUnpackerSupport<TRecv>
+        public static Unpacker<TRecv> CreateUnpacker<TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, Func<IEnumerable<byte>, int> calculatePacketLengthHandler)
             where TRecv : Response
         {
-            var unpacker = new Unpacker<TRecv>(client, calculatePacketLengthHandler);
+            if(unpackerSupport is BytesClient client)
+            {
+                var unpacker = new Unpacker<TRecv>(client, calculatePacketLengthHandler);
 
-            client.BindUnpacker(unpacker);
+                client.BindUnpacker(unpacker);
 
-            return unpacker;
+                return unpacker;
+            }
+            else
+            {
+                throw new InvalidOperationException($"{unpackerSupport.GetType().FullName} is not a type inherited from BytesClient.");
+            }
         }
 
         /// <summary>
@@ -106,7 +111,7 @@ namespace STTech.BytesIO.Core
                 }
 
                 // 匹配到对应帧后移除当前监听,保存数据，标记已完成
-                unpackerSupport.Unpacker.OnDataParsed += dataParsedHandle;
+                unpackerSupport.Unpacker.OnDataParsed -= dataParsedHandle;
                 buffer = e.Data;
                 isCompleted = true;
                 evt.Set();
