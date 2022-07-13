@@ -12,44 +12,42 @@ namespace STTech.BytesIO.Core.Entity
         /// Reply内数据响应类型转格式
         /// </summary>
         /// <typeparam name="TOut">输出类型</typeparam>
-        /// <typeparam name="TIn">当前类型</typeparam>
         /// <param name="reply"></param>
         /// <param name="convertHandler">转换实现回调</param>
         /// <returns></returns>
         /// <exception cref="ReplyConversionException"></exception>
-        public static Reply<TOut> ConvertTo<TOut, TIn>(this Reply<TIn> reply, Func<TIn, TOut> convertHandler = null)
+        public static Reply<TOut> ConvertTo<TOut>(this Reply reply, Func<Response, TOut> convertHandler)
             where TOut : Response
-            where TIn : Response
         {
             Reply<TOut> newReply;
 
             if (reply.Status == ReplyStatus.Completed)
             {
-                var bytes = reply.Data.OriginalData;
-                TOut resp;
-                if (convertHandler == null)
-                {
-                    try
-                    {
-                        resp = (TOut)Activator.CreateInstance(typeof(TOut), bytes);
-                    }
-                    catch (MissingMethodException ex)
-                    {
-                        throw new ReplyConversionException($"Target type({typeof(TOut).FullName}) of the conversion should contain a constructor of `ctor(IEnumerable<byte> bytes)`.", ex);
-                    }
-                }
-                else
-                {
-                    resp = convertHandler.Invoke(reply.Data);
-                }
+                TOut resp = convertHandler.Invoke(reply.GetResponse());
                 newReply = new Reply<TOut>(reply.Client, reply.Status, resp);
             }
             else
             {
                 newReply = new Reply<TOut>(reply.Client, reply.Status, reply.Exception);
             }
-
             return newReply;
+        }
+
+        /// <summary>
+        /// Reply内数据响应类型转格式
+        /// </summary>
+        /// <typeparam name="TOut">输出类型</typeparam>
+        /// <param name="reply"></param>
+        /// <returns></returns>
+        public static Reply<TOut> ConvertTo<TOut>(this Reply reply)
+            where TOut : Response
+        {
+            return reply.ConvertTo(respIn => {
+                var bytes = reply.GetResponse().GetOriginalData();
+                var respOut = (TOut)Activator.CreateInstance(typeof(TOut), bytes);
+                return respOut;
+            });
+
         }
     }
 }
