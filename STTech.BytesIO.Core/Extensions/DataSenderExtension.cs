@@ -53,10 +53,10 @@ namespace STTech.BytesIO.Core
         /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
         /// </param>
         /// <returns>单次发送数据并等待远端响应的任务</returns>
-        public static Task<Reply<TRecv>> SendAsync<TSend, TRecv>(IDataSender<TSend, TRecv> sender, TSend data, int timeout, ReplyMatchHandler<TSend, TRecv> matchHandler = null)
-        {
-            return Task.Run(() => sender.Send(data, timeout, matchHandler));
-        }
+        //public static Task<Reply<TRecv>> SendAsync<TSend, TRecv>(IDataSender<TSend, TRecv> sender, TSend data, int timeout, ReplyMatchHandler<TSend, TRecv> matchHandler = null)
+        //{
+        //    return Task.Run(() => sender.Send(data, timeout, matchHandler));
+        //}
 
     }
 }
