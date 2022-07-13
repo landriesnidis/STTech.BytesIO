@@ -45,7 +45,7 @@ namespace STTech.BytesIO.Core
         /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
         /// </param>
         /// <returns>单次发送数据的远端响应</returns>
-        public Reply<byte[]> Send(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null)
+        public ReplyBytes Send(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null)
         {
             EventHandler<DataReceivedEventArgs> dataReceivedHandle = null;
             byte[] buffer = null;
@@ -84,7 +84,7 @@ namespace STTech.BytesIO.Core
             // 再次主动移除监听（避免因超时结束但监听未注销）
             OnDataReceived -= dataReceivedHandle;
 
-            return new Reply<byte[]>(this, isCompleted ? ReplyStatus.Completed : ReplyStatus.Timeout, buffer);
+            return new ReplyBytes(this, isCompleted ? ReplyStatus.Completed : ReplyStatus.Timeout, buffer);
         }
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace STTech.BytesIO.Core
         /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
         /// </param>
         /// <returns>单次发送数据并等待远端响应的任务</returns>
-        public Task<Reply<byte[]>> SendAsync(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null)
+        public Task<ReplyBytes> SendAsync(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null)
         {
             return Task.Run(() => Send(data, timeout, matchHandler));
         }
