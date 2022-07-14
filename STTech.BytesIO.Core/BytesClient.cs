@@ -41,7 +41,7 @@ namespace STTech.BytesIO.Core
     public abstract partial class BytesClient
     {
         // 异步连接Locker
-        private readonly object asyncConnectLocker = new object();
+        private readonly object asyncConnectLocker = new();
 
         /// <summary>
         /// 建立连接

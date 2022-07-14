@@ -99,7 +99,7 @@ namespace STTech.BytesIO.Core
             bool isCompleted = false;
 
             // 信号事件
-            AutoResetEvent evt = new AutoResetEvent(false);
+            AutoResetEvent evt = new(false);
 
             // 接收到数据的回调
             dataParsedHandle = (sender, e) =>
