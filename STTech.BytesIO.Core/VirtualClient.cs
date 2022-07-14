@@ -45,12 +45,15 @@ namespace STTech.BytesIO.Core
                 }
 
                 innerClient = value;
-                innerClient.OnConnectedSuccessfully += InnerClient_OnConnectedSuccessfully;
-                innerClient.OnConnectionFailed += InnerClient_OnConnectionFailed;
-                innerClient.OnDisconnected += InnerClient_OnDisconnected;
-                innerClient.OnDataReceived += InnerClient_OnDataReceived;
-                innerClient.OnDataSent += InnerClient_OnDataSent;
-                innerClient.OnExceptionOccurs += InnerClient_OnExceptionOccurs;
+                if (innerClient != null)
+                {
+                    innerClient.OnConnectedSuccessfully += InnerClient_OnConnectedSuccessfully;
+                    innerClient.OnConnectionFailed += InnerClient_OnConnectionFailed;
+                    innerClient.OnDisconnected += InnerClient_OnDisconnected;
+                    innerClient.OnDataReceived += InnerClient_OnDataReceived;
+                    innerClient.OnDataSent += InnerClient_OnDataSent;
+                    innerClient.OnExceptionOccurs += InnerClient_OnExceptionOccurs;
+                }
             }
         }
         private T innerClient;
