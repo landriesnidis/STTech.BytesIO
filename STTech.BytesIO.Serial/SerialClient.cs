@@ -144,24 +144,6 @@ namespace STTech.BytesIO.Serial
         /// </summary>
         public int BaudRate { get => innerClient.BaudRate; set => innerClient.BaudRate = value; }
 
-        [Description("标准波特率(常用值)")]
-        public StandardBaudRate BaudRateStandard
-        {
-            get
-            {
-                var arr = Enum.GetValues(typeof(StandardBaudRate));
-                foreach (int br in arr)
-                {
-                    if (br == BaudRate) return (StandardBaudRate)BaudRate;
-                }
-                return StandardBaudRate.NonStandard;
-            }
-            set
-            {
-                BaudRate = (int)value;
-            }
-        }
-
         /// <summary>
         /// 获取或设置中断信号状态。
         /// 如果端口处于中断状态，则为True;否则为False。
@@ -230,7 +212,7 @@ namespace STTech.BytesIO.Serial
             innerClient.Close();
 
             // 执行通信已断开的回调事件 
-            RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = DisconnectionReasonCode.Active});
+            RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = DisconnectionReasonCode.Active });
         }
 
         /// <summary>
@@ -304,21 +286,5 @@ namespace STTech.BytesIO.Serial
         {
             innerClient.DiscardOutBuffer();
         }
-    }
-
-    /// <summary>
-    /// 标准波特率
-    /// </summary>
-    public enum StandardBaudRate : int
-    {
-        NonStandard = 0,
-        BR_115200 = 115200,
-        BR_57600 = 57600,
-        BR_56000 = 56000,
-        BR_43000 = 43000,
-        BR_38400 = 38400,
-        BR_19200 = 19200,
-        BR_9600 = 9600,
-        BR_4800 = 4800,
     }
 }
