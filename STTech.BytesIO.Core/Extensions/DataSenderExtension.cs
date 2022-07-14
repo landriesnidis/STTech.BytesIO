@@ -9,34 +9,30 @@ namespace STTech.BytesIO.Core
     /// </summary>
     public static class DataSenderExtension
     {
-        /// <summary>
-        /// 发送请求实体
-        /// </summary>
-        /// <typeparam name="TClient"></typeparam>
-        /// <typeparam name="TRequest"></typeparam>
-        /// <param name="client"></param>
-        /// <param name="request"></param>
-        public static void Send<TClient, TRequest>(this TClient client, TRequest request)
-            where TClient : BytesClient, IDataSender<TRequest>
-            where TRequest : IRequest
-        {
-            client.Send(request.GetBytes());
-        }
+        ///// <summary>
+        ///// 发送请求实体
+        ///// </summary>
+        ///// <typeparam name="TRequest"></typeparam>
+        ///// <param name="client"></param>
+        ///// <param name="request"></param>
+        //public static void Send<TRequest>(this BytesClient client, TRequest request)
+        //    where TRequest : IRequest
+        //{
+        //    client.Send(request.GetBytes());
+        //}
 
-        /// <summary>
-        /// 异步发送请求实体
-        /// </summary>
-        /// <typeparam name="TClient"></typeparam>
-        /// <typeparam name="TRequest"></typeparam>
-        /// <param name="client"></param>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        public static Task SendAsync<TClient, TRequest>(this TClient client, TRequest request)
-            where TClient : BytesClient, IDataSender<TRequest>
-            where TRequest : IRequest
-        {
-            return Task.Run(() => client.Send(request));
-        }
+        ///// <summary>
+        ///// 异步发送请求实体
+        ///// </summary>
+        ///// <typeparam name="TRequest"></typeparam>
+        ///// <param name="client"></param>
+        ///// <param name="request"></param>
+        ///// <returns></returns>
+        //public static Task SendAsync<TRequest>(this BytesClient client, TRequest request)
+        //    where TRequest : IRequest
+        //{
+        //    return Task.Run(() => client.Send(request));
+        //}
 
         /// <summary>
         /// 异步数据
