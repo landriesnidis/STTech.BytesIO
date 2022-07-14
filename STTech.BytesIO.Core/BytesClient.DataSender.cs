@@ -31,6 +31,32 @@ namespace STTech.BytesIO.Core
         public virtual Task SendAsync(byte[] data) => Task.Run(() => Send(data));
 
         /// <summary>
+        /// 发送请求实体
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="client"></param>
+        /// <param name="request"></param>
+        public void Send<TRequest>(TRequest request)
+            where TRequest : IRequest
+        {
+            this.Send(request.GetBytes());
+        }
+
+        /// <summary>
+        /// 异步发送请求实体
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="client"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public Task SendAsync<TRequest>(TRequest request)
+            where TRequest : IRequest
+        {
+            return Task.Run(() => this.Send(request));
+        }
+
+
+        /// <summary>
         /// 发送数据
         /// 阻塞等待单次发送的响应结果
         /// </summary>
@@ -54,7 +80,7 @@ namespace STTech.BytesIO.Core
             bool isCompleted = false;
 
             // 信号事件
-            AutoResetEvent evt = new AutoResetEvent(false);
+            AutoResetEvent evt = new(false);
 
             // 接收到数据的回调
             dataReceivedHandle = (sender, e) =>
