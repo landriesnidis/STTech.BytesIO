@@ -23,7 +23,7 @@ namespace STTech.BytesIO.Core
         public static Unpacker<TRecv> CreateUnpacker<TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, Func<IEnumerable<byte>, int> calculatePacketLengthHandler)
             where TRecv : Response
         {
-            if(unpackerSupport is BytesClient client)
+            if (unpackerSupport is BytesClient client)
             {
                 var unpacker = new Unpacker<TRecv>(client, calculatePacketLengthHandler);
 
@@ -130,7 +130,14 @@ namespace STTech.BytesIO.Core
             // 再次主动移除监听（避免因超时结束但监听未注销）
             unpackerSupport.Unpacker.OnDataParsed -= dataParsedHandle;
 
-            return new Reply<TRecv>(client, isCompleted ? ReplyStatus.Completed : ReplyStatus.Timeout, buffer);
+            if (isCompleted)
+            {
+                return new Reply<TRecv>(client, buffer);
+            }
+            else
+            {
+                return new Reply<TRecv>(client, ReplyStatus.Timeout, null);
+            }
         }
 
         /// <summary>

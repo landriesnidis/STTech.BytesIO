@@ -24,7 +24,7 @@ namespace STTech.BytesIO.Core.Entity
             if (reply.Status == ReplyStatus.Completed)
             {
                 TOut resp = convertHandler.Invoke(reply.GetResponse());
-                newReply = new Reply<TOut>(reply.Client, reply.Status, resp);
+                newReply = new Reply<TOut>(reply.Client, resp);
             }
             else
             {

@@ -110,7 +110,14 @@ namespace STTech.BytesIO.Core
             // 再次主动移除监听（避免因超时结束但监听未注销）
             OnDataReceived -= dataReceivedHandle;
 
-            return new ReplyBytes(this, isCompleted ? ReplyStatus.Completed : ReplyStatus.Timeout, buffer);
+            if (isCompleted)
+            {
+                return new ReplyBytes(this, buffer);
+            }
+            else
+            {
+                return new ReplyBytes(this, ReplyStatus.Timeout, null);
+            }
         }
 
         /// <summary>

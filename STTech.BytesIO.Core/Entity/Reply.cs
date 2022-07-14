@@ -42,7 +42,7 @@ namespace STTech.BytesIO.Core.Entity
         /// </summary>
         /// <param name="client"></param>
         /// <param name="status"></param>
-        /// <param name="exception"></param>
+        /// <param name="exception">异常信息</param>
         protected BaseReply(IBytesClient client, ReplyStatus status, Exception exception)
         {
             Client = client;
@@ -54,12 +54,11 @@ namespace STTech.BytesIO.Core.Entity
         /// 构造成功的响应
         /// </summary>
         /// <param name="client"></param>
-        /// <param name="status"></param>
         /// <param name="value"></param>
-        protected BaseReply(IBytesClient client, ReplyStatus status, object value)
+        protected BaseReply(IBytesClient client, object value)
         {
             Client = client;
-            Status = status;
+            Status = ReplyStatus.Completed;
             Value = value;
         }
     }
@@ -78,20 +77,16 @@ namespace STTech.BytesIO.Core.Entity
         protected T Data => (T)Value;
 
         /// <summary>
-        /// 构造失败的响应
+        /// <inheritdoc/>
         /// </summary>
-        /// <param name="client"></param>
-        /// <param name="status"></param>
-        /// <param name="exception"></param>
         protected BaseReply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
 
         /// <summary>
         /// 构造成功的响应
         /// </summary>
         /// <param name="client"></param>
-        /// <param name="status"></param>
         /// <param name="data"></param>
-        protected BaseReply(IBytesClient client, ReplyStatus status, T data) : base(client, status, data) { }
+        protected BaseReply(IBytesClient client, T data) : base(client, data) { }
 
         protected T GetData() => (T)Value;
     }
@@ -99,7 +94,7 @@ namespace STTech.BytesIO.Core.Entity
     public class Reply : BaseReply<Response>
     {
         protected Reply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
-        protected Reply(IBytesClient client, ReplyStatus status, Response data) : base(client, status, data) { }
+        protected Reply(IBytesClient client, Response data) : base(client, data) { }
 
         /// <summary>
         /// 获取响应对象
@@ -111,7 +106,7 @@ namespace STTech.BytesIO.Core.Entity
     public class Reply<T> : Reply where T : Response
     {
         public Reply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
-        public Reply(IBytesClient client, ReplyStatus status, T data) : base(client, status, data) { }
+        public Reply(IBytesClient client, T data) : base(client, data) { }
 
         /// <summary>
         /// 获取响应对象
@@ -123,7 +118,7 @@ namespace STTech.BytesIO.Core.Entity
     public class ReplyBytes : BaseReply<byte[]>
     {
         public ReplyBytes(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
-        public ReplyBytes(IBytesClient client, ReplyStatus status, byte[] data) : base(client, status, data) { }
+        public ReplyBytes(IBytesClient client, byte[] data) : base(client, data) { }
 
         /// <summary>
         /// 获取响应对象
