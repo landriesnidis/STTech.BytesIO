@@ -113,7 +113,6 @@ namespace STTech.BytesIO.Core
                 // 匹配到对应帧后移除当前监听,保存数据，标记已完成
                 unpackerSupport.Unpacker.OnDataParsed -= dataParsedHandle;
                 buffer = e.Data;
-                isCompleted = true;
                 evt.Set();
             };
 
@@ -125,7 +124,7 @@ namespace STTech.BytesIO.Core
             // 通过条件一：信号事件的阻塞解除（接收到有效数据）
             // 通过条件二：超时
             // 阻塞等待信号
-            evt.WaitOne(timeout);
+            isCompleted = evt.WaitOne(timeout);
 
             // 再次主动移除监听（避免因超时结束但监听未注销）
             unpackerSupport.Unpacker.OnDataParsed -= dataParsedHandle;
