@@ -98,7 +98,7 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public override void Send(byte[] data)
+        protected override void SendHandler(byte[] data)
         {
             InnerClient.Send(data);
         }
@@ -118,5 +118,7 @@ namespace STTech.BytesIO.Core
         {
             throw new NotImplementedException();
         }
+
+
     }
 }

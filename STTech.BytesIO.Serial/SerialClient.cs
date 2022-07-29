@@ -242,7 +242,7 @@ namespace STTech.BytesIO.Serial
         /// 向串口发送数据
         /// </summary>
         /// <param name="data"></param>
-        public override void Send(byte[] data)
+        protected override void SendHandler(byte[] data)
         {
             try
             {

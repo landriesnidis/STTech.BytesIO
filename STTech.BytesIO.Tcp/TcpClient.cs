@@ -158,6 +158,11 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="ex"></param>
         public override void Disconnect(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null)
         {
             // TODO: 主动关闭时这里被调用两次，需要找到第二次调用的原因
@@ -183,7 +188,11 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
-        public override void Send(byte[] data)
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <param name="data"></param>
+        protected override void SendHandler(byte[] data)
         {
             try
             {
@@ -207,6 +216,9 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
         protected override void ReceiveDataHandle()
         {
             try
@@ -254,6 +266,9 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
         protected override void ReceiveDataCompletedHandle()
         {
             Disconnect(DisconnectionReasonCode.Passive);

@@ -17,42 +17,67 @@ namespace STTech.BytesIO.Core
 
     public abstract partial class BytesClient
     {
+        private readonly object sendingLocker = new object();
+
+        /// <summary>
+        /// 默认的发送选项
+        /// </summary>
+        public SendOptions DefaultSendOptions { get; } = new SendOptions();
+
         /// <summary>
         /// 发送数据
         /// </summary>
         /// <param name="data"></param>
-        public abstract void Send(byte[] data);
+        /// <param name="options">发送选项</param>
+        public void Send(byte[] data, SendOptions options = null)
+        {
+            lock (sendingLocker)
+            {
+                options ??= DefaultSendOptions;
+
+                // 执行发送操作
+                SendHandler(data);
+
+                // 延时
+                Task.Delay(options.PauseTime);
+            }
+        }
+
+        /// <summary>
+        /// 发送数据的实现过程
+        /// </summary>
+        protected abstract void SendHandler(byte[] data);
 
         /// <summary>
         /// 异步发送数据
         /// </summary>
         /// <param name="data"></param>
+        /// <param name="options"></param>
         /// <returns></returns>
-        public virtual Task SendAsync(byte[] data) => Task.Run(() => Send(data));
+        public Task SendAsync(byte[] data, SendOptions options = null) => Task.Run(() => Send(data, options));
 
         /// <summary>
         /// 发送请求实体
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
-        /// <param name="client"></param>
         /// <param name="request"></param>
-        public void Send<TRequest>(TRequest request)
+        /// <param name="options"></param>
+        public void Send<TRequest>(TRequest request, SendOptions options = null)
             where TRequest : IRequest
         {
-            this.Send(request.GetBytes());
+            this.Send(request.GetBytes(), options);
         }
 
         /// <summary>
         /// 异步发送请求实体
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
-        /// <param name="client"></param>
         /// <param name="request"></param>
         /// <returns></returns>
-        public Task SendAsync<TRequest>(TRequest request)
+        public Task SendAsync<TRequest>(TRequest request, SendOptions options = null)
             where TRequest : IRequest
         {
-            return Task.Run(() => this.Send(request));
+            return Task.Run(() => this.Send(request, options));
         }
 
 
@@ -70,8 +95,9 @@ namespace STTech.BytesIO.Core
         /// 2.对发送数据的任务号及通信计数与接收数据的对应位进行对比；
         /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
         /// </param>
+        /// <param name="options"></param>
         /// <returns>单次发送数据的远端响应</returns>
-        public ReplyBytes Send(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null)
+        public ReplyBytes Send(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null, SendOptions options = null)
         {
             EventHandler<DataReceivedEventArgs> dataReceivedHandle = null;
             byte[] buffer = null;
@@ -100,7 +126,7 @@ namespace STTech.BytesIO.Core
 
             // 监听数据接受事件 & 同步发送数据
             OnDataReceived += dataReceivedHandle;
-            Send(data);
+            Send(data, options);
 
             // 创建Task等待被阻塞的信号事件
             // 通过条件一：信号事件的阻塞解除（接收到有效数据）
@@ -135,9 +161,9 @@ namespace STTech.BytesIO.Core
         /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
         /// </param>
         /// <returns>单次发送数据并等待远端响应的任务</returns>
-        public Task<ReplyBytes> SendAsync(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null)
+        public Task<ReplyBytes> SendAsync(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null, SendOptions options = null)
         {
-            return Task.Run(() => Send(data, timeout, matchHandler));
+            return Task.Run(() => Send(data, timeout, matchHandler, options));
         }
     }
 }

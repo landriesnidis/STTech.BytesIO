@@ -70,9 +70,10 @@ namespace STTech.BytesIO.Core
         /// 2.对发送数据的任务号及通信计数与接收数据的对应位进行对比；
         /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
         /// </param>
+        /// <param name="options"></param>
         /// <returns>单次发送数据的远端响应</returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static Reply<TRecv> Send<TSend, TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, TSend request, int timeout, ReplyMatchHandler<TSend, TRecv> matchHandler = null)
+        public static Reply<TRecv> Send<TSend, TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, TSend request, int timeout, ReplyMatchHandler<TSend, TRecv> matchHandler = null, SendOptions options = null)
             where TSend : IRequest
             where TRecv : Response
         {
@@ -118,7 +119,7 @@ namespace STTech.BytesIO.Core
 
             // 监听数据接受事件 & 同步发送数据
             unpackerSupport.Unpacker.OnDataParsed += dataParsedHandle;
-            client.Send(data);
+            client.Send(data, options);
 
             // 创建Task等待被阻塞的信号事件
             // 通过条件一：信号事件的阻塞解除（接收到有效数据）
