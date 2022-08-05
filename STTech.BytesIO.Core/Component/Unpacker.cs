@@ -7,20 +7,6 @@ using STTech.BytesIO.Core.Entity;
 namespace STTech.BytesIO.Core.Component
 {
     /// <summary>
-    /// 解析出结果的事件委托
-    /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
-    // public delegate void DataParsedHandler(object sender, DataParsedEventArgs e);
-
-    /// <summary>
-    /// 解析出结果的事件委托
-    /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
-    // public delegate void DataParsedHandler<T>(object sender, DataParsedEventArgs<T> e);
-
-    /// <summary>
     /// 数据解包器
     /// </summary>
     public abstract class Unpacker

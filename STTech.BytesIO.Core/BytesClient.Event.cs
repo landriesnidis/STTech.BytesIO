@@ -14,43 +14,6 @@ namespace STTech.BytesIO.Core
     // 
     // ===============================================================================
 
-    ///// <summary>
-    ///// 连接成功事件委托
-    ///// </summary>
-    ///// <param name="sender"></param>
-    ///// <param name="e"></param>
-    //public delegate void ConnectedSuccessfullyHandler(object sender, ConnectedSuccessfullyEventArgs e);
-    ///// <summary>
-    ///// 连接失败事件委托
-    ///// </summary>
-    ///// <param name="sender"></param>
-    ///// <param name="e"></param>
-    //public delegate void ConnectionFailedHandler(object sender, ConnectionFailedEventArgs e);
-    ///// <summary>
-    ///// 断开连接事件委托
-    ///// </summary>
-    ///// <param name="sender"></param>
-    ///// <param name="e"></param>
-    //public delegate void DisconnectedHandler(object sender, DisconnectedEventArgs e);
-    ///// <summary>
-    ///// 接收到数据事件委托
-    ///// </summary>
-    ///// <param name="sender"></param>
-    ///// <param name="e"></param>
-    //public delegate void DataReceivedHandler(object sender, DataReceivedEventArgs e);
-    ///// <summary>
-    ///// 异常发送事件委托
-    ///// </summary>
-    ///// <param name="sender"></param>
-    ///// <param name="e"></param>
-    //public delegate void ExceptionOccursHandler(object sender, ExceptionOccursEventArgs e);
-    ///// <summary>
-    ///// 数据发送事件委托
-    ///// </summary>
-    ///// <param name="sender"></param>
-    ///// <param name="e"></param>
-    //public delegate void DataSentHandler(object sender, DataSentEventArgs e);
-
     public abstract partial class BytesClient
     {
         /// <summary>
