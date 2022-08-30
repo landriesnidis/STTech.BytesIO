@@ -16,6 +16,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		待完善.txt = 待完善.txt
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.BytesIO.Modbus", "STTech.BytesIO.Modbus\STTech.BytesIO.Modbus.csproj", "{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,6 +36,10 @@ Global
 		{040D665E-A81F-46C2-903D-2A2C83138430}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{040D665E-A81F-46C2-903D-2A2C83138430}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{040D665E-A81F-46C2-903D-2A2C83138430}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
