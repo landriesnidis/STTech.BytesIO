@@ -1,8 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+
+		<Company>ApeFree</Company>
+		<Copyright>Copyright © 2022 ApeFree, All Rights Reserved.</Copyright>
+		<PackageIcon>stdiag.png</PackageIcon>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Description>BytesIO Modbus通信库，提供Modbus-RTU/Modbus-TCP通信客户端，支持ReadCoilRegister(读线圈寄存器)、ReadDiscreteInputRegister(读离散输入寄存器)、ReadHoldRegister(读保持寄存器)、ReadInputRegister(读输入寄存器)、WriteSingleCoilRegister(写单个线圈寄存器)、WriteSingleHoldRegister(写单个保持寄存器)、WriteMultipleCoilRegisters(写多个线圈寄存器)、WriteMultipleHoldRegisters(写多个保持寄存器)八种命令的收发操作。</Description>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+	</PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
