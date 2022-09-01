@@ -32,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="STTech.CodePlus" Version="1.4.0" />
+	  <ProjectReference Include="..\..\STTech.CodePlus\STTech.CodePlus.csproj" />
 	</ItemGroup>
 
 </Project>
