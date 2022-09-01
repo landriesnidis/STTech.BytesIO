@@ -1,14 +1,10 @@
 ﻿using STTech.BytesIO.Tcp.Entity;
+using System.Net;
 
 namespace STTech.BytesIO.Tcp
 {
-    public interface ITcpClient : ITcpSSL
+    public interface ITcpClient
     {
-        /// <summary>
-        /// 是否已连接
-        /// </summary>
-        bool IsConnected { get; }
-
         /// <summary>
         /// 本地端口号
         /// </summary>
@@ -25,14 +21,19 @@ namespace STTech.BytesIO.Tcp
         int Port { get; set; }
 
         /// <summary>
-        /// 接受缓存区大小（默认64kb）
+        /// 接受缓存区大小
         /// </summary>
         int ReceiveBufferSize { get; set; }
 
         /// <summary>
-        /// 发送缓存区大小（默认32kb）
+        /// 发送缓存区大小
         /// </summary>
         int SendBufferSize { get; set; }
+
+        /// <summary>
+        /// 远程终端信息
+        /// </summary>
+        IPEndPoint RemoteEndPoint { get; }
     }
 
 

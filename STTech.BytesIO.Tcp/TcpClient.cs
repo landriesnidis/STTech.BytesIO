@@ -20,7 +20,7 @@ namespace STTech.BytesIO.Tcp
         /// <summary>
         /// 内部TCP客户端
         /// </summary>
-        protected System.Net.Sockets.TcpClient innerClient;
+        protected System.Net.Sockets.TcpClient InnerClient { get; set; }
 
         /// <summary>
         /// 接受缓存区
@@ -28,46 +28,27 @@ namespace STTech.BytesIO.Tcp
         protected byte[] socketDataReceiveBuffer = null;
 
         /// <summary>
-        /// 接受缓存区大小（默认64kb）
+        /// <inheritdoc/>
+        /// </summary>
+        public override bool IsConnected => InnerClient != null && InnerClient.Client != null && InnerClient.Client.Connected;
+
+        /// <summary>
+        /// <inheritdoc/>
         /// </summary>
         public override int ReceiveBufferSize { get; set; } = 65536;
 
         /// <summary>
-        /// 发送缓存区大小（默认32kb）
+        /// <inheritdoc/>
         /// </summary>
         public override int SendBufferSize { get; set; } = 32768;
 
-        /// <summary>
-        ///远程主机网络地址
-        /// </summary>
-        public string Host { get; set; } = "127.0.0.1";
-
-        /// <summary>
-        /// 远程主机端口号
-        /// </summary>
-        public int Port { get; set; } = 8086;
-
-        /// <summary>
-        /// 是否已连接
-        /// </summary>
-        public override bool IsConnected => innerClient != null && innerClient.Client != null && innerClient.Client.Connected;
-
-        /// <summary>
-        /// 本地端口号
-        /// </summary>
-        public int LocalPort => IsConnected ? ((IPEndPoint)innerClient.Client.LocalEndPoint).Port : 0;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public IPEndPoint RemoteEndPoint => (IPEndPoint)innerClient.Client.RemoteEndPoint;
 
         /// <summary>
         /// 构造TCP客户端
         /// </summary>
         public TcpClient()
         {
-            innerClient = new System.Net.Sockets.TcpClient();
+            InnerClient = new System.Net.Sockets.TcpClient();
         }
 
         /// <summary>
@@ -76,7 +57,7 @@ namespace STTech.BytesIO.Tcp
         /// <param name="innerClient">内部的TCP客户端（<c>System.Net.Sockets.TcpClient</c>）</param>
         public TcpClient(System.Net.Sockets.TcpClient innerClient)
         {
-            this.innerClient = innerClient;
+            this.InnerClient = innerClient;
 
             if (innerClient.Connected)
             {
@@ -93,7 +74,7 @@ namespace STTech.BytesIO.Tcp
         /// 构造TCP客户端
         /// </summary>
         /// <param name="socket">内部的Socket对象</param>
-        internal TcpClient(Socket socket):this(new System.Net.Sockets.TcpClient { Client = socket})
+        internal TcpClient(Socket socket) : this(new System.Net.Sockets.TcpClient { Client = socket })
         {
         }
 
@@ -104,7 +85,7 @@ namespace STTech.BytesIO.Tcp
         {
 
             // 如果client已经连接了，则此次连接无效
-            if (innerClient.Connected)
+            if (InnerClient.Connected)
                 return;
 
             try
@@ -117,9 +98,9 @@ namespace STTech.BytesIO.Tcp
                 }
 
                 // 建立连接
-                innerClient.ReceiveBufferSize = ReceiveBufferSize;
-                innerClient.SendBufferSize = SendBufferSize;
-                innerClient.Connect(Host, Port);
+                InnerClient.ReceiveBufferSize = ReceiveBufferSize;
+                InnerClient.SendBufferSize = SendBufferSize;
+                InnerClient.Connect(Host, Port);
 
                 // 是否使用SSL/TLS通信
                 if (UseSsl)
@@ -127,7 +108,7 @@ namespace STTech.BytesIO.Tcp
                     try
                     {
                         // 创建SSL流
-                        SslStream = new SslStream(innerClient.GetStream(), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
+                        SslStream = new SslStream(InnerClient.GetStream(), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
                         SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
 
                         // 执行TLS通信验证通过的回调事件
@@ -151,7 +132,7 @@ namespace STTech.BytesIO.Tcp
                 RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex.Message));
 
                 // 重置tcp客户端
-                innerClient = new System.Net.Sockets.TcpClient();
+                InnerClient = new System.Net.Sockets.TcpClient();
 
                 // 释放缓冲区
                 // socketDataReceiveBuffer = null;
@@ -168,16 +149,16 @@ namespace STTech.BytesIO.Tcp
             // TODO: 主动关闭时这里被调用两次，需要找到第二次调用的原因
 
             // 如果TcpClient没有关闭，则关闭连接
-            if (innerClient.Connected)
+            if (InnerClient.Connected)
             {
                 // 关闭异步任务
                 CancelReceiveDataTask();
 
                 // 关闭内部Socket客户端
-                innerClient.Close();
+                InnerClient.Close();
 
                 // 重置tcp客户端
-                innerClient = new System.Net.Sockets.TcpClient();
+                InnerClient = new System.Net.Sockets.TcpClient();
 
                 // 执行通信已断开的回调事件 
                 RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = code });
@@ -204,7 +185,7 @@ namespace STTech.BytesIO.Tcp
                 else
                 {
                     // 发送数据
-                    innerClient.Client.Send(data);
+                    InnerClient.Client.Send(data);
                 }
                 // 执行数据已发送的回调事件
                 RaiseDataSent(this, new DataSentEventArgs(data));
@@ -224,7 +205,7 @@ namespace STTech.BytesIO.Tcp
             try
             {
                 int CheckTimes = 0;
-                Stream stream = UseSsl ? SslStream : innerClient.GetStream();
+                Stream stream = UseSsl ? SslStream : InnerClient.GetStream();
                 while (IsConnected)
                 {
                     // 获取数据长度
@@ -259,7 +240,7 @@ namespace STTech.BytesIO.Tcp
             catch (Exception ex)
             {
                 // 如果关闭了通信，不回调异常
-                if (!innerClient.Connected) return;
+                if (!InnerClient.Connected) return;
 
                 // 回调异常事件
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
@@ -273,5 +254,28 @@ namespace STTech.BytesIO.Tcp
         {
             Disconnect(DisconnectionReasonCode.Passive);
         }
+    }
+
+    public partial class TcpClient : ITcpClient
+    {
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public string Host { get; set; } = "127.0.0.1";
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public int Port { get; set; } = 8086;
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public int LocalPort => IsConnected ? ((IPEndPoint)InnerClient.Client.LocalEndPoint).Port : 0;
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public IPEndPoint RemoteEndPoint => (IPEndPoint)InnerClient.Client.RemoteEndPoint;
     }
 }
