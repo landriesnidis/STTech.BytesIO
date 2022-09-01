@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace STTech.BytesIO.Modbus
 {
-    public abstract class ModbusResponse : Response
+    public class ModbusResponse : Response
     {
         public byte SlaveId { get; }
         public FunctionCode FunctionCode { get; }

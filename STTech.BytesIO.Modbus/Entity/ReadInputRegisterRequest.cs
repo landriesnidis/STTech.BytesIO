@@ -10,6 +10,11 @@ namespace STTech.BytesIO.Modbus
         public ushort StartAddress { get; set; }
         public ushort Length { get; set; }
 
+
+        public ReadInputRegisterRequest():base(FunctionCode.ReadInputRegister)
+        {
+
+        }
         public override byte[] GetBytes()
         {
             List<byte> bytes = new List<byte>();

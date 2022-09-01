@@ -8,7 +8,7 @@ namespace STTech.BytesIO.Modbus
 {
     public class ModbusUnpacker : Unpacker<ModbusResponse>
     {
-        public ModbusUnpacker(BytesClient client, Func<IEnumerable<byte>, int> calculatePacketLengthHandler = null) : base(client, calculatePacketLengthHandler)
+        public ModbusUnpacker(BytesClient client) : base(client, CalculatePacketLength)
         {
 
         }
@@ -17,7 +17,7 @@ namespace STTech.BytesIO.Modbus
         const int functionCodeLen = 1;
         const int crcLen = 2;
         const int fixedHead = slaveIdLen + functionCodeLen;
-        protected override int CalculatePacketLength(IEnumerable<byte> bytes)
+        private static int CalculatePacketLength(IEnumerable<byte> bytes)
         {
             if (bytes.Count() < 2)
             {
@@ -25,13 +25,13 @@ namespace STTech.BytesIO.Modbus
             }
 
 
-            switch ((FunctionCode)Convert.ToInt16(bytes.Skip(1).Take(1)))
+            switch ((FunctionCode)(short)(bytes.Skip(1).First()))
             {
                 case FunctionCode.ReadCoilRegister:
                 case FunctionCode.ReadDiscreteInputRegister:
                 case FunctionCode.ReadHoldRegister:
                 case FunctionCode.ReadInputRegister:
-                    return fixedHead + 1 + Convert.ToInt16(bytes.Skip(fixedHead).Take(1)) + crcLen;
+                    return fixedHead + 1 + (short)bytes.Skip(fixedHead).First() + crcLen;
 
                 case FunctionCode.WriteSingleCoilRegister:
                 case FunctionCode.WriteSingleHoldRegister:
@@ -40,7 +40,7 @@ namespace STTech.BytesIO.Modbus
                     return fixedHead + 4 + crcLen;
 
                 default:
-                    return 0;
+                    return bytes.Count();
             }
         }
     }

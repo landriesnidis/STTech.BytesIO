@@ -1,13 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
     <ProjectReference Include="..\STTech.BytesIO.Serial\STTech.BytesIO.Serial.csproj" />
     <ProjectReference Include="..\STTech.BytesIO.Tcp\STTech.BytesIO.Tcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Doc\" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,10 @@ namespace STTech.BytesIO.Modbus
 {
     public class ReadCoilRegisterRequest : ModbusRequest
     {
+        public ReadCoilRegisterRequest() : base(FunctionCode.ReadCoilRegister)
+        {
+        }
+
         public ushort StartAddress { get; set; }
         public ushort Length { get; set; }
 

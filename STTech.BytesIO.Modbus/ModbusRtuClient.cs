@@ -1,4 +1,5 @@
-﻿using STTech.BytesIO.Core.Component;
+﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core.Component;
 using STTech.BytesIO.Serial;
 
 namespace STTech.BytesIO.Modbus
@@ -8,7 +9,8 @@ namespace STTech.BytesIO.Modbus
         public Unpacker<ModbusResponse> Unpacker { get; }
         public ModbusRtuClient()
         {
-            Unpacker = new Unpacker<ModbusResponse>(this);
+            Unpacker = new ModbusUnpacker(this);
+            this.BindUnpacker(Unpacker);
         }
     }
 }

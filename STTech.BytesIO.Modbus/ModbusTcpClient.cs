@@ -9,7 +9,7 @@ namespace STTech.BytesIO.Modbus
 
         public ModbusTcpClient()
         {
-            Unpacker = new Unpacker<ModbusResponse>(this);
+            Unpacker = new ModbusUnpacker(this);
         }
     }
 }
