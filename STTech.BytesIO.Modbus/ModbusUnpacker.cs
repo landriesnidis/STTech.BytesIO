@@ -6,6 +6,9 @@ using System.Linq;
 
 namespace STTech.BytesIO.Modbus
 {
+    /// <summary>
+    /// Modbus协议解包器
+    /// </summary>
     public class ModbusUnpacker : Unpacker<ModbusResponse>
     {
         public ModbusUnpacker(BytesClient client) : base(client, CalculatePacketLength)

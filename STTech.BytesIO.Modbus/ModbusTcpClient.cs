@@ -5,9 +5,15 @@ using System.Net;
 
 namespace STTech.BytesIO.Modbus
 {
+    /// <summary>
+    /// Modbus TCP 客户端
+    /// </summary>
     public partial class ModbusTcpClient : ModbusClient<TcpClient>, IModbusClient
     {
+        public ModbusTcpClient() : base(new TcpClient())
+        {
 
+        }
     }
 
     public partial class ModbusTcpClient : ITcpClient

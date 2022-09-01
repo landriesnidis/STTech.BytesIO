@@ -6,9 +6,15 @@ using System.IO.Ports;
 
 namespace STTech.BytesIO.Modbus
 {
+    /// <summary>
+    /// Modbus RTU 客户端
+    /// </summary>
     public partial class ModbusRtuClient : ModbusClient<SerialClient>, IModbusClient
     {
+        public ModbusRtuClient():base(new SerialClient())
+        {
 
+        }
     }
 
     public partial class ModbusRtuClient : ISerialClient

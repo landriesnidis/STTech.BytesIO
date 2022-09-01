@@ -5,11 +5,18 @@ using System.ComponentModel;
 
 namespace STTech.BytesIO.Modbus
 {
+    /// <summary>
+    /// Modbus虚拟客户端
+    /// </summary>
+    /// <typeparam name="TClient"></typeparam>
     public abstract partial class ModbusClient<TClient> : VirtualClient<TClient>, IModbusClient where TClient : BytesClient
     {
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
         public Unpacker<ModbusResponse> Unpacker { get; }
 
-        public ModbusClient()
+        public ModbusClient(TClient client) : base(client)
         {
             Unpacker = new ModbusUnpacker(this);
             this.BindUnpacker(Unpacker);
