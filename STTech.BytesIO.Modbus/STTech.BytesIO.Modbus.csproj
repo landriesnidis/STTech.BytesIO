@@ -3,6 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
+		<Version>2.11.0-beta0901</Version>
 
 		<Company>ApeFree</Company>
 		<Copyright>Copyright © 2022 ApeFree, All Rights Reserved.</Copyright>
@@ -17,14 +18,25 @@
 		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
 	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
-    <ProjectReference Include="..\STTech.BytesIO.Serial\STTech.BytesIO.Serial.csproj" />
-    <ProjectReference Include="..\STTech.BytesIO.Tcp\STTech.BytesIO.Tcp.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\stdiag.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
+		<ProjectReference Include="..\STTech.BytesIO.Serial\STTech.BytesIO.Serial.csproj" />
+		<ProjectReference Include="..\STTech.BytesIO.Tcp\STTech.BytesIO.Tcp.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Doc\" />
-  </ItemGroup>
+	<ItemGroup>
+		<Folder Include="Doc\" />
+	</ItemGroup>
 
 </Project>

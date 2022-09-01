@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.10.0-beta0730</Version>
+		<Version>2.11.0-beta0901</Version>
 
 		<Company>深圳市智驾实业有限公司 KarFans(Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
@@ -19,16 +19,16 @@
 		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="..\stdiag.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
 	<!--仅在netstandard2.0环境时使用-->
 	<ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
 		<PackageReference Include="System.Net.Security" Version="4.3.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Include="stdiag.png">
-			<Pack>True</Pack>
-			<PackagePath></PackagePath>
-		</None>
 	</ItemGroup>
 
 	<ItemGroup>
