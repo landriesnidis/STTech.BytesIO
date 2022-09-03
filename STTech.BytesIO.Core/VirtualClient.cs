@@ -12,7 +12,15 @@ namespace STTech.BytesIO.Core
     /// </summary>
     public class VirtualClient : VirtualClient<BytesClient>
     {
+        public VirtualClient()
+        {
 
+        }
+
+        public VirtualClient(BytesClient innerClient) : this()
+        {
+            InnerClient = innerClient;
+        }
     }
 
     /// <summary>
