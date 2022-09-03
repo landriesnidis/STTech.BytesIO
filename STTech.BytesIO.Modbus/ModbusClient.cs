@@ -8,15 +8,14 @@ namespace STTech.BytesIO.Modbus
     /// <summary>
     /// Modbus虚拟客户端
     /// </summary>
-    /// <typeparam name="TClient"></typeparam>
-    public abstract partial class ModbusClient<TClient> : VirtualClient<TClient> where TClient : BytesClient
+    public abstract partial class ModbusClient : VirtualClient
     {
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public Unpacker<ModbusResponse> Unpacker { get; }
 
-        public ModbusClient(TClient client) : base(client)
+        protected ModbusClient(BytesClient client) : base(client)
         {
             Unpacker = new ModbusUnpacker(this);
             this.BindUnpacker(Unpacker);
@@ -25,7 +24,7 @@ namespace STTech.BytesIO.Modbus
         }
     }
 
-    public abstract partial class ModbusClient<TClient>: IModbusClient
+    public abstract partial class ModbusClient : IModbusClient
     {
         public Reply<ReadCoilRegisterResponse> ReadCoilRegister(ReadCoilRegisterRequest request, int timeout = 3000, SendOptions options = null)
         {
@@ -116,7 +115,7 @@ namespace STTech.BytesIO.Modbus
         }
     }
 
-    public abstract partial class ModbusClient<TClient>
+    public abstract partial class ModbusClient
     {
         /// <summary>
         /// 当接收到Modbus响应数据包时触发事件

@@ -8,8 +8,10 @@ namespace STTech.BytesIO.Modbus
     /// <summary>
     /// Modbus TCP 客户端
     /// </summary>
-    public partial class ModbusTcpClient : ModbusClient<TcpClient>, IModbusClient
+    public partial class ModbusTcpClient : ModbusClient, IModbusClient
     {
+        public new TcpClient InnerClient { get; }
+
         public ModbusTcpClient() : base(new TcpClient())
         {
 
