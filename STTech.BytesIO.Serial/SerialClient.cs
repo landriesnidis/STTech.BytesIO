@@ -17,6 +17,7 @@ namespace STTech.BytesIO.Serial
         /// 串口通信对象
         /// </summary>
         protected SerialPort InnerClient { get; set; }
+        public SerialPort GetInnerClient() => InnerClient;
 
         /// <summary>
         /// 获取一个指示打开或关闭状态的值
@@ -148,7 +149,8 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool CtsHolding => InnerClient.CtsHolding;
+        //[IgnoreDataMember] 
+        //public bool CtsHolding => InnerClient.CtsHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -163,7 +165,8 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool DsrHolding => InnerClient.DsrHolding;
+        //[IgnoreDataMember] 
+        //public bool DsrHolding => InnerClient.DsrHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -188,7 +191,8 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool CDHolding => InnerClient.CDHolding;
+        //[IgnoreDataMember] 
+        //public bool CDHolding => InnerClient.CDHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -227,8 +231,9 @@ namespace STTech.BytesIO.Serial
 
         /// <summary>
         /// <inheritdoc/>
-        /// </summary>
-        public int BytesToWrite => InnerClient.BytesToWrite;
+        ///// </summary>
+        //[IgnoreDataMember]
+        //public int BytesToWrite => InnerClient.BytesToWrite;
 
         /// <summary>
         /// <inheritdoc/>
@@ -238,16 +243,19 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool BreakState { get => InnerClient.BreakState; set => InnerClient.BreakState = value; }
+        //[IgnoreDataMember] 
+        //public bool BreakState { get => InnerClient.BreakState; set => InnerClient.BreakState = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public Stream BaseStream => InnerClient.BaseStream;
+        //[IgnoreDataMember] 
+        //public Stream BaseStream => InnerClient.BaseStream;
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
+        [IgnoreDataMember] 
         public int BytesToRead => InnerClient.BytesToRead;
 
         /// <summary>

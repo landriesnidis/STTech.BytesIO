@@ -21,7 +21,7 @@ namespace STTech.BytesIO.Tcp
         /// 内部TCP客户端
         /// </summary>
         protected System.Net.Sockets.TcpClient InnerClient { get; set; }
-
+        public System.Net.Sockets.TcpClient GetInnerClient() => InnerClient;
         /// <summary>
         /// 接受缓存区
         /// </summary>
