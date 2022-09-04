@@ -25,6 +25,10 @@ namespace STTech.BytesIO.Core.Entity
 
     public interface IRequest
     {
+        /// <summary>
+        /// 获取字节数组
+        /// </summary>
+        /// <returns></returns>
         byte[] GetBytes();
     }
 }
