@@ -125,17 +125,17 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        //public bool BreakState { get => InnerClient.BreakState; set => InnerClient.BreakState = value; }
+        // public bool BreakState { get => InnerClient.BreakState; set => InnerClient.BreakState = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        //public Stream BaseStream => InnerClient.BaseStream;
+        // public Stream BaseStream => InnerClient.BaseStream;
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int BytesToRead => InnerClient.BytesToRead;
+        // public int BytesToRead => InnerClient.BytesToRead;
 
         /// <summary>
         /// <inheritdoc/>
