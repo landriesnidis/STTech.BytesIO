@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.ComponentModel;
+using System.IO;
 using System.IO.Ports;
 using System.Runtime.Serialization;
 
@@ -73,8 +74,8 @@ namespace STTech.BytesIO.Serial
         /// 获取或设置中断信号状态。
         /// 如果端口处于中断状态，则为True;否则为False。
         /// </summary>
-        [IgnoreDataMember]
-        bool BreakState { get; set; }
+        //[IgnoreDataMember]
+        //bool BreakState { get; set; }
 
         /// <summary>
         /// 获取或设置每个字节的标准停止位数。
@@ -90,23 +91,19 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// 获取发送缓冲区中数据的字节数。
         /// </summary>
-        [IgnoreDataMember]
-        int BytesToWrite { get; }
+        //[IgnoreDataMember]
+        //int BytesToWrite { get; }
 
         /// <summary>
         /// 获取System.IO.Ports.SerialPort对象的底层System.IO.Stream对象。
         /// </summary>
-        [IgnoreDataMember]/// <summary>
-        /// 获取或设置奇偶检查协议。
-        /// 默认为System.IO.Ports.Parity.None。
-        /// </summary>
-        Stream BaseStream { get; }
+        //Stream BaseStream { get; }
 
         /// <summary>
         /// 获取接收缓冲区中数据的字节数。
         /// </summary>
-        [IgnoreDataMember]
-        int BytesToRead { get; }
+        //[IgnoreDataMember]
+        //int BytesToRead { get; }
 
         /// <summary>
         /// 获取或设置在System.IO.Ports.SerialPort.DataReceived事件发生之前内部输入缓冲区中的字节数。
@@ -118,8 +115,8 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// 获取端口的Carrier Detect行状态。
         /// </summary>
-        [IgnoreDataMember]
-        bool CDHolding { get; }
+        //[IgnoreDataMember]
+        //bool CDHolding { get; }
 
         /// <summary>
         /// 获取或设置发生奇偶校验错误时替换数据流中无效字节的字节。
@@ -129,8 +126,8 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// 获取数据集就绪(DSR)信号的状态。
         /// </summary>
-        [IgnoreDataMember]
-        bool DsrHolding { get; }
+        //[IgnoreDataMember]
+        //bool DsrHolding { get; }
 
         /// <summary>
         /// 获取或设置每个字节的数据位的标准长度。
@@ -142,8 +139,8 @@ namespace STTech.BytesIO.Serial
         /// 获取清除到发送行的状态。
         /// 如果检测到清除发送行，则为true;否则为False。
         /// </summary>
-        [IgnoreDataMember]
-        bool CtsHolding { get; }
+        //[IgnoreDataMember]
+        //bool CtsHolding { get; }
 
         /// <summary>
         /// 丢弃来自串行驱动程序的接收缓冲区的数据

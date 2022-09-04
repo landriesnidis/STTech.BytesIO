@@ -85,7 +85,7 @@ namespace STTech.BytesIO.Serial
         private void InnerClient_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             // 判断缓冲区是否有数据
-            int len = BytesToRead;
+            int len = InnerClient.BytesToRead;
             if (len > 0)
             {
                 // 获取数据
@@ -255,8 +255,8 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        [IgnoreDataMember] 
-        public int BytesToRead => InnerClient.BytesToRead;
+        //[IgnoreDataMember] 
+        //public int BytesToRead => InnerClient.BytesToRead;
 
         /// <summary>
         /// <inheritdoc/>
