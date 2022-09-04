@@ -11,10 +11,10 @@ namespace STTech.BytesIO.Modbus
     public partial class ModbusTcpClient : ModbusClient, IModbusClient
     {
         public new TcpClient InnerClient { get; }
-
+        public TcpClient GetInnerClient() => InnerClient;
         public ModbusTcpClient() : base(new TcpClient())
         {
-
+            InnerClient = (TcpClient)base.InnerClient;
         }
     }
 

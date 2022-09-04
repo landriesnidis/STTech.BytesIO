@@ -3,6 +3,7 @@ using STTech.BytesIO.Core.Component;
 using STTech.BytesIO.Serial;
 using System.IO;
 using System.IO.Ports;
+using System.Runtime.Serialization;
 
 namespace STTech.BytesIO.Modbus
 {
@@ -12,9 +13,10 @@ namespace STTech.BytesIO.Modbus
     public partial class ModbusRtuClient : ModbusClient, IModbusClient
     {
         public new SerialClient InnerClient { get; }
+        public SerialClient GetInnerClient() => InnerClient;
         public ModbusRtuClient() : base(new SerialClient())
         {
-
+            InnerClient = (SerialClient)base.InnerClient;
         }
     }
 
@@ -33,7 +35,7 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool CtsHolding => InnerClient.CtsHolding;
+        //public bool CtsHolding => InnerClient.CtsHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -48,7 +50,7 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool DsrHolding => InnerClient.DsrHolding;
+        //public bool DsrHolding => InnerClient.DsrHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -73,7 +75,7 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool CDHolding => InnerClient.CDHolding;
+        //public bool CDHolding => InnerClient.CDHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -113,7 +115,7 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int BytesToWrite => InnerClient.BytesToWrite;
+        //public int BytesToWrite => InnerClient.BytesToWrite;
 
         /// <summary>
         /// <inheritdoc/>
@@ -123,12 +125,12 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool BreakState { get => InnerClient.BreakState; set => InnerClient.BreakState = value; }
+        //public bool BreakState { get => InnerClient.BreakState; set => InnerClient.BreakState = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public Stream BaseStream => InnerClient.BaseStream;
+        //public Stream BaseStream => InnerClient.BaseStream;
 
         /// <summary>
         /// <inheritdoc/>
