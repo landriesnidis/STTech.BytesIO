@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
@@ -8,9 +9,11 @@ namespace STTech.BytesIO.Modbus
 {
     public class WriteMultipleCoilRegistersRequest : ModbusRequest
     {
+        [Description("写入地址")]
         public ushort WriteAddress { get; set; }
 
-        public bool[] Data { get; set; }
+        [Description("写入数据")]
+        public bool[] Data { get; set; } = new bool[] { false };
 
         public WriteMultipleCoilRegistersRequest() : base(FunctionCode.WriteMultipleCoilRegisters)
         {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
@@ -7,8 +8,11 @@ namespace STTech.BytesIO.Modbus
 {
     public class ReadHoldRegisterRequest:ModbusRequest
     {
+        [Description("起始地址")]
         public ushort StartAddress { get; set; }
-        public ushort Length { get; set; }
+
+        [Description("读取长度")]
+        public ushort Length { get; set; } = 1;
 
         public ReadHoldRegisterRequest() : base(FunctionCode.ReadHoldRegister)
         {

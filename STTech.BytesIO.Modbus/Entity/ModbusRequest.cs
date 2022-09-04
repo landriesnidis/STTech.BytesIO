@@ -1,25 +1,39 @@
 ﻿using STTech.BytesIO.Core.Entity;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace STTech.BytesIO.Modbus
 {
     public abstract class ModbusRequest : IRequest
     {
+        /// <summary>
+        /// 从机地址
+        /// </summary>
+        [Description("从机地址")]
         public byte SlaveId { get; set; }
-        public FunctionCode FunctionCode { get; set; }
+
+        /// <summary>
+        /// 功能码
+        /// </summary>
+        [Description("功能码")]
+        protected FunctionCode FunctionCode { get; set; }
 
         protected ModbusRequest(FunctionCode functionCode)
         {
             FunctionCode = functionCode;
         }
 
+        /// <summary>
+        /// 有效荷载
+        /// </summary>
         protected IEnumerable<byte> Payload { get; set; }
 
-        public const ushort CoilOn = 0xFF00;
-        public const ushort CoilOff = 0x0000;
-
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        /// <returns></returns>
         public virtual byte[] GetBytes()
         {
             List<byte> bytes = new List<byte>();
@@ -30,7 +44,7 @@ namespace STTech.BytesIO.Modbus
             return CRC16(bytes.ToArray());
         }
 
-        public static byte[] CRC16(byte[] value, ushort poly = 0xA001, ushort crcInit = 0xFFFF)
+        private static byte[] CRC16(byte[] value, ushort poly = 0xA001, ushort crcInit = 0xFFFF)
         {
             if (value == null || !value.Any())
                 throw new ArgumentException("");
