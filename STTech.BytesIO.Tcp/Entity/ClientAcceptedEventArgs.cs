@@ -1,4 +1,5 @@
-﻿using System;
+﻿using STTech.BytesIO.Core.Entity;
+using System;
 
 namespace STTech.BytesIO.Tcp.Entity
 {
@@ -24,7 +25,7 @@ namespace STTech.BytesIO.Tcp.Entity
         public TcpClient Client { get;  }
     }
 
-    public class ClientDisconnectedEventArgs : EventArgs
+    public class ClientDisconnectedEventArgs : DisconnectedEventArgs
     {
         public ClientDisconnectedEventArgs(TcpClient client)
         {
