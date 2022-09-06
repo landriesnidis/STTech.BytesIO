@@ -42,6 +42,15 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         public override int SendBufferSize { get; set; } = 32768;
 
+        /// <summary>
+        /// 内部状态
+        /// </summary>
+        private InnerStatus innerStatus = InnerStatus.Free;
+
+        /// <summary>
+        /// 状态锁
+        /// </summary>
+        private object lockerStatus = new object();
 
         /// <summary>
         /// 构造TCP客户端
@@ -61,6 +70,9 @@ namespace STTech.BytesIO.Tcp
 
             if (innerClient.Connected)
             {
+                // 设置内部状态为忙碌
+                innerStatus = InnerStatus.Busy;
+
                 IPEndPoint point = (IPEndPoint)innerClient.Client.RemoteEndPoint;
                 Host = point.Address.ToString();
                 Port = point.Port;
@@ -83,60 +95,80 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         public override void Connect()
         {
-
-            // 如果client已经连接了，则此次连接无效
-            if (InnerClient.Connected)
-                return;
-
-            try
+            lock (lockerStatus)
             {
-                // 创建数据接收缓冲区
-                if (socketDataReceiveBuffer == null || ReceiveBufferSize != socketDataReceiveBuffer.Length)
+
+                // 如果client已经连接了，则此次连接无效
+                if (InnerClient.Connected || innerStatus == InnerStatus.Busy)
+                    return;
+
+                try
                 {
-                    socketDataReceiveBuffer = null;
-                    socketDataReceiveBuffer = new byte[ReceiveBufferSize];
+                    // 创建数据接收缓冲区
+                    if (socketDataReceiveBuffer == null || ReceiveBufferSize != socketDataReceiveBuffer.Length)
+                    {
+                        socketDataReceiveBuffer = null;
+                        socketDataReceiveBuffer = new byte[ReceiveBufferSize];
+                    }
+
+                    // 建立连接
+                    InnerClient.ReceiveBufferSize = ReceiveBufferSize;
+                    InnerClient.SendBufferSize = SendBufferSize;
+                    InnerClient.Connect(Host, Port);
+
+                    // 是否使用SSL/TLS通信
+                    if (UseSsl)
+                    {
+                        try
+                        {
+                            // 创建SSL流
+                            SslStream = new SslStream(InnerClient.GetStream(), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
+                            SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
+
+                            // 执行TLS通信验证通过的回调事件
+                            PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception("SSL certificate validation failed.", ex);
+                        }
+                    }
+
+                    // 设置内部状态为忙碌
+                    innerStatus = InnerStatus.Busy;
+
+                    // 执行连接成功回调事件
+                    RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
+
+                    // 启动接收数据的异步任务
+                    StartReceiveDataTask();
                 }
-
-                // 建立连接
-                InnerClient.ReceiveBufferSize = ReceiveBufferSize;
-                InnerClient.SendBufferSize = SendBufferSize;
-                InnerClient.Connect(Host, Port);
-
-                // 是否使用SSL/TLS通信
-                if (UseSsl)
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        // 创建SSL流
-                        SslStream = new SslStream(InnerClient.GetStream(), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
-                        SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
 
-                        // 执行TLS通信验证通过的回调事件
-                        PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception("SSL certificate validation failed.", ex);
-                    }
+                    // 连接失败
+                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex.Message));
+
+                    // 重置tcp客户端
+                    ResetInnerClient();
+
+                    // 释放缓冲区
+                    // socketDataReceiveBuffer = null;
                 }
-
-                // 执行连接成功回调事件
-                RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
-
-                // 启动接收数据的异步任务
-                StartReceiveDataTask();
             }
-            catch (Exception ex)
-            {
-                // 连接失败
-                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex.Message));
+        }
 
-                // 重置tcp客户端
-                InnerClient = new System.Net.Sockets.TcpClient();
-
-                // 释放缓冲区
-                // socketDataReceiveBuffer = null;
-            }
+        /// <summary>
+        /// 重置内部客户端
+        /// </summary>
+        private void ResetInnerClient()
+        {
+#if NET45
+            InnerClient.Client.Dispose();
+#else
+            InnerClient?.Dispose();
+#endif
+            InnerClient = new System.Net.Sockets.TcpClient();
         }
 
         /// <summary>
@@ -146,26 +178,30 @@ namespace STTech.BytesIO.Tcp
         /// <param name="ex"></param>
         public override void Disconnect(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null)
         {
-            // TODO: 主动关闭时这里被调用两次，需要找到第二次调用的原因
-
-            // 如果TcpClient没有关闭，则关闭连接
-            if (InnerClient.Connected)
+            lock (lockerStatus)
             {
-                // 关闭异步任务
-                CancelReceiveDataTask();
+                // 如果TcpClient没有关闭，则关闭连接
+                if (InnerClient.Connected || innerStatus == InnerStatus.Busy)
+                {
+                    // 关闭异步任务
+                    CancelReceiveDataTask();
 
-                // 关闭内部Socket客户端
-                InnerClient.Close();
+                    // 关闭内部Socket客户端
+                    InnerClient.Close();
 
-                // 重置tcp客户端
-                InnerClient = new System.Net.Sockets.TcpClient();
+                    // 重置TCP客户端
+                    ResetInnerClient();
 
-                // 执行通信已断开的回调事件 
-                RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = code });
-            }
-            else
-            {
-                return;
+                    // 重置内部状态为空闲
+                    innerStatus = InnerStatus.Free;
+
+                    // 执行通信已断开的回调事件 
+                    RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = code });
+                }
+                else
+                {
+                    return;
+                }
             }
         }
 
@@ -240,7 +276,20 @@ namespace STTech.BytesIO.Tcp
             catch (Exception ex)
             {
                 // 如果关闭了通信，不回调异常
-                if (!InnerClient.Connected) return;
+                if (!InnerClient.Connected)
+                {
+                    if (ex is IOException && ex.InnerException != null)
+                    {
+                        if (ex.InnerException is SocketException ex2)
+                        {
+                            if (ex2.ErrorCode == 10054)
+                            {
+                                // Disconnect(DisconnectionReasonCode.Passive, ex);
+                                return;
+                            }
+                        }
+                    }
+                }
 
                 // 回调异常事件
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
@@ -253,6 +302,12 @@ namespace STTech.BytesIO.Tcp
         protected override void ReceiveDataCompletedHandle()
         {
             Disconnect(DisconnectionReasonCode.Passive);
+        }
+
+        private enum InnerStatus
+        {
+            Free,
+            Busy,
         }
     }
 
@@ -278,4 +333,6 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         public IPEndPoint RemoteEndPoint => (IPEndPoint)InnerClient.Client.RemoteEndPoint;
     }
+
+
 }
