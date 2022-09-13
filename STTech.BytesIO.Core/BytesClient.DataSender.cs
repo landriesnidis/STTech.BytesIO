@@ -39,7 +39,7 @@ namespace STTech.BytesIO.Core
                 SendHandler(data);
 
                 // 延时
-                Task.Delay(options.PauseTime);
+                Task.Delay(options.PauseTime).Wait();
             }
         }
 
