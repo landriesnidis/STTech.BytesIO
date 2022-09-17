@@ -86,7 +86,7 @@ namespace STTech.BytesIO.Tcp
         /// 构造TCP客户端
         /// </summary>
         /// <param name="socket">内部的Socket对象</param>
-        internal TcpClient(Socket socket) : this(new System.Net.Sockets.TcpClient { Client = socket })
+        public TcpClient(Socket socket) : this(new System.Net.Sockets.TcpClient { Client = socket })
         {
         }
 
