@@ -20,27 +20,23 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 异步接收数据任务取消令牌
         /// </summary>
-        private CancellationToken _asyncReceiveDataCancellationToken;
-        private CancellationTokenSource _cancellationTokenSource;
+        protected CancellationTokenSource ReceiveTaskCancellationTokenSource { get; private set; }
 
         /// <summary>
         /// 启动异步数据接收任务
         /// </summary>
         protected virtual void StartReceiveDataTask()
         {
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = new CancellationTokenSource();
+            ReceiveTaskCancellationTokenSource?.Cancel();
+            ReceiveTaskCancellationTokenSource?.Dispose();
+            ReceiveTaskCancellationTokenSource = new CancellationTokenSource();
 
-            CancelReceiveDataTask();
-            _asyncReceiveDataCancellationToken = _cancellationTokenSource.Token;
-
-            Task task = new Task(() => SafelyInvokeCallback(() => { ReceiveDataHandle(); }), _asyncReceiveDataCancellationToken);
-            var awaiter = task.GetAwaiter();
-            awaiter.OnCompleted(() =>
+            Task task = new Task(ReceiveDataHandle, ReceiveTaskCancellationTokenSource.Token);
+            task.ContinueWith(t =>
             {
-                if (awaiter.IsCompleted)
+                if (t.IsCompleted)
                 {
-                    SafelyInvokeCallback(() => { ReceiveDataCompletedHandle(); });
+                    SafelyInvokeCallback(ReceiveDataCompletedHandle);
                 }
             });
             task.Start();
@@ -52,10 +48,12 @@ namespace STTech.BytesIO.Core
         protected virtual void CancelReceiveDataTask()
         {
             // 关闭异步接收任务
-            if (_asyncReceiveDataCancellationToken != null && _asyncReceiveDataCancellationToken.IsCancellationRequested)
-            {
-                _asyncReceiveDataCancellationToken.ThrowIfCancellationRequested();
-            }
+            //if (_asyncReceiveDataCancellationToken != null && _asyncReceiveDataCancellationToken.IsCancellationRequested)
+            //{
+            //    _asyncReceiveDataCancellationToken.ThrowIfCancellationRequested();
+            //}
+
+            ReceiveTaskCancellationTokenSource?.Cancel();
         }
 
         /// <summary>
