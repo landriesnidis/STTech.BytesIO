@@ -269,7 +269,7 @@ namespace STTech.BytesIO.Tcp
                         UpdateLastMessageTimestamp();
 
                         // 执行接收到数据的回调事件
-                        RaiseDataReceived(this, new Core.Entity.DataReceivedEventArgs(data));
+                        RaiseDataReceived(this, new DataReceivedEventArgs(data));
                     });
                 }
             }
@@ -282,10 +282,11 @@ namespace STTech.BytesIO.Tcp
                     {
                         if (ex.InnerException is SocketException ex2)
                         {
-                            if (ex2.ErrorCode == 10054)
+                            switch (ex2.SocketErrorCode)
                             {
-                                // Disconnect(DisconnectionReasonCode.Passive, ex);
-                                return;
+                                case SocketError.ConnectionReset:   // TODO: 待解决问题
+                                case SocketError.Interrupted:       // TODO: 待解决问题"WSACancelBlockingCall"
+                                    return;
                             }
                         }
                     }
