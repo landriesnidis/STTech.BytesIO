@@ -58,16 +58,22 @@ namespace STTech.BytesIO.Core
         /// <param name="e"></param>
         protected virtual void RaiseExceptionOccurs(object sender, ExceptionOccursEventArgs e)
         {
-            SafelyInvokeCallback(() =>
+            try
             {
                 OnExceptionOccurs?.Invoke(sender, e);
-
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
                 // 每次产生异常都检查连接是否正常
                 if (!IsConnected)
                 {
                     Disconnect(DisconnectionReasonCode.Error, e.Exception);
                 }
-            });
+            }
         }
 
         /// <summary>
