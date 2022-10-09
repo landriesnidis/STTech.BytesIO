@@ -2,21 +2,16 @@
 
 namespace STTech.BytesIO.Core.Entity
 {
-    public class DataReceivedEventArgs : DataReceivedEventArgs<byte[]>
-    {
-        public DataReceivedEventArgs(byte[] data) : base(data)
-        {
-        }
-    }
-
-    public class DataReceivedEventArgs<T> : EventArgs
+    public class DataReceivedEventArgs : EventArgs
     {
         /// <summary>
         /// 接收到的数据
         /// </summary>
-        public T Data { get; }
+        public virtual byte[] Data { get; }
 
-        public DataReceivedEventArgs(T data)
+        protected DataReceivedEventArgs() { }
+
+        public DataReceivedEventArgs(byte[] data)
         {
             Data = data;
         }
