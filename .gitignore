@@ -334,4 +334,5 @@ UpgradeLog*.XML
 /STTech.BytesIO.Tcp.Test
 /STTech.BytesIO.Tcp.DoIp
 /STTech.BytesIO.Tcp.WebSocket
+/STTech.BytesIO.Tests.Desktop
 /STTech.BytesIO.all.sln
