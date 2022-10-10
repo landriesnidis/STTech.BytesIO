@@ -28,12 +28,17 @@ namespace STTech.BytesIO.Udp
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int LocalPort { get; set; } = 8080;
+        public int LocalPort { get; set; } = 0;
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public override bool IsConnected => InnerClient != null;
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public bool AllowReceivingDataFromAnyIP { get; set; } = false;
 
         /// <summary>
         /// 在接收到数据时发生
@@ -133,29 +138,17 @@ namespace STTech.BytesIO.Udp
         /// <param name="e"></param>
         protected virtual void RaiseUdpDataReceived(object sender, UdpDataReceivedEventArgs e)
         {
+            if (!AllowReceivingDataFromAnyIP)
+            {
+                if (e.ReceiveResult.RemoteEndPoint.Address.ToString() != Host)
+                {
+                    // 消息被过滤
+                    return;
+                }
+            }
+
             RaiseDataReceived(sender, e);
             SafelyInvokeCallback(() => { OnUdpDataReceived?.Invoke(sender, e); });
-        }
-    }
-
-    /// <summary>
-    /// UDP数据接收事件参数
-    /// </summary>
-    public class UdpDataReceivedEventArgs : DataReceivedEventArgs
-    {
-        /// <summary>
-        /// 接收到的字节数组
-        /// </summary>
-        public override byte[] Data => ReceiveResult.Buffer;
-
-        /// <summary>
-        /// UDP接收结果
-        /// </summary>
-        public UdpReceiveResult ReceiveResult { get; }
-
-        public UdpDataReceivedEventArgs(UdpReceiveResult receiveResult)
-        {
-            ReceiveResult = receiveResult;
         }
     }
 }

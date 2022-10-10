@@ -16,5 +16,11 @@
         /// 远程主机端口号
         /// </summary>
         int Port { get; set; }
+
+        /// <summary>
+        /// 允许匿名消息
+        /// 非Host来源的消息
+        /// </summary>
+        bool AllowReceivingDataFromAnyIP { get; set; }
     }
 }
