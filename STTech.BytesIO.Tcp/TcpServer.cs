@@ -12,10 +12,32 @@ namespace STTech.BytesIO.Tcp
 {
     public interface ITcpServer : IDisposable
     {
+        /// <summary>
+        /// 开放网络地址
+        /// </summary>
         string Host { get; set; }
+
+        /// <summary>
+        /// 开放端口号
+        /// </summary>
         int Port { get; set; }
+
+        /// <summary>
+        /// 启动监听
+        /// </summary>
+        /// <returns></returns>
         Task StartAsync();
+
+        /// <summary>
+        /// 停止监听
+        /// </summary>
+        /// <returns></returns>
         Task StopAsync();
+
+        /// <summary>
+        /// 关闭服务
+        /// </summary>
+        /// <returns></returns>
         Task CloseAsync();
     }
 
@@ -62,12 +84,12 @@ namespace STTech.BytesIO.Tcp
         public int Backlog { get; set; } = 10;
 
         /// <summary>
-        /// 开放网络地址
+        /// <inheritdoc/>
         /// </summary>
         public string Host { get; set; } = "0.0.0.0";
 
         /// <summary>
-        /// 开放端口
+        /// <inheritdoc/>
         /// </summary>
         public int Port { get; set; } = 8086;
 
@@ -109,7 +131,7 @@ namespace STTech.BytesIO.Tcp
         public event EventHandler Closed;
 
         /// <summary>
-        /// 启动服务
+        /// <inheritdoc/>
         /// </summary>
         public Task StartAsync()
         {
@@ -170,7 +192,7 @@ namespace STTech.BytesIO.Tcp
             });
         }
 
-        private void TcpClient_OnDisconnected(object sender, Core.Entity.DisconnectedEventArgs e)
+        private void TcpClient_OnDisconnected(object sender, Core.DisconnectedEventArgs e)
         {
             T client = (T)sender;
             client.OnDisconnected -= TcpClient_OnDisconnected;
@@ -187,7 +209,7 @@ namespace STTech.BytesIO.Tcp
         }
 
         /// <summary>
-        /// 关闭服务器
+        /// <inheritdoc/>
         /// </summary>
         public Task CloseAsync()
         {
@@ -209,9 +231,8 @@ namespace STTech.BytesIO.Tcp
         }
 
         /// <summary>
-        /// 停止侦听
+        /// <inheritdoc/>
         /// </summary>
-        /// <returns></returns>
         public Task StopAsync()
         {
             isRun = false;
