@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core.Entity;
+﻿using STTech.BytesIO.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -90,17 +90,17 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public override void Connect()
+        public override ConnectResult Connect(ConnectArgument argument = null)
         {
-            InnerClient.Connect();
+            return InnerClient.Connect();
         }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public override void Disconnect(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null)
+        public override DisconnectResult Disconnect(DisconnectArgument argument = null)
         {
-            InnerClient.Disconnect(code, ex);
+            return InnerClient.Disconnect(argument);
         }
 
         /// <summary>
