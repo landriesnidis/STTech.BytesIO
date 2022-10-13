@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core.Entity;
+﻿using STTech.BytesIO.Core;
 using System;
 
 namespace STTech.BytesIO.Core
@@ -11,12 +11,12 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 建立连接
         /// </summary>
-        void Connect();
+        ConnectResult Connect(ConnectArgument argument);
 
         /// <summary>
         /// 断开连接
         /// </summary>
-        void Disconnect(DisconnectionReasonCode code, Exception ex = null);
+        DisconnectResult Disconnect(DisconnectArgument argument);
 
         /// <summary>
         /// 是否已连接

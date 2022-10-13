@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core.Entity;
+﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Exceptions;
 using System;
 using System.Threading;
@@ -46,22 +46,19 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 建立连接
         /// </summary>
-        public abstract void Connect();
+        public abstract ConnectResult Connect(ConnectArgument argument = null);
 
         /// <summary>
         /// 异步建立连接
         /// </summary>
         /// <returns></returns>
-        public virtual Task ConnectAsync()
+        public virtual Task<ConnectResult> ConnectAsync(ConnectArgument argument = null)
         {
             return Task.Run(() =>
             {
                 lock (asyncConnectLocker)
                 {
-                    if (!IsConnected)
-                    {
-                        Connect();
-                    }
+                    return Connect(argument);
                 }
             });
         }
@@ -71,7 +68,7 @@ namespace STTech.BytesIO.Core
         /// </summary>
         /// <param name="code">断开连接的原因</param>
         /// <param name="ex">导致连接断开的异常</param>
-        public abstract void Disconnect(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null);
+        public abstract DisconnectResult Disconnect(DisconnectArgument argument = null);
 
         /// <summary>
         /// 异步断开连接
@@ -79,6 +76,13 @@ namespace STTech.BytesIO.Core
         /// <param name="code">断开连接的原因</param>
         /// <param name="ex">导致连接断开的异常</param>
         /// <returns></returns>
-        public virtual Task DisconnectAsync(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null) => Task.Run(() => Disconnect(code, ex));
+        public virtual Task<DisconnectResult> DisconnectAsync(DisconnectArgument argument = null) 
+            => Task.Run(() =>
+            {
+                lock (asyncConnectLocker)
+                {
+                    return Disconnect(argument);
+                }
+            });
     }
 }
