@@ -1,5 +1,5 @@
 ﻿using STTech.BytesIO.Core;
-using STTech.BytesIO.Core.Entity;
+using STTech.BytesIO.Core;
 using System;
 using System.Collections;
 using System.ComponentModel;
@@ -8,6 +8,7 @@ using System.IO.Ports;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace STTech.BytesIO.Serial
 {
@@ -37,9 +38,12 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// 建立串口通信
         /// </summary>
-        public override void Connect()
+        public override ConnectResult Connect(ConnectArgument argument = null)
         {
-            if (InnerClient.IsOpen) return;
+            if (InnerClient.IsOpen)
+            {
+                return new ConnectResult(ConnectErrorCode.IsConnected);
+            }
 
             try
             {
@@ -51,30 +55,48 @@ namespace STTech.BytesIO.Serial
                 // 启动接收数据的异步任务
                 // 注：SerialPort已提供了DataReceived事件，不需要再实现异步接收
                 // StartReceiveDataTask();
+
+                return new ConnectResult();
             }
             catch (Exception ex)
             {
                 // 连接失败
                 RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex.Message));
+
+                return new ConnectResult(ConnectErrorCode.Error, ex);
             }
         }
 
         /// <summary>
         /// 关闭串口通信
         /// </summary>
-        public override void Disconnect(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null)
+        public override DisconnectResult Disconnect(DisconnectArgument argument = null)
         {
-            if (!InnerClient.IsOpen) return;
+            argument ??= new DisconnectArgument();
+
+            if (!InnerClient.IsOpen)
+            {
+                return new DisconnectResult(DisconnectErrorCode.NoConnection);
+            }
 
             // 关闭异步任务
             // 注：SerialPort已提供了DataReceived事件，不需要再实现异步接收
             // CancelReceiveDataTask();
 
-            // 关闭串口
-            InnerClient.Close();
+            try
+            {
+                // 关闭串口
+                InnerClient.Close();
 
-            // 执行通信已断开的回调事件 
-            RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = DisconnectionReasonCode.Active });
+                // 执行通信已断开的回调事件 
+                RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode,argument.Exception));
+
+                return new DisconnectResult();
+            }
+            catch (Exception ex)
+            {
+                return new DisconnectResult(DisconnectErrorCode.Error, ex);
+            }
         }
 
         /// <summary>
