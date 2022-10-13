@@ -1,5 +1,5 @@
 ﻿using STTech.BytesIO.Core;
-using STTech.BytesIO.Core.Entity;
+using STTech.BytesIO.Core;
 using STTech.BytesIO.Tcp.Entity;
 using System;
 using System.IO;
@@ -21,7 +21,13 @@ namespace STTech.BytesIO.Tcp
         /// 内部TCP客户端
         /// </summary>
         protected System.Net.Sockets.TcpClient InnerClient { get; set; }
+
+        /// <summary>
+        /// 获取内部的TCP客户端
+        /// </summary>
+        /// <returns></returns>
         public System.Net.Sockets.TcpClient GetInnerClient() => InnerClient;
+
         /// <summary>
         /// 接受缓存区
         /// </summary>
@@ -93,14 +99,18 @@ namespace STTech.BytesIO.Tcp
         /// <summary>
         /// 异步建立连接
         /// </summary>
-        public override void Connect()
+        public override ConnectResult Connect(ConnectArgument argument = null)
         {
+            argument ??= new ConnectArgument();
+
             lock (lockerStatus)
             {
 
                 // 如果client已经连接了，则此次连接无效
                 if (InnerClient.Connected || innerStatus == InnerStatus.Busy)
-                    return;
+                {
+                    return new ConnectResult(ConnectErrorCode.IsConnected);
+                }
 
                 try
                 {
@@ -114,7 +124,15 @@ namespace STTech.BytesIO.Tcp
                     // 建立连接
                     InnerClient.ReceiveBufferSize = ReceiveBufferSize;
                     InnerClient.SendBufferSize = SendBufferSize;
-                    InnerClient.Connect(Host, Port);
+
+                    // 连接是否完成（非超时）
+                    var isComplete = InnerClient.ConnectAsync(Host, Port).Wait(argument.Timeout);
+
+                    // 如果超时，则返回超时结果
+                    if (!isComplete)
+                    {
+                        return new ConnectResult(ConnectErrorCode.Timeout);
+                    }
 
                     // 是否使用SSL/TLS通信
                     if (UseSsl)
@@ -142,10 +160,11 @@ namespace STTech.BytesIO.Tcp
 
                     // 启动接收数据的异步任务
                     StartReceiveDataTask();
+
+                    return new ConnectResult();
                 }
                 catch (Exception ex)
                 {
-
                     // 连接失败
                     RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex.Message));
 
@@ -154,6 +173,22 @@ namespace STTech.BytesIO.Tcp
 
                     // 释放缓冲区
                     // socketDataReceiveBuffer = null;
+
+                    // 返回操作错误结果
+                    if (ex is SocketException socketEx)
+                    {
+                        switch (socketEx.SocketErrorCode)
+                        {
+                            case SocketError.HostNotFound:
+                                return new ConnectResult(ConnectErrorCode.ConnectionParameterError, ex);
+                            default:
+                                return new ConnectResult(ConnectErrorCode.Error, ex);
+                        }
+                    }
+                    else
+                    {
+                        return new ConnectResult(ConnectErrorCode.Error, ex);
+                    }
                 }
             }
         }
@@ -176,8 +211,10 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         /// <param name="code"></param>
         /// <param name="ex"></param>
-        public override void Disconnect(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null)
+        public override DisconnectResult Disconnect(DisconnectArgument argument = null)
         {
+            argument ??= new DisconnectArgument();
+
             lock (lockerStatus)
             {
                 // 如果TcpClient没有关闭，则关闭连接
@@ -196,11 +233,14 @@ namespace STTech.BytesIO.Tcp
                     innerStatus = InnerStatus.Free;
 
                     // 执行通信已断开的回调事件 
-                    RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = code });
+                    RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
+
+                    return new DisconnectResult();
                 }
                 else
                 {
-                    return;
+                    // 当前无连接
+                    return new DisconnectResult(DisconnectErrorCode.NoConnection);
                 }
             }
         }
@@ -302,9 +342,12 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         protected override void ReceiveDataCompletedHandle()
         {
-            Disconnect(DisconnectionReasonCode.Passive);
+            Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
         }
 
+        /// <summary>
+        /// 内部客户端的连接状态
+        /// </summary>
         private enum InnerStatus
         {
             Free,
