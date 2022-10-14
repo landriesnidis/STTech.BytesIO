@@ -1,5 +1,4 @@
 ﻿using STTech.BytesIO.Core;
-using STTech.BytesIO.Core.Entity;
 using System;
 using System.Net.Sockets;
 
@@ -52,7 +51,7 @@ namespace STTech.BytesIO.Udp
             ReceiveBufferSize = 65536;
         }
 
-        public override void Connect()
+        public override ConnectResult Connect(ConnectArgument argument = null)
         {
             if (InnerClient == null)
             {
@@ -62,16 +61,23 @@ namespace STTech.BytesIO.Udp
                     StartReceiveDataTask();
 
                     RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
+
+                    return new ConnectResult();
                 }
                 catch (Exception ex)
                 {
                     RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
-                    throw;
+
+                    return new ConnectResult(ConnectErrorCode.Error, ex);
                 }
+            }
+            else
+            {
+                return new ConnectResult(ConnectErrorCode.IsConnected);
             }
         }
 
-        public override void Disconnect(DisconnectionReasonCode code = DisconnectionReasonCode.Active, Exception ex = null)
+        public override DisconnectResult Disconnect(DisconnectArgument argument = null)
         {
             if (InnerClient != null)
             {
@@ -81,13 +87,19 @@ namespace STTech.BytesIO.Udp
                 // 关闭异步任务
                 CancelReceiveDataTask();
 
-                RaiseDisconnected(this, new DisconnectedEventArgs() { ReasonCode = DisconnectionReasonCode.Active });
+                RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
+
+                return new DisconnectResult();
+            }
+            else
+            {
+                return new DisconnectResult(DisconnectErrorCode.NoConnection);
             }
         }
 
         protected override void ReceiveDataCompletedHandle()
         {
-            Disconnect(DisconnectionReasonCode.Active);
+            Disconnect();
         }
 
         protected override void ReceiveDataHandle()
