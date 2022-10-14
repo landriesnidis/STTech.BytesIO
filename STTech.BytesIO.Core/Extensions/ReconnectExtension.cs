@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core.Entity;
+﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
 using System;
 using System.Collections.Generic;
@@ -49,15 +49,33 @@ namespace STTech.BytesIO.Core
             else
             {
                 timer = new ReconnectTimer(client);
+                timer.ElapsedHnadler = Client_ElapsedHnadler;
                 timer.ElapsedHnadler = t => client.ConnectAsync();
                 timer.ReconnectFailedHandler = reconnectFailedHandler;
                 timer.ReconnectTimes = times;
                 timer.ResetReconnectTimes();
                 timer.Interval = delay;
-                timer.Enabled = true;
+                timer.Enabled = !client.IsConnected;
                 client.OnConnectedSuccessfully += Client_OnConnectedSuccessfully;
                 client.OnDisconnected += Client_OnDisconnected;
                 dict[client] = timer;
+            }
+        }
+
+        private static void Client_ElapsedHnadler(ReconnectTimer timer)
+        {
+            if (timer.Client.IsConnected)
+            {
+                timer.Enabled = false;
+                timer.ResetReconnectTimes();
+            }
+            else
+            {
+                timer.Client.ConnectAsync();
+                //    .ContinueWith(task => {
+                //    var result = task.Result;
+                //    result.
+                //});
             }
         }
 
@@ -89,11 +107,11 @@ namespace STTech.BytesIO.Core
             public Action<BytesClient> ReconnectFailedHandler { get; set; }
             public int ReconnectTimes { get; set; }
             private int currentTimes;
-            private BytesClient client;
+            public BytesClient Client { get; private set; }
 
             public ReconnectTimer(BytesClient client)
             {
-                this.client = client;
+                this.Client = client;
 
                 Elapsed += (s, e) =>
                 {
@@ -108,7 +126,7 @@ namespace STTech.BytesIO.Core
                         else
                         {
                             Stop();
-                            ReconnectFailedHandler?.Invoke(this.client);
+                            ReconnectFailedHandler?.Invoke(this.Client);
                         }
                     }
                     else
@@ -131,7 +149,7 @@ namespace STTech.BytesIO.Core
             {
                 ElapsedHnadler = null;
                 ReconnectFailedHandler = null;
-                client = null;
+                Client = null;
 
                 base.Dispose(disposing);
             }
