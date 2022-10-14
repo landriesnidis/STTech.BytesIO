@@ -1,6 +1,5 @@
 ﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
-using STTech.BytesIO.Core.Entity;
 using System.ComponentModel;
 
 namespace STTech.BytesIO.Modbus
