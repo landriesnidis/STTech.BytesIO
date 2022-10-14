@@ -85,7 +85,7 @@ namespace STTech.BytesIO.Core
             }
 
             // 加入新的心跳超时
-            dict.Add(client, new ClientReceiveTimeoutTimer(client, timeout, () => client.Disconnect(Entity.DisconnectionReasonCode.Timeout)) { Enabled = true });
+            dict.Add(client, new ClientReceiveTimeoutTimer(client, timeout, () => client.Disconnect(new DisconnectArgument(DisconnectionReasonCode.Timeout))) { Enabled = true });
         }
     }
 

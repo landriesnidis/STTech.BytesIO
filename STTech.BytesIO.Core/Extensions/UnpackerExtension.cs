@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core.Entity;
+﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
 using System;
 using System.Collections.Generic;

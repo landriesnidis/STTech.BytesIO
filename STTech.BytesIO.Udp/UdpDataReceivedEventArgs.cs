@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core.Entity;
+﻿using STTech.BytesIO.Core;
 using System.Net.Sockets;
 
 namespace STTech.BytesIO.Udp

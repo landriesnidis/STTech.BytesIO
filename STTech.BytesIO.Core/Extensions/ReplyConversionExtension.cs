@@ -1,7 +1,7 @@
 ﻿using STTech.BytesIO.Core.Exceptions;
 using System;
 
-namespace STTech.BytesIO.Core.Entity
+namespace STTech.BytesIO.Core
 {
     /// <summary>
     /// 同步通信结果(Reply)类型转换
