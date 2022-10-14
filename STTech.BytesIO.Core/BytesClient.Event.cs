@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core.Entity;
+﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Exceptions;
 using System;
 using System.Collections.Generic;
@@ -71,7 +71,7 @@ namespace STTech.BytesIO.Core
                 // 每次产生异常都检查连接是否正常
                 if (!IsConnected)
                 {
-                    Disconnect(DisconnectionReasonCode.Error, e.Exception);
+                    Disconnect(new DisconnectArgument(DisconnectionReasonCode.Error, e.Exception));
                 }
             }
         }

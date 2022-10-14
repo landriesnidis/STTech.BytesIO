@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace STTech.BytesIO.Core.Entity
+namespace STTech.BytesIO.Core
 {
     public abstract class Response
     {

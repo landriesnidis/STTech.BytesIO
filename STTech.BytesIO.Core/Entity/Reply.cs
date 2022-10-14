@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace STTech.BytesIO.Core.Entity
+namespace STTech.BytesIO.Core
 {
     /// <summary>
     /// 回复(数据收发)匹配委托

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace STTech.BytesIO.Core.Entity
+namespace STTech.BytesIO.Core
 {
     public class ExceptionOccursEventArgs : EventArgs
     {

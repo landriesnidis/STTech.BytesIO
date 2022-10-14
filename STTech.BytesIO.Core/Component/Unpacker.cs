@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using STTech.BytesIO.Core.Entity;
+using STTech.BytesIO.Core;
 
 namespace STTech.BytesIO.Core.Component
 {

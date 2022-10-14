@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace STTech.BytesIO.Core.Entity
+namespace STTech.BytesIO.Core
 {
     public class DisconnectedEventArgs : EventArgs
     {
@@ -10,9 +10,25 @@ namespace STTech.BytesIO.Core.Entity
         public bool IsActively => ReasonCode == DisconnectionReasonCode.Active || ReasonCode == DisconnectionReasonCode.Timeout;
 
         /// <summary>
+        /// 异常信息
+        /// </summary>
+        public Exception Exception { get; }
+
+        /// <summary>
         /// 断开连接的原因
         /// </summary>
-        public DisconnectionReasonCode ReasonCode { get; set; }
+        public DisconnectionReasonCode ReasonCode { get; }
+
+        public DisconnectedEventArgs()
+        {
+            ReasonCode = DisconnectionReasonCode.Active;
+        }
+
+        public DisconnectedEventArgs(DisconnectionReasonCode reasonCode, Exception exception = null)
+        {
+            Exception = exception;
+            ReasonCode = reasonCode;
+        }
     }
 
     /// <summary>

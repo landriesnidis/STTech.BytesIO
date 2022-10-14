@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace STTech.BytesIO.Core.Entity
+namespace STTech.BytesIO.Core
 {
     /// <summary>
     /// 发送选项
