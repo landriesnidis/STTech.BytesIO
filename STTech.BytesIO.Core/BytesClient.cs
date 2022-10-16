@@ -49,6 +49,13 @@ namespace STTech.BytesIO.Core
         public abstract ConnectResult Connect(ConnectArgument argument = null);
 
         /// <summary>
+        /// 建立连接
+        /// </summary>
+        /// <param name="timeout">超时时间</param>
+        /// <returns></returns>
+        public virtual ConnectResult Connect(int timeout) => Connect(new ConnectArgument() { Timeout = timeout });
+
+        /// <summary>
         /// 异步建立连接
         /// </summary>
         /// <returns></returns>
@@ -64,6 +71,13 @@ namespace STTech.BytesIO.Core
         }
 
         /// <summary>
+        /// 异步建立连接
+        /// </summary>
+        /// <param name="timeout">超时时间</param>
+        /// <returns></returns>
+        public virtual Task<ConnectResult> ConnectAsync(int timeout) => ConnectAsync(new ConnectArgument() { Timeout = timeout });
+
+        /// <summary>
         /// 断开连接
         /// </summary>
         /// <param name="code">断开连接的原因</param>
@@ -76,7 +90,7 @@ namespace STTech.BytesIO.Core
         /// <param name="code">断开连接的原因</param>
         /// <param name="ex">导致连接断开的异常</param>
         /// <returns></returns>
-        public virtual Task<DisconnectResult> DisconnectAsync(DisconnectArgument argument = null) 
+        public virtual Task<DisconnectResult> DisconnectAsync(DisconnectArgument argument = null)
             => Task.Run(() =>
             {
                 lock (asyncConnectLocker)
