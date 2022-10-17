@@ -61,13 +61,11 @@ namespace STTech.BytesIO.Udp
                     StartReceiveDataTask();
 
                     RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
-
                     return new ConnectResult();
                 }
                 catch (Exception ex)
                 {
                     RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
-
                     return new ConnectResult(ConnectErrorCode.Error, ex);
                 }
             }
