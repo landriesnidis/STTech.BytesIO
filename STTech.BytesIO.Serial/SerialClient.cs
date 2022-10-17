@@ -40,8 +40,10 @@ namespace STTech.BytesIO.Serial
         /// </summary>
         public override ConnectResult Connect(ConnectArgument argument = null)
         {
+            // 如果串口已经打开了，则此次连接无效
             if (InnerClient.IsOpen)
             {
+                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.IsConnected));
                 return new ConnectResult(ConnectErrorCode.IsConnected);
             }
 
@@ -61,8 +63,7 @@ namespace STTech.BytesIO.Serial
             catch (Exception ex)
             {
                 // 连接失败
-                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex.Message));
-
+                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
                 return new ConnectResult(ConnectErrorCode.Error, ex);
             }
         }
