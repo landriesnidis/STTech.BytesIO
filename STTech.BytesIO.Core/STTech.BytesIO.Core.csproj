@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.12.0-beta1016</Version>
+		<Version>2.12.1-beta1017</Version>
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Company>深圳市智驾实业有限公司 KarFans(Shenzhen, China)</Company>
@@ -26,13 +26,13 @@
 			<PackagePath>\</PackagePath>
 		</None>
 		<None Include="..\stdiag.png">
-		  <Pack>True</Pack>
-		  <PackagePath>\</PackagePath>
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="STTech.CodePlus" Version="1.5.9" />
+		<PackageReference Include="STTech.CodePlus" Version="1.5.9" />
 	</ItemGroup>
 
 </Project>
