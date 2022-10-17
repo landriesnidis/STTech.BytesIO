@@ -105,10 +105,10 @@ namespace STTech.BytesIO.Tcp
 
             lock (lockerStatus)
             {
-
                 // 如果client已经连接了，则此次连接无效
                 if (InnerClient.Connected || innerStatus == InnerStatus.Busy)
                 {
+                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.IsConnected));
                     return new ConnectResult(ConnectErrorCode.IsConnected);
                 }
 
@@ -131,6 +131,7 @@ namespace STTech.BytesIO.Tcp
                     // 如果超时，则返回超时结果
                     if (!isComplete)
                     {
+                        RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Timeout));
                         return new ConnectResult(ConnectErrorCode.Timeout);
                     }
 
@@ -148,7 +149,9 @@ namespace STTech.BytesIO.Tcp
                         }
                         catch (Exception ex)
                         {
-                            throw new Exception("SSL certificate validation failed.", ex);
+                            // throw new Exception("SSL certificate validation failed.", ex);
+                            RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
+                            return new ConnectResult(ConnectErrorCode.Error, ex);
                         }
                     }
 
@@ -166,7 +169,7 @@ namespace STTech.BytesIO.Tcp
                 catch (Exception ex)
                 {
                     // 连接失败
-                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex.Message));
+                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
 
                     // 重置tcp客户端
                     ResetInnerClient();
@@ -180,13 +183,16 @@ namespace STTech.BytesIO.Tcp
                         switch (socketEx.SocketErrorCode)
                         {
                             case SocketError.HostNotFound:
+                                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.ConnectionParameterError, ex));
                                 return new ConnectResult(ConnectErrorCode.ConnectionParameterError, ex);
                             default:
+                                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
                                 return new ConnectResult(ConnectErrorCode.Error, ex);
                         }
                     }
                     else
                     {
+                        RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
                         return new ConnectResult(ConnectErrorCode.Error, ex);
                     }
                 }
