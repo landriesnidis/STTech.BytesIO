@@ -23,8 +23,14 @@ namespace STTech.BytesIO.Core
         /// <param name="action"></param>
         protected void SafelyInvokeCallback(Action action)
         {
-            try { action.Invoke(); }
-            catch (Exception ex) { RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(new PerformCallbackException(ex))); }
+            try
+            {
+                action.Invoke();
+            }
+            catch (Exception ex)
+            {
+                RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(new PerformCallbackException(ex)));
+            }
         }
     }
 }

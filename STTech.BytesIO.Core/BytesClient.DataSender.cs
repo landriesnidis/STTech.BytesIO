@@ -1,9 +1,4 @@
-﻿using STTech.BytesIO.Core;
-using STTech.BytesIO.Core.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,6 +12,7 @@ namespace STTech.BytesIO.Core
 
     public abstract partial class BytesClient
     {
+        // 发送锁
         private readonly object sendingLocker = new object();
 
         /// <summary>
