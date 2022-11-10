@@ -68,6 +68,10 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         private readonly object lockerRaiseDataReceived = new object();
 
+        /// <summary>
+        /// 接收数据帧的ID
+        /// </summary>
+        private uint receivedDataFrameId = 0;
 
         /// <summary>
         /// 构造TCP客户端
@@ -362,7 +366,7 @@ namespace STTech.BytesIO.Tcp
                 while (receivedDataQueue.TryDequeue(out data))
                 {
                     // 执行接收到数据的回调事件
-                    RaiseDataReceived(this, new DataReceivedEventArgs(data));
+                    RaiseDataReceived(this, new DataReceivedEventArgs(data, receivedDataFrameId++));
                 }
             }
         }
