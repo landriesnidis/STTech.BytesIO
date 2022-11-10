@@ -309,13 +309,16 @@ namespace STTech.BytesIO.Tcp
                         CheckTimes = 0;
                     }
 
-                    Task.Factory.StartNew(() =>
-                    {
                         // 更新时间戳
                         UpdateLastMessageTimestamp();
 
+                    Task.Factory.StartNew(() =>
+                    {
+                        lock (lockerRaiseDataReceived)
+                        {
                         // 执行接收到数据的回调事件
                         RaiseDataReceived(this, new DataReceivedEventArgs(data));
+                        }
                     });
                 }
             }
@@ -343,6 +346,7 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
+        private readonly object lockerRaiseDataReceived = new object();
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
