@@ -1,7 +1,7 @@
 ﻿using STTech.BytesIO.Core;
-using STTech.BytesIO.Core;
 using STTech.BytesIO.Tcp.Entity;
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -57,6 +57,17 @@ namespace STTech.BytesIO.Tcp
         /// 状态锁
         /// </summary>
         private object lockerStatus = new object();
+
+        /// <summary>
+        /// 待触发事件的接收数据队列
+        /// </summary>
+        private ConcurrentQueue<byte[]> receivedDataQueue = new ConcurrentQueue<byte[]>();
+
+        /// <summary>
+        /// 触发数据接收事件的锁
+        /// </summary>
+        private readonly object lockerRaiseDataReceived = new object();
+
 
         /// <summary>
         /// 构造TCP客户端
@@ -309,17 +320,14 @@ namespace STTech.BytesIO.Tcp
                         CheckTimes = 0;
                     }
 
-                        // 更新时间戳
-                        UpdateLastMessageTimestamp();
+                    // 更新时间戳
+                    UpdateLastMessageTimestamp();
 
-                    Task.Factory.StartNew(() =>
-                    {
-                        lock (lockerRaiseDataReceived)
-                        {
-                        // 执行接收到数据的回调事件
-                        RaiseDataReceived(this, new DataReceivedEventArgs(data));
-                        }
-                    });
+                    // 将新的数据帧加入队列
+                    receivedDataQueue.Enqueue(data);
+
+                    // 异步执行触发数据接收事件的回调
+                    Task.Factory.StartNew(RaiseDataReceivedHandler);
                 }
             }
             catch (Exception ex)
@@ -346,7 +354,19 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
-        private readonly object lockerRaiseDataReceived = new object();
+        private void RaiseDataReceivedHandler()
+        {
+            lock (lockerRaiseDataReceived)
+            {
+                byte[] data;
+                while (receivedDataQueue.TryDequeue(out data))
+                {
+                    // 执行接收到数据的回调事件
+                    RaiseDataReceived(this, new DataReceivedEventArgs(data));
+                }
+            }
+        }
+
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
