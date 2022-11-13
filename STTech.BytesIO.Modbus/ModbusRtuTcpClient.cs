@@ -8,17 +8,17 @@ namespace STTech.BytesIO.Modbus
     /// <summary>
     /// Modbus TCP 客户端
     /// </summary>
-    public partial class ModbusTcpClient : ModbusClient, IModbusClient
+    public partial class ModbusRtuTcpClient : ModbusClient, IModbusClient
     {
         public new TcpClient InnerClient { get; }
         public TcpClient GetInnerClient() => InnerClient;
-        public ModbusTcpClient() : base(new TcpClient())
+        public ModbusRtuTcpClient() : base(new TcpClient())
         {
             InnerClient = (TcpClient)base.InnerClient;
         }
     }
 
-    public partial class ModbusTcpClient : ITcpClient
+    public partial class ModbusRtuTcpClient : ITcpClient
     {
         /// <summary>
         /// <inheritdoc/>
