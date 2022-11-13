@@ -115,11 +115,8 @@ namespace STTech.BytesIO.Serial
                 var bytes = new byte[len];
                 InnerClient.Read(bytes, 0, len);
 
-                // 更新时间戳
-                UpdateLastMessageTimestamp();
-
                 // 执行接收到数据的回调事件
-                RaiseDataReceived(this, new DataReceivedEventArgs(bytes));
+                InvokeDataReceivedEventCallback(bytes);
             }
         }
 

@@ -59,21 +59,6 @@ namespace STTech.BytesIO.Tcp
         private object lockerStatus = new object();
 
         /// <summary>
-        /// 待触发事件的接收数据队列
-        /// </summary>
-        private ConcurrentQueue<byte[]> receivedDataQueue = new ConcurrentQueue<byte[]>();
-
-        /// <summary>
-        /// 触发数据接收事件的锁
-        /// </summary>
-        private readonly object lockerRaiseDataReceived = new object();
-
-        /// <summary>
-        /// 接收数据帧的ID
-        /// </summary>
-        private uint receivedDataFrameId = 0;
-
-        /// <summary>
         /// 构造TCP客户端
         /// </summary>
         public TcpClient()
@@ -324,14 +309,7 @@ namespace STTech.BytesIO.Tcp
                         CheckTimes = 0;
                     }
 
-                    // 更新时间戳
-                    UpdateLastMessageTimestamp();
-
-                    // 将新的数据帧加入队列
-                    receivedDataQueue.Enqueue(data);
-
-                    // 异步执行触发数据接收事件的回调
-                    Task.Factory.StartNew(RaiseDataReceivedHandler);
+                    InvokeDataReceivedEventCallback(data);
                 }
             }
             catch (Exception ex)
@@ -355,19 +333,6 @@ namespace STTech.BytesIO.Tcp
 
                 // 回调异常事件
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
-            }
-        }
-
-        private void RaiseDataReceivedHandler()
-        {
-            lock (lockerRaiseDataReceived)
-            {
-                byte[] data;
-                while (receivedDataQueue.TryDequeue(out data))
-                {
-                    // 执行接收到数据的回调事件
-                    RaiseDataReceived(this, new DataReceivedEventArgs(data, receivedDataFrameId++));
-                }
             }
         }
 
