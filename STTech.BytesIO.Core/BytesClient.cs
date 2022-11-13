@@ -32,7 +32,7 @@ namespace STTech.BytesIO.Core
         /// 更新最后一次通信的时间戳
         /// </summary>
         /// <param name="time">手动设置时间戳</param>
-        protected void UpdateLastMessageTimestamp(DateTime? time = null) => LastMessageReceivedTime = time ?? DateTime.Now;
+        private void UpdateLastMessageTimestamp(DateTime? time = null) => LastMessageReceivedTime = time ?? DateTime.Now;
     }
 
     public abstract partial class BytesClient
