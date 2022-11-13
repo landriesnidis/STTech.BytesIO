@@ -69,6 +69,7 @@ namespace STTech.BytesIO.Core
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
         /// <param name="request"></param>
+        /// <param name="options"></param>
         /// <returns></returns>
         public Task SendAsync<TRequest>(TRequest request, SendOptions options = null)
             where TRequest : IRequest
