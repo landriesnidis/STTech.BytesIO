@@ -91,6 +91,9 @@ namespace STTech.BytesIO.Core
         protected T GetData() => (T)Value;
     }
 
+    /// <summary>
+    /// 单次发送数据的远端响应
+    /// </summary>
     public class Reply : BaseReply<Response>
     {
         protected Reply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
@@ -103,6 +106,10 @@ namespace STTech.BytesIO.Core
         public Response GetResponse() => GetData();
     }
 
+    /// <summary>
+    /// 单次发送数据的远端响应
+    /// </summary>
+    /// <typeparam name="T">响应数据的类型</typeparam>
     public class Reply<T> : Reply where T : Response
     {
         public Reply(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
@@ -115,6 +122,9 @@ namespace STTech.BytesIO.Core
         public new T GetResponse() => (T)base.GetResponse();
     }
 
+    /// <summary>
+    /// 单次发送数据的远端响应（字节数组）
+    /// </summary>
     public class ReplyBytes : BaseReply<byte[]>
     {
         public ReplyBytes(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }

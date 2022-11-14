@@ -11,7 +11,7 @@ namespace STTech.BytesIO.Modbus
     /// </summary>
     public class ModbusUnpacker : Unpacker<ModbusResponse>
     {
-        public ModbusUnpacker(BytesClient client) : base(client, CalculatePacketLength)
+        public ModbusUnpacker(BytesClient client) : base(client, CalculatePacketLengthHandler)
         {
 
         }
@@ -20,7 +20,7 @@ namespace STTech.BytesIO.Modbus
         const int functionCodeLen = 1;
         const int crcLen = 2;
         const int fixedHead = slaveIdLen + functionCodeLen;
-        private static int CalculatePacketLength(IEnumerable<byte> bytes)
+        private static int CalculatePacketLengthHandler(IEnumerable<byte> bytes)
         {
             if (bytes.Count() < 2)
             {

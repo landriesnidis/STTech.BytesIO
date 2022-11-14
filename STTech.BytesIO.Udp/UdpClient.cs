@@ -118,6 +118,10 @@ namespace STTech.BytesIO.Udp
                     }
                     else if (task.IsCompleted)
                     {
+                        // 调用数据接收事件的回调
+                        InvokeDataReceivedEventCallback(task.Result.Buffer);
+
+                        // 触发含来源信息的UDP包接收事件
                         RaiseUdpDataReceived(this, new UdpDataReceivedEventArgs(task.Result));
                     }
                     else if (task.IsFaulted)
@@ -157,7 +161,7 @@ namespace STTech.BytesIO.Udp
                 }
             }
 
-            RaiseDataReceived(sender, e);
+            
             SafelyInvokeCallback(() => { OnUdpDataReceived?.Invoke(sender, e); });
         }
     }

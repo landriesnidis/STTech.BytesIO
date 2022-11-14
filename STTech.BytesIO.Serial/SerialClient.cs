@@ -1,5 +1,4 @@
 ﻿using STTech.BytesIO.Core;
-using STTech.BytesIO.Core;
 using System;
 using System.Collections;
 using System.ComponentModel;
@@ -90,7 +89,7 @@ namespace STTech.BytesIO.Serial
                 InnerClient.Close();
 
                 // 执行通信已断开的回调事件 
-                RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode,argument.Exception));
+                RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
 
                 return new DisconnectResult();
             }
@@ -115,11 +114,8 @@ namespace STTech.BytesIO.Serial
                 var bytes = new byte[len];
                 InnerClient.Read(bytes, 0, len);
 
-                // 更新时间戳
-                UpdateLastMessageTimestamp();
-
                 // 执行接收到数据的回调事件
-                RaiseDataReceived(this, new DataReceivedEventArgs(bytes));
+                InvokeDataReceivedEventCallback(bytes);
             }
         }
 
@@ -254,32 +250,8 @@ namespace STTech.BytesIO.Serial
 
         /// <summary>
         /// <inheritdoc/>
-        ///// </summary>
-        //[IgnoreDataMember]
-        //public int BytesToWrite => InnerClient.BytesToWrite;
-
-        /// <summary>
-        /// <inheritdoc/>
         /// </summary>
         public int BaudRate { get => InnerClient.BaudRate; set => InnerClient.BaudRate = value; }
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        //[IgnoreDataMember] 
-        //public bool BreakState { get => InnerClient.BreakState; set => InnerClient.BreakState = value; }
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        //[IgnoreDataMember] 
-        //public Stream BaseStream => InnerClient.BaseStream;
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        //[IgnoreDataMember] 
-        //public int BytesToRead => InnerClient.BytesToRead;
 
         /// <summary>
         /// <inheritdoc/>

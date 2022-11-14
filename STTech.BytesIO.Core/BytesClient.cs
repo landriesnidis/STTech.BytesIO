@@ -32,7 +32,7 @@ namespace STTech.BytesIO.Core
         /// 更新最后一次通信的时间戳
         /// </summary>
         /// <param name="time">手动设置时间戳</param>
-        protected void UpdateLastMessageTimestamp(DateTime? time = null) => LastMessageReceivedTime = time ?? DateTime.Now;
+        private void UpdateLastMessageTimestamp(DateTime? time = null) => LastMessageReceivedTime = time ?? DateTime.Now;
     }
 
     public abstract partial class BytesClient
@@ -77,15 +77,13 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 断开连接
         /// </summary>
-        /// <param name="code">断开连接的原因</param>
-        /// <param name="ex">导致连接断开的异常</param>
+        /// <param name="argument">断开连接携带的参数</param>
         public abstract DisconnectResult Disconnect(DisconnectArgument argument = null);
 
         /// <summary>
         /// 异步断开连接
         /// </summary>
-        /// <param name="code">断开连接的原因</param>
-        /// <param name="ex">导致连接断开的异常</param>
+        /// <param name="argument">断开连接携带的参数</param>
         /// <returns></returns>
         public virtual Task<DisconnectResult> DisconnectAsync(DisconnectArgument argument = null)
             => Task.Run(() =>
