@@ -1,33 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-	  <TargetFrameworks>net45;netstandard2.0;net6.0</TargetFrameworks>
-	  <LangVersion>latest</LangVersion>
-	  <Version>2.12.3-Alpha1113</Version>
+	<PropertyGroup>
+		<TargetFrameworks>net45;netstandard2.0;net6.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Version>2.12.4-Alpha1117</Version>
 
-	  <Company>深圳市智驾实业有限公司 KarFans(Shenzhen, China)</Company>
-	  <Authors>Guijie Lee</Authors>
-	  <Copyright>Copyright © 2019-2022 KarFans, All Rights Reserved.</Copyright>
-	  <PackageIcon>stdiag.png</PackageIcon>
-	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	  <Description>BytesIO Udp通信库，提供UDP单播、广播、多播以及UDP数据包接收功能。</Description>
-	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
-	  <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-	  <RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
-	  <RepositoryType>git</RepositoryType>
-	  <PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
-  </PropertyGroup>
+		<Company>深圳市智驾实业有限公司 KarFans(Shenzhen, China)</Company>
+		<Authors>Guijie Lee</Authors>
+		<Copyright>Copyright © 2019-2022 KarFans, All Rights Reserved.</Copyright>
+		<PackageIcon>stdiag.png</PackageIcon>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Description>BytesIO Udp通信库，提供UDP单播、广播、多播以及UDP数据包接收功能。</Description>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\stdiag.png" Link="stdiag.png">
-      <PackagePath>\</PackagePath>
-      <Pack>True</Pack>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\stdiag.png" Link="stdiag.png">
+			<PackagePath>\</PackagePath>
+			<Pack>True</Pack>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
+	</ItemGroup>
 
 </Project>

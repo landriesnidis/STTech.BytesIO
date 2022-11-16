@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.11.3-beta0905</Version>
+		<Version>2.12.4-Alpha1117</Version>
 
 		<Company>ApeFree</Company>
 		<Copyright>Copyright © 2022 ApeFree, All Rights Reserved.</Copyright>
