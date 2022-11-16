@@ -1,5 +1,6 @@
 ﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Exceptions;
+using STTech.CodePlus.Components;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -44,14 +45,9 @@ namespace STTech.BytesIO.Core
         }
 
         /// <summary>
-        /// 待触发事件的接收数据队列
+        /// 数据接收任务队列
         /// </summary>
-        private ConcurrentQueue<byte[]> receivedDataQueue = new ConcurrentQueue<byte[]>();
-
-        /// <summary>
-        /// 触发数据接收事件的锁
-        /// </summary>
-        private readonly object lockerRaiseDataReceived = new object();
+        private TaskQueue<DataReceivedEventArgs> DataReceiveTaskQueue { get; set; }
 
         /// <summary>
         /// 接收数据帧的ID
@@ -91,22 +87,14 @@ namespace STTech.BytesIO.Core
             // 更新时间戳
             UpdateLastMessageTimestamp();
 
-            // 将新的数据帧加入队列
-            receivedDataQueue.Enqueue(data);
+            DataReceiveTaskQueue ??= new LongTermWorkerTaskQueue<DataReceivedEventArgs>(DataReceiveTaskQueueHandler);
+            DataReceiveTaskQueue.Join(new DataReceivedEventArgs(data, receivedDataFrameId++));
+        }
 
-            // 异步执行触发数据接收事件的回调
-            Task.Factory.StartNew(() =>
-            {
-                lock (lockerRaiseDataReceived)
-                {
-                    byte[] data;
-                    while (receivedDataQueue.TryDequeue(out data))
-                    {
-                        // 执行接收到数据的回调事件
-                        RaiseDataReceived(this, new DataReceivedEventArgs(data, receivedDataFrameId++));
-                    }
-                }
-            });
+        private void DataReceiveTaskQueueHandler(DataReceivedEventArgs e)
+        {
+            // 执行接收到数据的回调事件
+            RaiseDataReceived(this,e);
         }
     }
 }
