@@ -16,8 +16,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		待完善.txt = 待完善.txt
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Modbus", "STTech.BytesIO.Modbus\STTech.BytesIO.Modbus.csproj", "{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Udp", "STTech.BytesIO.Udp\STTech.BytesIO.Udp.csproj", "{FF579423-EF33-44AE-8140-61C122F20AF5}"
 EndProject
 Global
@@ -38,10 +36,6 @@ Global
 		{040D665E-A81F-46C2-903D-2A2C83138430}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{040D665E-A81F-46C2-903D-2A2C83138430}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{040D665E-A81F-46C2-903D-2A2C83138430}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4E6C2C63-7B1B-4284-9094-6097DB5C60B1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FF579423-EF33-44AE-8140-61C122F20AF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FF579423-EF33-44AE-8140-61C122F20AF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FF579423-EF33-44AE-8140-61C122F20AF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
