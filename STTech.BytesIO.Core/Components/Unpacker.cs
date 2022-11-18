@@ -118,10 +118,20 @@ namespace STTech.BytesIO.Core.Component
                         // 判断头部是否一致
                         if (!_UnprocessedDataCache.StartWith(StartMark))
                         {
-                            // 起始位不匹配时 一定会清空缓存
+                            // 起始位不匹配时，查看缓存区中是否能找到起始位
+                            var index = _UnprocessedDataCache.IndexOf(StartMark);
+                            if(index == -1)
+                            {
+                                // 未找到起始位则清空数据
                             ErrorOccurHandler?.Invoke(ErrorCode.StartMarkNotMatch);
                             _UnprocessedDataCache = null;
                             return;
+                        }
+                            else
+                            {
+                                // 若找到起始位则认为缓冲区前段混入脏数据，跳过这些字节
+                                _UnprocessedDataCache = _UnprocessedDataCache.Skip(index);
+                    }
                         }
                     }
 
