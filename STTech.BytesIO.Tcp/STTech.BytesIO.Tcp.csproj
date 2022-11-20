@@ -5,7 +5,7 @@
 		<LangVersion>latest</LangVersion>
 		<Version>2.12.5-Alpha1119</Version>
 
-		<Company>深圳市智驾实业有限公司 KarFans(Shenzhen, China)</Company>
+		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
 		<Copyright>Copyright © 2019-2022 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
