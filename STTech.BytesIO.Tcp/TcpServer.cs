@@ -160,28 +160,32 @@ namespace STTech.BytesIO.Tcp
                     manualResetEvent.Reset();
                     socket.BeginAccept((result) =>
                     {
-                        try
+                        lock (manualResetEvent)
                         {
-                            manualResetEvent?.Set();
 
-                            Socket serverSocket = (Socket)result.AsyncState;
-                            Socket clientSocket = serverSocket.EndAccept(result);
+                            try
+                            {
+                                manualResetEvent?.Set();
 
-                            if (ClientConnectionAcceptedHandle(this, new ClientAcceptedEventArgs(clientSocket)))
-                            {
-                                T client = EncapsulateSocket(clientSocket);
-                                clients.Add(client);
-                                client.OnDisconnected += TcpClient_OnDisconnected;
-                                // 触发事件
-                                ClientConnected?.Invoke(this, new ClientConnectedEventArgs(clientSocket, client));
+                                Socket serverSocket = (Socket)result.AsyncState;
+                                Socket clientSocket = serverSocket.EndAccept(result);
+
+                                if (ClientConnectionAcceptedHandle(this, new ClientAcceptedEventArgs(clientSocket)))
+                                {
+                                    T client = EncapsulateSocket(clientSocket);
+                                    clients.Add(client);
+                                    client.OnDisconnected += TcpClient_OnDisconnected;
+                                    // 触发事件
+                                    ClientConnected?.Invoke(this, new ClientConnectedEventArgs(clientSocket, client));
+                                }
+                                else
+                                {
+                                    clientSocket.Disconnect(false);
+                                    clientSocket.Dispose();
+                                }
                             }
-                            else
-                            {
-                                clientSocket.Disconnect(false);
-                                clientSocket.Dispose();
-                            }
+                            catch (Exception) { }
                         }
-                        catch (Exception) { }
                     }, socket);
                     manualResetEvent.WaitOne();
                 }
@@ -194,10 +198,13 @@ namespace STTech.BytesIO.Tcp
 
         private void TcpClient_OnDisconnected(object sender, Core.DisconnectedEventArgs e)
         {
-            T client = (T)sender;
-            client.OnDisconnected -= TcpClient_OnDisconnected;
-            clients.Remove(client);
-            ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(client));
+            lock (clients)
+            {
+                T client = (T)sender;
+                client.OnDisconnected -= TcpClient_OnDisconnected;
+                clients.Remove(client);
+                ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(client));
+            }
         }
 
         /// <summary>
