@@ -25,6 +25,21 @@ namespace STTech.BytesIO.Core
         protected CancellationTokenSource ReceiveTaskCancellationTokenSource { get; private set; }
 
         /// <summary>
+        /// 数据接收任务队列
+        /// </summary>
+        private TaskQueue<DataReceivedEventArgs> dataReceiveTaskQueue;
+
+        /// <summary>
+        /// 接收数据帧的ID
+        /// </summary>
+        private uint receivedDataFrameId = 0;
+
+        public BytesClient()
+        {
+            dataReceiveTaskQueue = new FloaterTaskQueue<DataReceivedEventArgs>(DataReceiveTaskQueueHandler);
+        }
+
+        /// <summary>
         /// 启动异步数据接收任务
         /// </summary>
         protected virtual void StartReceiveDataTask()
@@ -43,16 +58,6 @@ namespace STTech.BytesIO.Core
             });
             task.Start();
         }
-
-        /// <summary>
-        /// 数据接收任务队列
-        /// </summary>
-        private TaskQueue<DataReceivedEventArgs> DataReceiveTaskQueue { get; set; }
-
-        /// <summary>
-        /// 接收数据帧的ID
-        /// </summary>
-        private uint receivedDataFrameId = 0;
 
         /// <summary>
         /// 取消异步数据接收任务
@@ -87,14 +92,14 @@ namespace STTech.BytesIO.Core
             // 更新时间戳
             UpdateLastMessageTimestamp();
 
-            DataReceiveTaskQueue ??= new LongTermWorkerTaskQueue<DataReceivedEventArgs>(DataReceiveTaskQueueHandler);
-            DataReceiveTaskQueue.Join(new DataReceivedEventArgs(data, receivedDataFrameId++));
+            var args = new DataReceivedEventArgs(data, receivedDataFrameId++);
+            dataReceiveTaskQueue.Join(args);
         }
 
         private void DataReceiveTaskQueueHandler(DataReceivedEventArgs e)
         {
             // 执行接收到数据的回调事件
-            RaiseDataReceived(this,e);
+            RaiseDataReceived(this, e);
         }
     }
 }
