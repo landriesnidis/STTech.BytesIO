@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.12.6</Version>
+		<Version>2.12.7</Version>
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
@@ -18,6 +18,7 @@
 		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+		<UserSecretsId>3434f4a9-8e31-4feb-8f53-840cb292a3fb</UserSecretsId>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -32,7 +33,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="STTech.CodePlus" Version="1.5.12-alpha1117" />
+	  <PackageReference Include="STTech.CodePlus" Version="1.5.13" />
 	</ItemGroup>
 
 </Project>
