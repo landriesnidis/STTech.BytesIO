@@ -85,6 +85,8 @@ namespace STTech.BytesIO.Udp
                 // 关闭异步任务
                 CancelReceiveDataTask();
 
+                argument ??= new DisconnectArgument();
+
                 RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
 
                 return new DisconnectResult();
@@ -97,7 +99,7 @@ namespace STTech.BytesIO.Udp
 
         protected override void ReceiveDataCompletedHandle()
         {
-            Disconnect();
+            Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
         }
 
         protected override void ReceiveDataHandle()
