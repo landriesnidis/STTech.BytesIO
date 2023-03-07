@@ -122,6 +122,13 @@ namespace STTech.BytesIO.Core
             throw new NotImplementedException();
         }
 
-
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override void Dispose()
+        {
+            InnerClient?.Disconnect();
+            InnerClient?.Dispose();
+        }
     }
 }

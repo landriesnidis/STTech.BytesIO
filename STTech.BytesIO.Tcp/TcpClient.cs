@@ -345,6 +345,19 @@ namespace STTech.BytesIO.Tcp
         }
 
         /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override void Dispose()
+        {
+#if NETSTANDARD || NETCOREAPP
+            InnerClient?.Dispose();
+#elif NETFRAMEWORK
+            InnerClient?.Close();
+            InnerClient = null;
+#endif
+        }
+
+        /// <summary>
         /// 内部客户端的连接状态
         /// </summary>
         private enum InnerStatus

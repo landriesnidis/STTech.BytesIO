@@ -29,6 +29,11 @@ namespace STTech.BytesIO.Core
         public DateTime LastMessageReceivedTime { get; private set; }
 
         /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public abstract void Dispose();
+
+        /// <summary>
         /// 更新最后一次通信的时间戳
         /// </summary>
         /// <param name="time">手动设置时间戳</param>

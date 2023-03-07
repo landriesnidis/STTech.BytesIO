@@ -163,8 +163,18 @@ namespace STTech.BytesIO.Udp
                 }
             }
 
-            
+
             SafelyInvokeCallback(() => { OnUdpDataReceived?.Invoke(sender, e); });
+        }
+
+        public override void Dispose()
+        {
+#if NETSTANDARD || NETCOREAPP
+            InnerClient?.Dispose();
+#elif NETFRAMEWORK
+            InnerClient?.Close();
+            InnerClient = null;
+#endif
         }
     }
 }

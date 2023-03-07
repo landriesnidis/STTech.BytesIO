@@ -268,5 +268,18 @@ namespace STTech.BytesIO.Serial
         {
             InnerClient.DiscardOutBuffer();
         }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public override void Dispose()
+        {
+#if NETSTANDARD || NETCOREAPP
+            InnerClient?.Dispose();
+#elif NETFRAMEWORK
+            InnerClient?.Close();
+            InnerClient = null;
+#endif
+        }
     }
 }

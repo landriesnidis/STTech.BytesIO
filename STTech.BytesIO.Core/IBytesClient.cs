@@ -6,7 +6,7 @@ namespace STTech.BytesIO.Core
     /// <summary>
     /// 字节数组通信客户端接口
     /// </summary>
-    public interface IBytesClient
+    public interface IBytesClient:IDisposable
     {
         /// <summary>
         /// 建立连接
