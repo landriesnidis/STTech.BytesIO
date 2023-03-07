@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -13,8 +14,8 @@ namespace STTech.BytesIO.Core
     /// </summary>
     public static class HeartbeatExtension
     {
-        private static Lazy<Dictionary<BytesClient, ClientReceiveTimeoutTimer>> lazyDictHeartbeatTimeoutTimers = new Lazy<Dictionary<BytesClient, ClientReceiveTimeoutTimer>>();
-        private static Lazy<Dictionary<BytesClient, Timer>> lazyDictHeartbeatTimers = new Lazy<Dictionary<BytesClient, Timer>>();
+        private static Lazy<ConcurrentDictionary<BytesClient, ClientReceiveTimeoutTimer>> lazyDictHeartbeatTimeoutTimers = new Lazy<ConcurrentDictionary<BytesClient, ClientReceiveTimeoutTimer>>();
+        private static Lazy<ConcurrentDictionary<BytesClient, Timer>> lazyDictHeartbeatTimers = new Lazy<ConcurrentDictionary<BytesClient, Timer>>();
 
         /// <summary>
         /// 启用心跳功能
@@ -23,7 +24,7 @@ namespace STTech.BytesIO.Core
         /// <param name="client"></param>
         /// <param name="sendHeartbeatHandler"></param>
         /// <param name="interval">如果设置的心跳时间间隔小于等于0，则说明关闭心跳功能</param>
-        public static void UseHeartbeat<T>(this T client, Action<T> sendHeartbeatHandler, int interval = 5000) where T: BytesClient
+        public static void UseHeartbeat<T>(this T client, Action<T> sendHeartbeatHandler, int interval = 5000) where T : BytesClient
         {
             // 使用时检查集合空值
             var dict = lazyDictHeartbeatTimers.Value;
@@ -34,7 +35,7 @@ namespace STTech.BytesIO.Core
                 var t = dict[client];
                 t.Stop();
                 t.Dispose();
-                dict.Remove(client);
+                dict.TryRemove(client, out _);
             }
 
             // 如果设置的心跳时间间隔小于等于0，则说明关闭心跳功能
@@ -52,7 +53,7 @@ namespace STTech.BytesIO.Core
                     sendHeartbeatHandler.Invoke(client);
                 }
             };
-            dict.Add(client, timerSendHeartbeat);
+            dict[client] = timerSendHeartbeat;
             timerSendHeartbeat.Enabled = true;
         }
 
@@ -75,7 +76,7 @@ namespace STTech.BytesIO.Core
                 var t = dict[client];
                 t.Stop();
                 t.Dispose();
-                dict.Remove(client);
+                dict.TryRemove(client, out _);
             }
 
             // 如果设置的心跳超时时间小于等于0，则说明关闭心跳超时检测
@@ -85,7 +86,16 @@ namespace STTech.BytesIO.Core
             }
 
             // 加入新的心跳超时
-            dict.Add(client, new ClientReceiveTimeoutTimer(client, timeout, () => client.Disconnect(new DisconnectArgument(DisconnectionReasonCode.Timeout))) { Enabled = true });
+            ClientReceiveTimeoutTimer timer = null;
+            timer = new ClientReceiveTimeoutTimer(client, timeout, () =>
+            {
+                client.Disconnect(new DisconnectArgument(DisconnectionReasonCode.Timeout));
+                dict.TryRemove(client, out _);
+                timer.Dispose();
+            })
+            { Enabled = true };
+
+            dict[client] = timer;
         }
     }
 
