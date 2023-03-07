@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.12.7</Version>
+		<Version>2.12.9</Version>
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
@@ -34,6 +34,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="STTech.CodePlus" Version="1.5.13" />
+	  <PackageReference Include="System.ValueTuple" Version="4.5.0" />
 	</ItemGroup>
 
 </Project>
