@@ -140,13 +140,13 @@ namespace STTech.BytesIO.Tcp
                 return Task.FromResult(0);
             }
 
-            isRun = true;
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPAddress ipAddress = IPAddress.Parse(Host);
             IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, Port);
             socket.Bind(ipEndPoint);
             socket.Listen(Backlog);
 
+            isRun = true;
             Started?.Invoke(this, EventArgs.Empty);
 
             return Task.Run(() =>

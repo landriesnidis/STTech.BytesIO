@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.12.9</Version>
+		<Version>2.12.10-alpha0401</Version>
 
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
