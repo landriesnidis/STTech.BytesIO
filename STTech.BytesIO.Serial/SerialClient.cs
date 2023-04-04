@@ -99,6 +99,8 @@ namespace STTech.BytesIO.Serial
             }
         }
 
+        private readonly object _lockDataReceived = new object();
+
         /// <summary>
         /// 数据接收回调事件
         /// </summary>
@@ -106,16 +108,24 @@ namespace STTech.BytesIO.Serial
         /// <param name="e"></param>
         private void InnerClient_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            // 判断缓冲区是否有数据
-            int len = InnerClient.BytesToRead;
-            if (len > 0)
+            lock (_lockDataReceived)
             {
-                // 获取数据
-                var bytes = new byte[len];
-                InnerClient.Read(bytes, 0, len);
+                // 判断缓冲区是否有数据
+                int len = InnerClient.BytesToRead;
+                if (len > 0)
+                {
+                    if (ReceiveTimeout > 0)
+                    {
+                        Task.Delay(ReceiveTimeout).Wait();
+                    }
 
-                // 执行接收到数据的回调事件
-                InvokeDataReceivedEventCallback(bytes);
+                    // 获取数据
+                    var bytes = new byte[len];
+                    InnerClient.Read(bytes, 0, len);
+
+                    // 执行接收到数据的回调事件
+                    InvokeDataReceivedEventCallback(bytes);
+                }
             }
         }
 
@@ -252,6 +262,11 @@ namespace STTech.BytesIO.Serial
         /// <inheritdoc/>
         /// </summary>
         public int BaudRate { get => InnerClient.BaudRate; set => InnerClient.BaudRate = value; }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public int ReceiveTimeout { get; set; }
 
         /// <summary>
         /// <inheritdoc/>

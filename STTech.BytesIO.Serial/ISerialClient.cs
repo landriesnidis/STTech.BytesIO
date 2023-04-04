@@ -151,5 +151,12 @@ namespace STTech.BytesIO.Serial
         /// 丢弃来自串行驱动程序的传输缓冲区的数据
         /// </summary>
         void DiscardOutBuffer();
+
+        /// <summary>
+        /// 串口接收超时时间（Serial Port Receive Timeout）或简称为串口超时时间。
+        /// 它是为了确保在接收数据时，如果数据未完全到达，可以等待一段时间再读取，以避免数据的不完整性。
+        /// 超时时间的设置需要根据具体的应用场景和串口通信的速率来确定。
+        /// </summary>
+        int ReceiveTimeout { get; set; }
     }
 }
