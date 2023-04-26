@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Version>0.0.1-beta0426</Version>
+
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
+		<Authors>Guijie Lee</Authors>
+		<Copyright>Copyright © 2019-2023 KarFans, All Rights Reserved.</Copyright>
+		<PackageIcon>stdiag.png</PackageIcon>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Description>BytesIO KCP通信库，提供通信事件、异步通信、同步通信等功能。</Description>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+		<UserSecretsId>3434f4a9-8e31-4feb-8f53-840cb292a3fb</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\stdiag.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="KcpSharp" Version="0.8.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
+  </ItemGroup>
+
+</Project>
