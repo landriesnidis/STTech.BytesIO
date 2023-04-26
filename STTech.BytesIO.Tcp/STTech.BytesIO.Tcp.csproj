@@ -7,7 +7,7 @@
 
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
-		<Copyright>Copyright © 2019-2022 KarFans, All Rights Reserved.</Copyright>
+		<Copyright>Copyright © 2019-2023 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>BytesIO TCP通信库，提供通信事件、异步通信、同步通信等功能。支持SSL/TLS通信。</Description>
