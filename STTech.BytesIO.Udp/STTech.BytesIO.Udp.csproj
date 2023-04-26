@@ -7,7 +7,7 @@
 
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
-		<Copyright>Copyright © 2019-2022 KarFans, All Rights Reserved.</Copyright>
+		<Copyright>Copyright © 2019-2023 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>BytesIO Udp通信库，提供UDP单播、广播、多播以及UDP数据包接收功能。</Description>
