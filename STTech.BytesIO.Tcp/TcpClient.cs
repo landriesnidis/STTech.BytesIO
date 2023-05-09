@@ -205,7 +205,7 @@ namespace STTech.BytesIO.Tcp
         private void ResetInnerClient()
         {
 #if NET45
-            InnerClient.Client.Dispose();
+            InnerClient?.Client?.Dispose();
 #else
             InnerClient?.Dispose();
 #endif
