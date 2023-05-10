@@ -168,9 +168,6 @@ namespace STTech.BytesIO.Tcp
                 }
                 catch (Exception ex)
                 {
-                    // 连接失败
-                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
-
                     // 重置tcp客户端
                     ResetInnerClient();
 
