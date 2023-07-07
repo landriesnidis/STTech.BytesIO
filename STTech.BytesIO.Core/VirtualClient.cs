@@ -87,7 +87,7 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public override ConnectResult Connect(ConnectArgument argument = null)
         {
-            return InnerClient.Connect();
+            return InnerClient.Connect(argument);
         }
 
         /// <summary>
