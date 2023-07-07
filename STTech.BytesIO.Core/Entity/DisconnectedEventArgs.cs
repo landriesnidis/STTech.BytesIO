@@ -52,9 +52,5 @@ namespace STTech.BytesIO.Core
         /// 因超时(本地计时)而断开连接
         /// </summary>
         Timeout,
-        /// <summary>
-        /// 连接耗时超出预期，即使之后连接成功也主动断开
-        /// </summary>
-        ConnectTimeout,
     }
 }
