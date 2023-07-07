@@ -28,6 +28,7 @@ namespace STTech.BytesIO.Core
         /// 数据接收任务队列
         /// </summary>
         private TaskQueue<DataReceivedEventArgs> dataReceiveTaskQueue;
+        private TaskQueue<SendArgs> dataSendTaskQueue;
 
         /// <summary>
         /// 接收数据帧的ID
@@ -37,6 +38,7 @@ namespace STTech.BytesIO.Core
         public BytesClient()
         {
             dataReceiveTaskQueue = new FloaterTaskQueue<DataReceivedEventArgs>(DataReceiveTaskQueueHandler);
+            dataSendTaskQueue = new FloaterTaskQueue<SendArgs>(SendHandler);
         }
 
         /// <summary>

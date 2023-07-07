@@ -101,9 +101,9 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        protected override void SendHandler(byte[] data)
+        protected override void SendHandler(SendArgs args)
         {
-            InnerClient.Send(data);
+            InnerClient.Send(args.Data, args.Options);
         }
 
         /// <summary>

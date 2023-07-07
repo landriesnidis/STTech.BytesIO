@@ -4,6 +4,8 @@ using System;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
+using System.Net.Security;
+using System.Threading.Tasks;
 
 namespace STTech.BytesIO.Kcp
 {
@@ -110,9 +112,23 @@ namespace STTech.BytesIO.Kcp
             }
         }
 
-        protected override async void SendHandler(byte[] data)
+        protected override void SendHandler(SendArgs args)
         {
-            await InnerClient.SendAsync(data);
+            try
+            {
+                InnerClient.SendAsync(args.Data).AsTask().Wait();
+
+                // 执行数据已发送的回调事件
+                RaiseDataSent(this, new DataSentEventArgs(args.Data));
+
+                // 延时
+                Task.Delay(args.Options.PauseTime).Wait();
+            }
+            catch (Exception ex)
+            {
+                // 通信异常
+                RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+            }
         }
     }
 

@@ -129,19 +129,21 @@ namespace STTech.BytesIO.Serial
             }
         }
 
-        /// <summary>
-        /// 向串口发送数据
-        /// </summary>
-        /// <param name="data"></param>
-        protected override void SendHandler(byte[] data)
+        /// <inheritdoc/>
+        protected override void SendHandler(SendArgs args)
         {
             try
             {
+                var data = args.Data;
+
                 // 发送数据
                 InnerClient.Write(data, 0, data.Length);
 
                 // 执行数据已发送的回调事件
                 RaiseDataSent(this, new DataSentEventArgs(data));
+
+                // 延时
+                Task.Delay(args.Options.PauseTime).Wait();
             }
             catch (Exception ex)
             {

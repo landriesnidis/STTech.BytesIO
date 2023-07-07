@@ -1,4 +1,5 @@
-﻿using System;
+﻿using STTech.CodePlus.Components;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,22 +28,16 @@ namespace STTech.BytesIO.Core
         /// <param name="options">发送选项</param>
         public void Send(byte[] data, SendOptions options = null)
         {
-            lock (sendingLocker)
-            {
-                options ??= DefaultSendOptions;
+            options ??= DefaultSendOptions;
 
-                // 执行发送操作
-                SendHandler(data);
-
-                // 延时
-                Task.Delay(options.PauseTime).Wait();
-            }
+            // 加入发送队列
+            dataSendTaskQueue.Join(new SendArgs(data, options));
         }
 
         /// <summary>
         /// 发送数据的实现过程
         /// </summary>
-        protected abstract void SendHandler(byte[] data);
+        protected abstract void SendHandler(SendArgs data);
 
         /// <summary>
         /// 异步发送数据

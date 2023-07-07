@@ -1,6 +1,7 @@
 ﻿using STTech.BytesIO.Core;
 using System;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace STTech.BytesIO.Udp
 {
@@ -142,9 +143,26 @@ namespace STTech.BytesIO.Udp
             }
         }
 
-        protected override void SendHandler(byte[] data)
+        protected override void SendHandler(SendArgs args)
         {
-            InnerClient.Send(data, data.Length, Host, Port);
+            try
+            {
+                var data = args.Data;
+
+                // 发送数据
+                InnerClient.Send(data, data.Length, Host, Port);
+
+                // 执行数据已发送的回调事件
+                RaiseDataSent(this, new DataSentEventArgs(data));
+
+                // 延时
+                Task.Delay(args.Options.PauseTime).Wait();
+            }
+            catch (Exception ex)
+            {
+                // 通信异常
+                RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+            }
         }
 
         /// <summary>
