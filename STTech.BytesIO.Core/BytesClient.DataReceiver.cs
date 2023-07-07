@@ -64,12 +64,6 @@ namespace STTech.BytesIO.Core
         /// </summary>
         protected virtual void CancelReceiveDataTask()
         {
-            // 关闭异步接收任务
-            //if (_asyncReceiveDataCancellationToken != null && _asyncReceiveDataCancellationToken.IsCancellationRequested)
-            //{
-            //    _asyncReceiveDataCancellationToken.ThrowIfCancellationRequested();
-            //}
-
             ReceiveTaskCancellationTokenSource?.Cancel();
         }
 

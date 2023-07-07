@@ -20,32 +20,26 @@ namespace STTech.BytesIO.Tcp
         /// <summary>
         /// 内部TCP客户端
         /// </summary>
-        protected System.Net.Sockets.TcpClient InnerClient { get; set; }
+        protected Socket InnerClient { get; set; }
 
         /// <summary>
         /// 获取内部的TCP客户端
         /// </summary>
         /// <returns></returns>
-        public System.Net.Sockets.TcpClient GetInnerClient() => InnerClient;
+        public Socket GetInnerClient() => InnerClient;
 
         /// <summary>
         /// 接受缓存区
         /// </summary>
         protected byte[] socketDataReceiveBuffer = null;
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
-        public override bool IsConnected => InnerClient != null && InnerClient.Client != null && InnerClient.Client.Connected;
+        public override bool IsConnected => InnerClient != null && InnerClient != null && InnerClient.Connected;
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         public override int ReceiveBufferSize { get; set; } = 65536;
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         public override int SendBufferSize { get; set; } = 32768;
 
         /// <summary>
@@ -63,37 +57,34 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         public TcpClient()
         {
-            InnerClient = new System.Net.Sockets.TcpClient();
+            InnerClient = CreateDefaultSocket();
         }
+
+        private Socket CreateDefaultSocket() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+        {
+
+        };
 
         /// <summary>
         /// 构造TCP客户端
         /// </summary>
         /// <param name="innerClient">内部的TCP客户端（<c>System.Net.Sockets.TcpClient</c>）</param>
-        public TcpClient(System.Net.Sockets.TcpClient innerClient)
+        public TcpClient(Socket socket)
         {
-            this.InnerClient = innerClient;
+            this.InnerClient = socket;
 
-            if (innerClient.Connected)
+            if (socket.Connected)
             {
                 // 设置内部状态为忙碌
                 innerStatus = InnerStatus.Busy;
 
-                IPEndPoint point = (IPEndPoint)innerClient.Client.RemoteEndPoint;
+                IPEndPoint point = (IPEndPoint)socket.RemoteEndPoint;
                 Host = point.Address.ToString();
                 Port = point.Port;
                 socketDataReceiveBuffer = new byte[ReceiveBufferSize];
                 // 启动接收数据的异步任务
                 StartReceiveDataTask();
             }
-        }
-
-        /// <summary>
-        /// 构造TCP客户端
-        /// </summary>
-        /// <param name="socket">内部的Socket对象</param>
-        public TcpClient(Socket socket) : this(new System.Net.Sockets.TcpClient { Client = socket })
-        {
         }
 
         /// <summary>
@@ -112,86 +103,115 @@ namespace STTech.BytesIO.Tcp
                     return new ConnectResult(ConnectErrorCode.IsConnected);
                 }
 
-                try
+            }
+
+            try
+            {
+                // 创建数据接收缓冲区
+                if (socketDataReceiveBuffer == null || ReceiveBufferSize != socketDataReceiveBuffer.Length)
                 {
-                    // 创建数据接收缓冲区
-                    if (socketDataReceiveBuffer == null || ReceiveBufferSize != socketDataReceiveBuffer.Length)
-                    {
-                        socketDataReceiveBuffer = null;
-                        socketDataReceiveBuffer = new byte[ReceiveBufferSize];
-                    }
-
-                    // 建立连接
-                    InnerClient.ReceiveBufferSize = ReceiveBufferSize;
-                    InnerClient.SendBufferSize = SendBufferSize;
-
-                    // 连接是否完成（非超时）
-                    var isComplete = InnerClient.ConnectAsync(Host, Port).Wait(argument.Timeout);
-
-                    // 如果超时，则返回超时结果
-                    if (!isComplete)
-                    {
-                        RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Timeout));
-                        return new ConnectResult(ConnectErrorCode.Timeout);
-                    }
-
-                    // 是否使用SSL/TLS通信
-                    if (UseSsl)
-                    {
-                        try
-                        {
-                            // 创建SSL流
-                            SslStream = new SslStream(InnerClient.GetStream(), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
-                            SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
-
-                            // 执行TLS通信验证通过的回调事件
-                            PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
-                        }
-                        catch (Exception ex)
-                        {
-                            // throw new Exception("SSL certificate validation failed.", ex);
-                            RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
-                            return new ConnectResult(ConnectErrorCode.Error, ex);
-                        }
-                    }
-
-                    // 设置内部状态为忙碌
-                    innerStatus = InnerStatus.Busy;
-
-                    // 执行连接成功回调事件
-                    RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
-
-                    // 启动接收数据的异步任务
-                    StartReceiveDataTask();
-
-                    return new ConnectResult();
+                    socketDataReceiveBuffer = null;
+                    socketDataReceiveBuffer = new byte[ReceiveBufferSize];
                 }
-                catch (Exception ex)
+
+                // 建立连接
+                InnerClient.ReceiveBufferSize = ReceiveBufferSize;
+                InnerClient.SendBufferSize = SendBufferSize;
+
+                // 连接是否完成
+                var connectTask = Task.Run(() =>
                 {
-                    // 重置tcp客户端
-                    ResetInnerClient();
-
-                    // 释放缓冲区
-                    // socketDataReceiveBuffer = null;
-
-                    // 返回操作错误结果
-                    if (ex is SocketException socketEx)
+                    try
                     {
-                        switch (socketEx.SocketErrorCode)
-                        {
-                            case SocketError.HostNotFound:
-                                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.ConnectionParameterError, ex));
-                                return new ConnectResult(ConnectErrorCode.ConnectionParameterError, ex);
-                            default:
-                                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
-                                return new ConnectResult(ConnectErrorCode.Error, ex);
-                        }
+                        InnerClient.Connect(Host, Port);
                     }
-                    else
+                    catch (SocketException ex)
                     {
+                        return ex;
+                    }
+                    return null;
+                });
+
+                var completedTaskIndex = Task.WaitAny(connectTask, Task.Delay(argument.Timeout));
+
+                // 如果超时，则返回超时结果
+                if (completedTaskIndex == 1)
+                {
+                    // 这里有隐患
+                    connectTask.ContinueWith(t => Disconnect(new DisconnectArgument(DisconnectionReasonCode.ConnectTimeout)));
+
+                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Timeout));
+                    return new ConnectResult(ConnectErrorCode.Timeout);
+                }
+
+                // 如果连接失败了则抛出异常信息
+                if (connectTask.Result != null)
+                {
+                    throw connectTask.Result;
+                }
+
+                // 如果连接失败了则抛出异常信息
+                if (connectTask.Result != null)
+                {
+                    throw connectTask.Result;
+                }
+
+                // 是否使用SSL/TLS通信
+                if (UseSsl)
+                {
+                    try
+                    {
+                        // 创建SSL流
+                        SslStream = new SslStream(new NetworkStream(InnerClient), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
+                        SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
+
+                        // 执行TLS通信验证通过的回调事件
+                        PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
+                    }
+                    catch (Exception ex)
+                    {
+                        // throw new Exception("SSL certificate validation failed.", ex);
                         RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
                         return new ConnectResult(ConnectErrorCode.Error, ex);
                     }
+                }
+
+                // 设置内部状态为忙碌
+                innerStatus = InnerStatus.Busy;
+
+                // 执行连接成功回调事件
+                RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
+
+                // 启动接收数据的异步任务
+                StartReceiveDataTask();
+
+                return new ConnectResult();
+            }
+            catch (Exception ex)
+            {
+                // 重置tcp客户端
+                ResetInnerClient();
+
+                // 释放缓冲区
+                // socketDataReceiveBuffer = null;
+
+                // 返回操作错误结果
+                if (ex is SocketException socketEx)
+                {
+                    switch (socketEx.SocketErrorCode)
+                    {
+                        case SocketError.HostNotFound:
+                            RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.ConnectionParameterError, ex));
+                            return new ConnectResult(ConnectErrorCode.ConnectionParameterError, ex);
+                        default:
+                            RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
+                            return new ConnectResult(ConnectErrorCode.Error, ex);
+                    }
+                }
+                else
+                {
+                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex));
+                    return new ConnectResult(ConnectErrorCode.Error, ex);
                 }
             }
         }
@@ -202,18 +222,14 @@ namespace STTech.BytesIO.Tcp
         private void ResetInnerClient()
         {
 #if NET45
-            InnerClient?.Client?.Dispose();
+            InnerClient?.Dispose();
 #else
             InnerClient?.Dispose();
 #endif
-            InnerClient = new System.Net.Sockets.TcpClient();
+            InnerClient = CreateDefaultSocket();
         }
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
-        /// <param name="code"></param>
-        /// <param name="ex"></param>
         public override DisconnectResult Disconnect(DisconnectArgument argument = null)
         {
             argument ??= new DisconnectArgument();
@@ -248,10 +264,7 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
-        /// <param name="data"></param>
         protected override void SendHandler(byte[] data)
         {
             try
@@ -264,7 +277,7 @@ namespace STTech.BytesIO.Tcp
                 else
                 {
                     // 发送数据
-                    InnerClient.Client.Send(data);
+                    InnerClient.Send(data);
                 }
                 // 执行数据已发送的回调事件
                 RaiseDataSent(this, new DataSentEventArgs(data));
@@ -276,15 +289,13 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         protected override void ReceiveDataHandle()
         {
             try
             {
                 int CheckTimes = 0;
-                Stream stream = UseSsl ? SslStream : InnerClient.GetStream();
+                Stream stream = UseSsl ? SslStream : new NetworkStream(InnerClient);
                 while (IsConnected)
                 {
                     // 获取数据长度
@@ -333,17 +344,13 @@ namespace STTech.BytesIO.Tcp
             }
         }
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         protected override void ReceiveDataCompletedHandle()
         {
             Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
         }
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         public override void Dispose()
         {
 #if NETSTANDARD || NETCOREAPP
@@ -366,25 +373,17 @@ namespace STTech.BytesIO.Tcp
 
     public partial class TcpClient : ITcpClient
     {
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         public string Host { get; set; } = "127.0.0.1";
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
         public int Port { get; set; } = 8086;
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
-        public int LocalPort => IsConnected ? ((IPEndPoint)InnerClient.Client.LocalEndPoint).Port : 0;
+        public int LocalPort => IsConnected ? ((IPEndPoint)InnerClient.LocalEndPoint).Port : 0;
 
-        /// <summary>
         /// <inheritdoc/>
-        /// </summary>
-        public IPEndPoint RemoteEndPoint => (IPEndPoint)InnerClient.Client.RemoteEndPoint;
+        public IPEndPoint RemoteEndPoint => (IPEndPoint)InnerClient.RemoteEndPoint;
     }
 
 

@@ -20,22 +20,27 @@ namespace STTech.BytesIO.Core
         /// 在接收到数据时发生
         /// </summary>
         public event EventHandler<DataReceivedEventArgs> OnDataReceived;
+
         /// <summary>
         /// 在产生异常时发生
         /// </summary>
         public event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
+
         /// <summary>
         /// 在建立通信成功时发生
         /// </summary>
         public event EventHandler<ConnectedSuccessfullyEventArgs> OnConnectedSuccessfully;
+
         /// <summary>
         /// 在建立通信失败时发生
         /// </summary>
         public event EventHandler<ConnectionFailedEventArgs> OnConnectionFailed;
+
         /// <summary>
         /// 在通信断开时发生
         /// </summary>
         public event EventHandler<DisconnectedEventArgs> OnDisconnected;
+
         /// <summary>
         /// 在主动发送数据时发生
         /// </summary>

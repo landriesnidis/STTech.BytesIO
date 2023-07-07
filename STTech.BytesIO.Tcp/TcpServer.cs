@@ -48,7 +48,7 @@ namespace STTech.BytesIO.Tcp
     {
         public TcpServer()
         {
-            EncapsulateSocket = socket => new TcpClient(new System.Net.Sockets.TcpClient() { Client = socket });
+            EncapsulateSocket = socket => new TcpClient(socket);
         }
     }
 
