@@ -120,11 +120,11 @@ namespace STTech.BytesIO.Core.Component
                         {
                             // 起始位不匹配时，查看缓存区中是否能找到起始位
                             var index = _UnprocessedDataCache.IndexOf(StartMark);
-                            if(index == -1)
+                            if (index == -1)
                             {
-                                // 未找到起始位则清空数据
+                                // 未找到起始位则只保留起始标识长度-1位的数据
                                 ErrorOccurHandler?.Invoke(ErrorCode.StartMarkNotMatch);
-                                _UnprocessedDataCache = null;
+                                _UnprocessedDataCache = _UnprocessedDataCache.Skip(_UnprocessedDataCache.Count() - StartMark.Count() + 1).ToArray();
                                 return;
                             }
                             else
