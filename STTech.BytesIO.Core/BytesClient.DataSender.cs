@@ -92,6 +92,8 @@ namespace STTech.BytesIO.Core
         public ReplyBytes Send(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null, SendOptions options = null)
         {
             EventHandler<DataReceivedEventArgs> dataReceivedHandle = null;
+            EventHandler<DisconnectedEventArgs> disconnectedHandle = null;
+
             byte[] buffer = null;
 
             // 是否接收到有效数据
@@ -116,21 +118,40 @@ namespace STTech.BytesIO.Core
                 evt.Set();
             };
 
+            // 断开连接的回调
+            disconnectedHandle = (sender, e) =>
+            {
+                // 通信中断时，标记已完成
+                OnDisconnected -= disconnectedHandle;
+                evt.Set();
+            };
+
             // 监听数据接受事件 & 同步发送数据
             OnDataReceived += dataReceivedHandle;
+            OnDisconnected += disconnectedHandle;
             Send(data, options);
 
             // 创建Task等待被阻塞的信号事件
             // 通过条件一：信号事件的阻塞解除（接收到有效数据）
-            // 通过条件二：超时
+            // 通过条件二：连接断开
+            // 通过条件三：超时
             evt.WaitOne(timeout);
 
             // 再次主动移除监听（避免因超时结束但监听未注销）
             OnDataReceived -= dataReceivedHandle;
 
+            // 通过等待信号的完成状态判断是否超时
             if (isCompleted)
             {
-                return new ReplyBytes(this, buffer);
+                // 通过客户端当前的连接状态判断是成功响应还是通信中断
+                if (IsConnected)
+                {
+                    return new ReplyBytes(this, buffer);
+                }
+                else
+                {
+                    return new ReplyBytes(this, ReplyStatus.Interrupted, null);
+                }
             }
             else
             {

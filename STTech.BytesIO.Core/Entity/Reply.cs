@@ -155,5 +155,9 @@ namespace STTech.BytesIO.Core
         /// 错误
         /// </summary>
         Error,
+        /// <summary>
+        /// 被迫中断
+        /// </summary>
+        Interrupted,
     }
 }

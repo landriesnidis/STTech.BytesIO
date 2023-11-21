@@ -88,6 +88,8 @@ namespace STTech.BytesIO.Core
             }
 
             EventHandler<DataParsedEventArgs<TRecv>> dataParsedHandle = null;
+            EventHandler<DisconnectedEventArgs> disconnectedHandle = null;
+
             TRecv buffer = null;
 
             // 客户端
@@ -117,22 +119,42 @@ namespace STTech.BytesIO.Core
                 evt.Set();
             };
 
+            // 断开连接的回调
+            disconnectedHandle = (sender, e) =>
+            {
+                // 通信中断时，标记已完成
+                unpackerSupport.Unpacker.Client.OnDisconnected -= disconnectedHandle;
+                evt.Set();
+            };
+
             // 监听数据接受事件 & 同步发送数据
             unpackerSupport.Unpacker.OnDataParsed += dataParsedHandle;
+            unpackerSupport.Unpacker.Client.OnDisconnected += disconnectedHandle;
             client.Send(data, options);
 
             // 创建Task等待被阻塞的信号事件
             // 通过条件一：信号事件的阻塞解除（接收到有效数据）
-            // 通过条件二：超时
+            // 通过条件二：连接断开
+            // 通过条件三：超时
             // 阻塞等待信号
             isCompleted = evt.WaitOne(timeout);
 
             // 再次主动移除监听（避免因超时结束但监听未注销）
             unpackerSupport.Unpacker.OnDataParsed -= dataParsedHandle;
+            unpackerSupport.Unpacker.Client.OnDisconnected -= disconnectedHandle;
 
+            // 通过等待信号的完成状态判断是否超时
             if (isCompleted)
             {
-                return new Reply<TRecv>(client, buffer);
+                // 通过客户端当前的连接状态判断是成功响应还是通信中断
+                if (client.IsConnected)
+                {
+                    return new Reply<TRecv>(client, buffer);
+                }
+                else
+                {
+                    return new Reply<TRecv>(client, ReplyStatus.Interrupted, null);
+                }
             }
             else
             {
