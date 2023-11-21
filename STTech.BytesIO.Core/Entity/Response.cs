@@ -9,9 +9,9 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 原始数据
         /// </summary>
-        protected IEnumerable<byte> OriginalData { get; }
+        protected byte[] OriginalData { get; }
 
-        protected Response(IEnumerable<byte> bytes)
+        protected Response(byte[] bytes)
         {
             OriginalData = bytes;
         }
@@ -20,7 +20,7 @@ namespace STTech.BytesIO.Core
         /// 获取原始数据
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<byte> GetOriginalData() => OriginalData;
+        public byte[] GetOriginalData() => OriginalData;
     }
 
     public interface IRequest
