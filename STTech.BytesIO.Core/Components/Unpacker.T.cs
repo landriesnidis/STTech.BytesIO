@@ -41,12 +41,24 @@ namespace STTech.BytesIO.Core.Component
 
         private void Unpacker_OnDataParsed(object sender, DataParsedEventArgs e)
         {
-            // 反射构造对象
-            // 基于Response对象必须拥有一个带参的构造函数且参数类型为IEnumerable<byte>
-            T data = Activator.CreateInstance(typeof(T), new object[] { e.Data }) as T;
+            var resp = ResponseSerializeHandler(e.Data);
 
             // 反射执行回调
-            OnDataParsed?.Invoke(this, new DataParsedEventArgs<T>(data));
+            OnDataParsed?.Invoke(this, new DataParsedEventArgs<T>(resp));
+        }
+
+        /// <summary>
+        /// 将字节数组序列化称为Response对象的过程
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns></returns>
+        protected virtual T ResponseSerializeHandler(byte[] bytes)
+        {
+            // 反射构造对象
+            // 基于Response对象必须拥有一个带参的构造函数且参数类型为IEnumerable<byte>
+            T resp = Activator.CreateInstance(typeof(T), [bytes]) as T;
+
+            return resp;
         }
 
         /// <summary>
@@ -57,7 +69,7 @@ namespace STTech.BytesIO.Core.Component
         /// <param name="bytes"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        protected override int CalculatePacketLength(IEnumerable<byte> bytes)
+        protected override int CalculatePacketLength(byte[] bytes)
         {
             return _calculatePacketLengthHandler(bytes);
         }
@@ -66,9 +78,9 @@ namespace STTech.BytesIO.Core.Component
     /// <summary>
     /// 解析出结果(bytes)的事件参数
     /// </summary>
-    public class DataParsedEventArgs : DataParsedEventArgs<IEnumerable<byte>>
+    public class DataParsedEventArgs : DataParsedEventArgs<byte[]>
     {
-        public DataParsedEventArgs(IEnumerable<byte> data) : base(data) { }
+        public DataParsedEventArgs(byte[] data) : base(data) { }
     }
 
     /// <summary>
