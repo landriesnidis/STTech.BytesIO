@@ -1,6 +1,7 @@
 ﻿using STTech.BytesIO.Core;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.IO.Ports;
@@ -110,22 +111,23 @@ namespace STTech.BytesIO.Serial
         {
             lock (_lockDataReceived)
             {
-                // 判断缓冲区是否有数据
-                int len = InnerClient.BytesToRead;
-                if (len > 0)
+                if (ReceiveTimeout > 0)
                 {
-                    if (ReceiveTimeout > 0)
-                    {
-                        Task.Delay(ReceiveTimeout).Wait();
-                    }
+                    Task.Delay(ReceiveTimeout).Wait();
+                }
 
-                    // 获取数据
+                int len = 0;
+                List<byte> buffer = new List<byte>();
+
+                while ((len = InnerClient.BytesToRead) > 0)
+                {
                     var bytes = new byte[len];
                     InnerClient.Read(bytes, 0, len);
 
-                    // 执行接收到数据的回调事件
-                    InvokeDataReceivedEventCallback(bytes);
+                    buffer.AddRange(bytes);
                 }
+
+                InvokeDataReceivedEventCallback(buffer.ToArray());
             }
         }
 
