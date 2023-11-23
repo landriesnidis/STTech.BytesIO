@@ -176,12 +176,7 @@ namespace STTech.BytesIO.Tcp
                 {
                     try
                     {
-                        // 创建SSL流
-                        SslStream = new SslStream(new NetworkStream(socket), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
-                        SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
-
-                        // 执行TLS通信验证通过的回调事件
-                        PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
+                        InitializeSslStream();
                     }
                     catch (Exception ex)
                     {
@@ -231,11 +226,32 @@ namespace STTech.BytesIO.Tcp
         }
 
         /// <summary>
+        /// 初始化SSL通信流
+        /// </summary>
+        public void InitializeSslStream()
+        {
+            if (SslStream != null)
+            {
+                SslStream.Close();
+                SslStream.Dispose();
+                SslStream = null;
+            }
+
+            // 创建SSL流
+            SslStream = new SslStream(new NetworkStream(InnerClient), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
+            SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
+
+            // 执行TLS通信验证通过的回调事件
+            PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
+        }
+
+        /// <summary>
         /// 重置内部客户端
         /// </summary>
         private void ResetInnerClient()
         {
             SslStream?.Dispose();
+            SslStream = null;
             InnerClient?.Dispose();
             InnerClient = CreateDefaultSocket();
         }
@@ -409,6 +425,4 @@ namespace STTech.BytesIO.Tcp
         /// <inheritdoc/>
         public IPEndPoint RemoteEndPoint => (IPEndPoint)InnerClient.RemoteEndPoint;
     }
-
-
 }
