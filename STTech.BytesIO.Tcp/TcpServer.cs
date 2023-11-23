@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -44,7 +46,7 @@ namespace STTech.BytesIO.Tcp
     /// <summary>
     /// TCP服务端
     /// </summary>
-    public class TcpServer : TcpServer<TcpClient>
+    public partial class TcpServer : TcpServer<TcpClient>
     {
         public TcpServer()
         {
@@ -52,7 +54,16 @@ namespace STTech.BytesIO.Tcp
         }
     }
 
-    public abstract class TcpServer<T> : ITcpServer where T : TcpClient
+
+    public abstract partial class TcpServer<T> where T : TcpClient
+    {
+        public bool UseSsl { get; set; }
+        public string ServerCertificateName { get; set; }
+        public X509Certificate Certificate { get; set; }
+        public SslProtocols SslProtocol { get; set; }
+    }
+
+    public abstract partial class TcpServer<T> : ITcpServer where T : TcpClient
     {
         private Socket socket;
         private List<T> clients = new List<T>();
@@ -121,6 +132,11 @@ namespace STTech.BytesIO.Tcp
         public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
 
         /// <summary>
+        /// 在产生异常时发生
+        /// </summary>
+        public event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
+
+        /// <summary>
         /// 服务器启动事件
         /// </summary>
         public event EventHandler Started;
@@ -162,7 +178,6 @@ namespace STTech.BytesIO.Tcp
                     {
                         lock (manualResetEvent)
                         {
-
                             try
                             {
                                 manualResetEvent?.Set();
@@ -173,6 +188,23 @@ namespace STTech.BytesIO.Tcp
                                 if (ClientConnectionAcceptedHandle(this, new ClientAcceptedEventArgs(clientSocket)))
                                 {
                                     T client = EncapsulateSocket(clientSocket);
+
+                                    if (client.IsConnected && UseSsl)
+                                    {
+                                        try
+                                        {
+                                            client.UseSsl = UseSsl;
+                                            client.SslProtocol = SslProtocol;
+                                            client.Certificate ??= Certificate;
+                                            client.ServerCertificateName ??= ServerCertificateName;
+                                            client.InitializeSslStream();
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            throw new Exception($"Description Failed to establish SSL communication between the server and client. (Client RemoteEndPoint: {client.RemoteEndPoint})", ex);
+                                        }
+                                    }
+
                                     clients.Add(client);
                                     client.OnDisconnected += TcpClient_OnDisconnected;
                                     // 触发事件
@@ -184,7 +216,10 @@ namespace STTech.BytesIO.Tcp
                                     clientSocket.Dispose();
                                 }
                             }
-                            catch (Exception) { }
+                            catch (Exception ex)
+                            {
+                                OnExceptionOccurs?.Invoke(this, new ExceptionOccursEventArgs(ex));
+                            }
                         }
                     }, socket);
                     manualResetEvent.WaitOne();
@@ -250,4 +285,10 @@ namespace STTech.BytesIO.Tcp
             });
         }
     }
+
+
+    //public class SslException : BytesIOException
+    //{
+    //    public SslException(string message, Exception ex) : base(message, ex) { }
+    //}
 }
