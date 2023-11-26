@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.IO.Ports;
+using System.Linq;
+using System.Net.Security;
+using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
@@ -18,6 +21,11 @@ namespace STTech.BytesIO.Serial
         /// 串口通信对象
         /// </summary>
         protected SerialPort InnerClient { get; set; }
+
+        /// <summary>
+        /// 获取内部的串口通信对象
+        /// </summary>
+        /// <returns></returns>
         public SerialPort GetInnerClient() => InnerClient;
 
         /// <summary>
@@ -30,9 +38,6 @@ namespace STTech.BytesIO.Serial
         {
             // 初始化
             InnerClient = new SerialPort();
-
-            // 添加数据接收回调事件
-            InnerClient.DataReceived += InnerClient_DataReceived;
         }
 
         /// <summary>
@@ -55,8 +60,7 @@ namespace STTech.BytesIO.Serial
                 RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
 
                 // 启动接收数据的异步任务
-                // 注：SerialPort已提供了DataReceived事件，不需要再实现异步接收
-                // StartReceiveDataTask();
+                StartReceiveDataTask();
 
                 return new ConnectResult();
             }
@@ -100,37 +104,6 @@ namespace STTech.BytesIO.Serial
             }
         }
 
-        private readonly object _lockDataReceived = new object();
-
-        /// <summary>
-        /// 数据接收回调事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void InnerClient_DataReceived(object sender, SerialDataReceivedEventArgs e)
-        {
-            lock (_lockDataReceived)
-            {
-                if (ReceiveTimeout > 0)
-                {
-                    Task.Delay(ReceiveTimeout).Wait();
-                }
-
-                int len = 0;
-                List<byte> buffer = new List<byte>();
-
-                while ((len = InnerClient.BytesToRead) > 0)
-                {
-                    var bytes = new byte[len];
-                    InnerClient.Read(bytes, 0, len);
-
-                    buffer.AddRange(bytes);
-                }
-
-                InvokeDataReceivedEventCallback(buffer.ToArray());
-            }
-        }
-
         /// <inheritdoc/>
         protected override void SendHandler(SendArgs args)
         {
@@ -155,16 +128,75 @@ namespace STTech.BytesIO.Serial
         }
 
         /// <summary>
-        /// 获取当前计算机的串行端口名称的数组。
+        /// 获取当前计算机的串行端口名称的数组
         /// </summary>
         public string[] GetPortNames()
         {
             return SerialPort.GetPortNames();
         }
 
+        /// <inheritdoc/>
         protected override void ReceiveDataCompletedHandle() { }
 
-        protected override void ReceiveDataHandle() { }
+        /// <inheritdoc/>
+        protected override void ReceiveDataHandle()
+        {
+            SerialPort sp = InnerClient;
+
+            byte[] buffer = [];
+            List<byte> recv = new();
+            int len;
+            DateTime? startFrameTimestamp = null;
+            try
+            {
+                while (IsConnected)
+                {
+                    if (buffer.Length != ReceiveBufferSize)
+                    {
+                        buffer = new byte[ReceiveBufferSize];
+                    }
+
+                    // 获取数据长度
+                    len = sp.Read(buffer, 0, ReceiveBufferSize);
+
+                    // 接收到首帧的时间戳
+                    startFrameTimestamp ??= ReceiveTimeout > 0 ? DateTime.Now : null;
+
+                    // 将读取到的数据保存
+                    recv.AddRange(buffer.Take(len).ToArray());
+
+                    // 延迟等待
+                    if (ReceiveTimeout > 0)
+                    {
+                        var diffTime = (DateTime.Now - startFrameTimestamp.Value).TotalMilliseconds;
+                        if (diffTime < ReceiveTimeout)
+                        {
+                            Task.Delay((int)Math.Ceiling(ReceiveTimeout / 10.0)).Wait();
+                            if (sp.BytesToRead > 0)
+                            {
+                                continue;
+                            }
+                        }
+                    }
+
+                    InvokeDataReceivedEventCallback(recv.ToArray());
+                    startFrameTimestamp = null;
+                    recv.Clear();
+                }
+            }
+            catch (Exception ex)
+            {
+                // 如果关闭了通信，不回调异常
+                if (!IsConnected)
+                {
+                    return;
+                }
+
+                // 回调异常事件
+                RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                Disconnect(new DisconnectArgument(DisconnectionReasonCode.Error, ex));
+            }
+        }
     }
 
     public partial class SerialClient : ISerialClient
@@ -182,24 +214,12 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        //[IgnoreDataMember] 
-        //public bool CtsHolding => InnerClient.CtsHolding;
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
         public bool DiscardNull { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public int DataBits { get => InnerClient.DataBits; set => InnerClient.DataBits = value; }
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        //[IgnoreDataMember] 
-        //public bool DsrHolding => InnerClient.DsrHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -220,12 +240,6 @@ namespace STTech.BytesIO.Serial
         /// <inheritdoc/>
         /// </summary>
         public string PortName { get => InnerClient.PortName; set => InnerClient.PortName = value; }
-
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        //[IgnoreDataMember] 
-        //public bool CDHolding => InnerClient.CDHolding;
 
         /// <summary>
         /// <inheritdoc/>
@@ -270,7 +284,7 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int ReceiveTimeout { get; set; }
+        public int ReceiveTimeout { get; set; } = 50;
 
         /// <summary>
         /// <inheritdoc/>
