@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
-using STTech.BytesIO.Core;
 
 namespace STTech.BytesIO.Core.Component
 {
@@ -165,6 +163,14 @@ namespace STTech.BytesIO.Core.Component
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 清空缓存数据
+        /// </summary>
+        public void ClearCache()
+        {
+            _UnprocessedDataCache.Clear();
         }
 
         /// <summary>
