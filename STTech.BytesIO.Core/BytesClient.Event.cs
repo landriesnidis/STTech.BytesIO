@@ -19,32 +19,32 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 在接收到数据时发生
         /// </summary>
-        public event EventHandler<DataReceivedEventArgs> OnDataReceived;
+        public virtual event EventHandler<DataReceivedEventArgs> OnDataReceived;
 
         /// <summary>
         /// 在产生异常时发生
         /// </summary>
-        public event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
+        public virtual event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
 
         /// <summary>
         /// 在建立通信成功时发生
         /// </summary>
-        public event EventHandler<ConnectedSuccessfullyEventArgs> OnConnectedSuccessfully;
+        public virtual event EventHandler<ConnectedSuccessfullyEventArgs> OnConnectedSuccessfully;
 
         /// <summary>
         /// 在建立通信失败时发生
         /// </summary>
-        public event EventHandler<ConnectionFailedEventArgs> OnConnectionFailed;
+        public virtual event EventHandler<ConnectionFailedEventArgs> OnConnectionFailed;
 
         /// <summary>
         /// 在通信断开时发生
         /// </summary>
-        public event EventHandler<DisconnectedEventArgs> OnDisconnected;
+        public virtual event EventHandler<DisconnectedEventArgs> OnDisconnected;
 
         /// <summary>
         /// 在主动发送数据时发生
         /// </summary>
-        public event EventHandler<DataSentEventArgs> OnDataSent;
+        public virtual event EventHandler<DataSentEventArgs> OnDataSent;
 
         /// <summary>
         /// 触发数据已接受事件

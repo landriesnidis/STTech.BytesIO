@@ -53,6 +53,9 @@ namespace STTech.BytesIO.Core
             Task task = new Task(ReceiveDataHandle, ReceiveTaskCancellationTokenSource.Token);
             task.ContinueWith(t =>
             {
+                ReceiveTaskCancellationTokenSource = null;
+
+                // TODO: 这里有优化空间，针对Task的不同状态分别处理
                 if (t.IsCompleted)
                 {
                     SafelyInvokeCallback(ReceiveDataCompletedHandle);
