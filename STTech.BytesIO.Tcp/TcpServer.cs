@@ -124,27 +124,27 @@ namespace STTech.BytesIO.Tcp
         /// <summary>
         /// 客户端建立连接事件
         /// </summary>
-        public event EventHandler<ClientConnectedEventArgs> ClientConnected;
+        public virtual event EventHandler<ClientConnectedEventArgs> ClientConnected;
 
         /// <summary>
         /// 客户端断开连接事件
         /// </summary>
-        public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
+        public virtual event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
 
         /// <summary>
         /// 在产生异常时发生
         /// </summary>
-        public event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
+        public virtual event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
 
         /// <summary>
         /// 服务器启动事件
         /// </summary>
-        public event EventHandler Started;
+        public virtual event EventHandler Started;
 
         /// <summary>
         /// 服务器关闭事件
         /// </summary>
-        public event EventHandler Closed;
+        public virtual event EventHandler Closed;
 
         /// <summary>
         /// <inheritdoc/>
@@ -183,7 +183,16 @@ namespace STTech.BytesIO.Tcp
                                 manualResetEvent?.Set();
 
                                 Socket serverSocket = (Socket)result.AsyncState;
-                                Socket clientSocket = serverSocket.EndAccept(result);
+                                Socket clientSocket;
+
+                                try
+                                {
+                                    clientSocket = serverSocket.EndAccept(result);
+                                }
+                                catch (Exception ex)
+                                {
+                                    return;
+                                }
 
                                 if (ClientConnectionAcceptedHandle(this, new ClientAcceptedEventArgs(clientSocket)))
                                 {
