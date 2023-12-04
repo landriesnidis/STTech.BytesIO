@@ -52,6 +52,21 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         private object lockerStatus = new object();
 
+        /// <inheritdoc/>
+        public override event EventHandler<DataReceivedEventArgs> OnDataReceived
+        {
+            add
+            {
+                base.OnDataReceived += value;
+
+                if (ReceiveTaskCancellationTokenSource == null)
+                {
+                    StartReceiveDataTask();
+                }
+            }
+            remove { base.OnDataReceived -= value; }
+        }
+
         /// <summary>
         /// 构造TCP客户端
         /// </summary>
@@ -60,15 +75,12 @@ namespace STTech.BytesIO.Tcp
             InnerClient = CreateDefaultSocket();
         }
 
-        private Socket CreateDefaultSocket() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-        {
-
-        };
+        private Socket CreateDefaultSocket() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
         /// <summary>
         /// 构造TCP客户端
         /// </summary>
-        /// <param name="innerClient">内部的TCP客户端（<c>System.Net.Sockets.TcpClient</c>）</param>
+        /// <param name="socket">内部的Socket对象（<c>System.Net.Sockets.Socket</c>）</param>
         public TcpClient(Socket socket)
         {
             this.InnerClient = socket;
@@ -82,8 +94,6 @@ namespace STTech.BytesIO.Tcp
                 Host = point.Address.ToString();
                 Port = point.Port;
                 socketDataReceiveBuffer = new byte[ReceiveBufferSize];
-                // 启动接收数据的异步任务
-                StartReceiveDataTask();
             }
         }
 
@@ -198,7 +208,7 @@ namespace STTech.BytesIO.Tcp
             }
             catch (Exception ex)
             {
-                // 重置tcp客户端
+                // 重置TCP客户端
                 ResetInnerClient();
 
                 // 设置内部状态为空闲
@@ -264,7 +274,7 @@ namespace STTech.BytesIO.Tcp
             lock (lockerStatus)
             {
                 // 如果TcpClient没有关闭，则关闭连接
-                if (InnerClient.Connected || innerStatus == InnerStatus.Busy)
+                if (InnerClient != null && (InnerClient.Connected || innerStatus == InnerStatus.Busy))
                 {
                     // 关闭异步任务
                     CancelReceiveDataTask();
