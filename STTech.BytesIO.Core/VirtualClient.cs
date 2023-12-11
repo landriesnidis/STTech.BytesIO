@@ -75,6 +75,15 @@ namespace STTech.BytesIO.Core
             InnerClient = innerClient;
         }
 
+        /// <inheritdoc/>
+        public override bool IsConnected => InnerClient.IsConnected;
+
+        /// <inheritdoc/>
+        public override int ReceiveBufferSize { get => InnerClient.ReceiveBufferSize; set => InnerClient.ReceiveBufferSize = value; }
+
+        /// <inheritdoc/>
+        public override int SendBufferSize { get => InnerClient.SendBufferSize; set => InnerClient.SendBufferSize = value; }
+
         private void InnerClient_OnExceptionOccurs(object sender, ExceptionOccursEventArgs e) => RaiseExceptionOccurs(sender, e);
         private void InnerClient_OnDataSent(object sender, DataSentEventArgs e) => RaiseDataSent(sender, e);
         private void InnerClient_OnDataReceived(object sender, DataReceivedEventArgs e) => RaiseDataReceived(sender, e);
