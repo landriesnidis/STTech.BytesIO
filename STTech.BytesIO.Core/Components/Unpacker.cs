@@ -98,7 +98,7 @@ namespace STTech.BytesIO.Core.Component
                     }
                 }
 
-                while (true)
+                while (_UnprocessedDataCache != null)
                 {
                     // 当前缓存数据长度
                     var cacheLen = _UnprocessedDataCache.Count();
@@ -148,8 +148,8 @@ namespace STTech.BytesIO.Core.Component
                         return;
                     }
 
-                    // 将拆粘包的结果通过回调返回
-                    OnDataParsed.Invoke(this, new DataParsedEventArgs(_UnprocessedDataCache.Take(packetLen).ToArray()));
+                    // 取出解包数据
+                    var data = _UnprocessedDataCache.Take(packetLen).ToArray();
 
                     // 如果缓存还有粘包，则将剩余数据保存至缓存中
                     if (packetLen < cacheLen)
@@ -159,8 +159,10 @@ namespace STTech.BytesIO.Core.Component
                     else
                     {
                         _UnprocessedDataCache = null;
-                        return;
                     }
+
+                    // 将拆粘包的结果通过回调返回
+                    OnDataParsed.Invoke(this, new DataParsedEventArgs(data));
                 }
             }
         }
