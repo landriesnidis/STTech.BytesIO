@@ -11,7 +11,7 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 当前是否已连接
         /// </summary>
-        public virtual bool IsConnected => false;
+        public abstract bool IsConnected { get; }
 
         /// <summary>
         /// 接受缓存区大小
