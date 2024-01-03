@@ -79,7 +79,7 @@ namespace STTech.BytesIO.Serial
         {
             argument ??= new DisconnectArgument();
 
-            if (!InnerClient.IsOpen)
+            if (argument.ReasonCode == DisconnectionReasonCode.Active && !InnerClient.IsOpen)
             {
                 return new DisconnectResult(DisconnectErrorCode.NoConnection);
             }
@@ -90,6 +90,8 @@ namespace STTech.BytesIO.Serial
 
             try
             {
+                CancelReceiveDataTask();
+
                 // 关闭串口
                 InnerClient.Close();
 
@@ -143,7 +145,7 @@ namespace STTech.BytesIO.Serial
         {
             SerialPort sp = InnerClient;
 
-            byte[] buffer = [];
+            byte[] buffer = new byte[0];
             List<byte> recv = new();
             int len;
             DateTime? startFrameTimestamp = null;
@@ -186,15 +188,25 @@ namespace STTech.BytesIO.Serial
             }
             catch (Exception ex)
             {
-                // 如果关闭了通信，不回调异常
-                if (!IsConnected)
+                // 如果是主动关闭的连接，则不触发异常回调
+                if (ReceiveTaskCancellationTokenSource.IsCancellationRequested)
                 {
                     return;
                 }
 
-                // 回调异常事件
-                RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
-                Disconnect(new DisconnectArgument(DisconnectionReasonCode.Error, ex));
+                // 如果通信已经被关闭了，则说明是被动关闭导致的；否则代表数据接收时出现错误；
+                if (!IsConnected)
+                {
+                    Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive, ex));
+                }
+                else
+                {
+                    // 回调异常事件
+                    RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                    Disconnect(new DisconnectArgument(DisconnectionReasonCode.Error, ex));
+                }
+
+
             }
         }
     }
