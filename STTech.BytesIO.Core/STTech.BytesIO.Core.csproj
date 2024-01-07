@@ -3,12 +3,12 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.14.3.0-beta1212</Version>
+		<Version>2.14.5.0</Version>
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
-		<Copyright>Copyright © 2019-2022 KarFans, All Rights Reserved.</Copyright>
+		<Copyright>Copyright © 2019-2024 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>通信核心库，提供基于字节数组通信的标准接口；内置协议解包器等组件；提供异步通信、同步通信、心跳发送、心跳检测、自动重连等众多实用的扩展功能。</Description>
@@ -33,7 +33,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="STTech.CodePlus" Version="1.5.13" />
+	  <PackageReference Include="STTech.CodePlus" Version="1.6.5" />
 	  <PackageReference Include="System.ValueTuple" Version="4.5.0" />
 	</ItemGroup>
 

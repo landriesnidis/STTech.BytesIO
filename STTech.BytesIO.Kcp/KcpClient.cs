@@ -24,6 +24,7 @@ namespace STTech.BytesIO.Kcp
     }
     public partial class KcpClient : BytesClient
     {
+        /// <inheritdoc/>
         public override bool IsConnected => InnerClient != null;
 
         /// <summary>
