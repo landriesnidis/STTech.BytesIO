@@ -34,7 +34,7 @@ namespace STTech.BytesIO.Tcp
         protected byte[] socketDataReceiveBuffer = null;
 
         /// <inheritdoc/>
-        public override bool IsConnected => InnerClient != null && InnerClient != null && InnerClient.Connected;
+        public override bool IsConnected => InnerClient != null && InnerClient.Connected;
 
         /// <inheritdoc/>
         public override int ReceiveBufferSize { get; set; } = 65536;
@@ -59,7 +59,7 @@ namespace STTech.BytesIO.Tcp
             {
                 base.OnDataReceived += value;
 
-                if (ReceiveTaskCancellationTokenSource == null)
+                if (IsConnected && ReceiveTaskCancellationTokenSource == null)
                 {
                     StartReceiveDataTask();
                 }
@@ -274,7 +274,7 @@ namespace STTech.BytesIO.Tcp
             lock (lockerStatus)
             {
                 // 如果TcpClient没有关闭，则关闭连接
-                if (InnerClient != null && (InnerClient.Connected || innerStatus == InnerStatus.Busy))
+                if (InnerClient != null && (IsConnected || innerStatus == InnerStatus.Busy))
                 {
                     // 关闭异步任务
                     CancelReceiveDataTask();
@@ -350,9 +350,13 @@ namespace STTech.BytesIO.Tcp
                     {
                         // 连续5次接收到空数据 则看作通信已断开
                         if (++CheckTimes > 5)
+                        {
                             return;
+                        }
                         else
+                        {
                             continue;
+                        }
                     }
                     else
                     {
@@ -373,9 +377,18 @@ namespace STTech.BytesIO.Tcp
                         {
                             switch (ex2.SocketErrorCode)
                             {
-                                case SocketError.ConnectionReset:   // TODO: 待解决问题
-                                case SocketError.Interrupted:       // TODO: 待解决问题"WSACancelBlockingCall"
-                                    return;
+                                case SocketError.ConnectionReset:       // 此连接由远程对等计算机重置
+                                    {
+                                        innerStatus = InnerStatus.Busy;
+                                        Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
+                                        return;
+                                    }
+                                case SocketError.ConnectionAborted:     // 此连接由 .NET 或基础套接字提供程序中止
+                                case SocketError.Interrupted:           // 已取消阻止 Socket 调用的操作
+                                    {
+                                        // Disconnect(new DisconnectArgument(DisconnectionReasonCode.Active));
+                                        return;
+                                    }
                             }
                         }
                     }
@@ -383,6 +396,9 @@ namespace STTech.BytesIO.Tcp
 
                 // 回调异常事件
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+
+                // 抛出异常信息
+                throw ex;
             }
             finally
             {
@@ -393,8 +409,6 @@ namespace STTech.BytesIO.Tcp
         /// <inheritdoc/>
         protected override void ReceiveDataCompletedHandle()
         {
-            Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
-
             SslStream = null;
             // 重置TCP客户端
             ResetInnerClient();
