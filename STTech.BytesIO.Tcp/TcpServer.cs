@@ -67,12 +67,26 @@ namespace STTech.BytesIO.Tcp
     {
         private Socket socket;
         private List<T> clients = new List<T>();
-        private bool isRun;
+
+        /// <summary>
+        /// 服务器状态
+        /// </summary>
+        public ServerState State { get; private set; }
 
         /// <summary>
         /// 是否在运行
         /// </summary>
-        public bool IsRunning { get; private set; }
+        public bool IsRunning => State != ServerState.Closed;
+
+        /// <summary>
+        /// 是否停止监听新客户端的加入
+        /// </summary>
+        public bool IsPaused => State == ServerState.Paused;
+
+        /// <summary>
+        /// 是否正在监听新客户端的连接
+        /// </summary>
+        public bool IsListening => State == ServerState.Listening;
 
         /// <summary>
         /// 接受客户端连接时
@@ -107,7 +121,7 @@ namespace STTech.BytesIO.Tcp
         /// <summary>
         /// 客户端列表
         /// </summary>
-        public IEnumerable<TcpClient> Clients => clients.ToArray();
+        public TcpClient[] Clients => clients.ToArray();
 
         /// <summary>
         /// 接收客户端连接时的处理过程
@@ -147,96 +161,105 @@ namespace STTech.BytesIO.Tcp
         public virtual event EventHandler Closed;
 
         /// <summary>
+        /// 服务器暂停监听事件
+        /// </summary>
+        public virtual event EventHandler Paused;
+
+        /// <summary>
         /// <inheritdoc/>
         /// </summary>
         public Task StartAsync()
         {
-            if (isRun)
+            if (IsListening)
             {
                 return Task.FromResult(0);
             }
 
+            // 初始化监听Socket
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPAddress ipAddress = IPAddress.Parse(Host);
             IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, Port);
             socket.Bind(ipEndPoint);
             socket.Listen(Backlog);
 
-            isRun = true;
-            Started?.Invoke(this, EventArgs.Empty);
+            // 修改服务器状态
+            State = ServerState.Listening;
+
+            // 触发事件
+            Started?.BeginInvoke(this, EventArgs.Empty, null, null);
 
             return Task.Run(() =>
             {
                 ManualResetEvent manualResetEvent = new ManualResetEvent(false);
 
-                IsRunning = true;
-
-                while (isRun)
+                while (IsListening)
                 {
                     manualResetEvent.Reset();
-                    socket.BeginAccept((result) =>
+                    try
                     {
-                        lock (manualResetEvent)
+
+
+                        socket.BeginAccept((result) =>
                         {
-                            try
+                            lock (manualResetEvent)
                             {
-                                manualResetEvent?.Set();
-
-                                Socket serverSocket = (Socket)result.AsyncState;
-                                Socket clientSocket;
-
                                 try
                                 {
-                                    clientSocket = serverSocket.EndAccept(result);
+                                    manualResetEvent?.Set();
+
+                                    Socket serverSocket = (Socket)result.AsyncState;
+                                    Socket clientSocket;
+
+                                    try
+                                    {
+                                        clientSocket = serverSocket.EndAccept(result);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        return;
+                                    }
+
+                                    if (ClientConnectionAcceptedHandle(this, new ClientAcceptedEventArgs(clientSocket)))
+                                    {
+                                        T client = EncapsulateSocket(clientSocket);
+
+                                        if (client.IsConnected && UseSsl)
+                                        {
+                                            try
+                                            {
+                                                client.UseSsl = UseSsl;
+                                                client.SslProtocol = SslProtocol;
+                                                client.Certificate ??= Certificate;
+                                                client.ServerCertificateName ??= ServerCertificateName;
+                                                client.InitializeSslStream();
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                throw new Exception($"Description Failed to establish SSL communication between the server and client. (Client RemoteEndPoint: {client.RemoteEndPoint})", ex);
+                                            }
+                                        }
+
+                                        clients.Add(client);
+                                        client.OnDisconnected += TcpClient_OnDisconnected;
+                                        // 触发事件
+                                        ClientConnected?.BeginInvoke(this, new ClientConnectedEventArgs(clientSocket, client), null, null);
+                                    }
+                                    else
+                                    {
+                                        clientSocket.Disconnect(false);
+                                        clientSocket.Dispose();
+                                    }
                                 }
                                 catch (Exception ex)
                                 {
-                                    return;
-                                }
-
-                                if (ClientConnectionAcceptedHandle(this, new ClientAcceptedEventArgs(clientSocket)))
-                                {
-                                    T client = EncapsulateSocket(clientSocket);
-
-                                    if (client.IsConnected && UseSsl)
-                                    {
-                                        try
-                                        {
-                                            client.UseSsl = UseSsl;
-                                            client.SslProtocol = SslProtocol;
-                                            client.Certificate ??= Certificate;
-                                            client.ServerCertificateName ??= ServerCertificateName;
-                                            client.InitializeSslStream();
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            throw new Exception($"Description Failed to establish SSL communication between the server and client. (Client RemoteEndPoint: {client.RemoteEndPoint})", ex);
-                                        }
-                                    }
-
-                                    clients.Add(client);
-                                    client.OnDisconnected += TcpClient_OnDisconnected;
-                                    // 触发事件
-                                    ClientConnected?.Invoke(this, new ClientConnectedEventArgs(clientSocket, client));
-                                }
-                                else
-                                {
-                                    clientSocket.Disconnect(false);
-                                    clientSocket.Dispose();
+                                    OnExceptionOccurs?.BeginInvoke(this, new ExceptionOccursEventArgs(ex), null, null);
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                OnExceptionOccurs?.Invoke(this, new ExceptionOccursEventArgs(ex));
-                            }
-                        }
-                    }, socket);
+                        }, socket);
+                    }
+                    catch (ObjectDisposedException ex) { }
                     manualResetEvent.WaitOne();
                 }
-
-                CloseAsync();
-                Closed?.Invoke(this, EventArgs.Empty);
-                IsRunning = false;
             });
         }
 
@@ -247,7 +270,7 @@ namespace STTech.BytesIO.Tcp
                 T client = (T)sender;
                 client.OnDisconnected -= TcpClient_OnDisconnected;
                 clients.Remove(client);
-                ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(client));
+                ClientDisconnected?.BeginInvoke(this, new ClientDisconnectedEventArgs(client), null, null);
             }
         }
 
@@ -264,8 +287,12 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         public Task CloseAsync()
         {
-            isRun = false;
-            return Task.Run(() =>
+            if (!IsRunning)
+            {
+                return Task.FromResult(0);
+            }
+
+            var task = Task.Run(() =>
             {
                 while (clients.Any())
                 {
@@ -279,6 +306,14 @@ namespace STTech.BytesIO.Tcp
                 socket?.Close();
                 socket?.Dispose();
             });
+
+            task.ContinueWith(t =>
+            {
+                State = ServerState.Closed;
+                Closed?.BeginInvoke(this, EventArgs.Empty, null, null);
+            });
+
+            return task;
         }
 
         /// <summary>
@@ -286,14 +321,51 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         public Task StopAsync()
         {
-            isRun = false;
-            return Task.Run(() =>
+            if (!IsListening)
             {
-                socket?.Close();
-                socket?.Dispose();
+                return Task.FromResult(0);
+            }
+
+            var task = Task.Run(() =>
+            {
+                try
+                {
+                    socket?.Close();
+                    socket?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                }
+                finally
+                {
+                    State = ServerState.Paused;
+                    Paused?.BeginInvoke(this, EventArgs.Empty, null, null);
+                }
             });
+
+            return task;
         }
     }
+
+    /// <summary>
+    /// 服务器状态
+    /// </summary>
+    public enum ServerState
+    {
+        /// <summary>
+        /// 服务器处于关闭状态
+        /// </summary>
+        Closed,
+        /// <summary>
+        /// 正在监听新客户端的加入
+        /// </summary>
+        Listening,
+        /// <summary>
+        /// 听见监听新客户端的连接，保留现有客户端的通信
+        /// </summary>
+        Paused,
+    }
+
 
 
     //public class SslException : BytesIOException
