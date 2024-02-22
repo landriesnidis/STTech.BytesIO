@@ -67,6 +67,7 @@ namespace STTech.BytesIO.Tcp
     {
         private Socket socket;
         private List<T> clients = new List<T>();
+        private uint maxConnections = 0;
 
         /// <summary>
         /// 服务器状态
@@ -118,6 +119,26 @@ namespace STTech.BytesIO.Tcp
         /// </summary>
         public int Port { get; set; } = 8086;
 
+        /// <summary>
+        /// 最大连接数量
+        /// 当该值为0时表示不限制客户端的连接数量
+        /// </summary>
+        public uint MaxConnections
+        {
+            get => maxConnections; set
+            {
+                maxConnections = value;
+
+                // 如果服务器正在监听新客户端，并且当前连接数大于新设置的最大连接数，则停止监听
+                if (maxConnections > 0 && State == ServerState.Listening)
+                {
+                    if (clients.Count >= maxConnections)
+                    {
+                        StopAsync();
+                    }
+                }
+            }
+        }
         /// <summary>
         /// 客户端列表
         /// </summary>
@@ -186,7 +207,7 @@ namespace STTech.BytesIO.Tcp
             State = ServerState.Listening;
 
             // 触发事件
-            Started?.BeginInvoke(this, EventArgs.Empty, null, null);
+            OnStarted(EventArgs.Empty);
 
             return Task.Run(() =>
             {
@@ -197,8 +218,6 @@ namespace STTech.BytesIO.Tcp
                     manualResetEvent.Reset();
                     try
                     {
-
-
                         socket.BeginAccept((result) =>
                         {
                             lock (manualResetEvent)
@@ -242,7 +261,14 @@ namespace STTech.BytesIO.Tcp
                                         clients.Add(client);
                                         client.OnDisconnected += TcpClient_OnDisconnected;
                                         // 触发事件
-                                        ClientConnected?.BeginInvoke(this, new ClientConnectedEventArgs(clientSocket, client), null, null);
+                                        var args = new ClientConnectedEventArgs(clientSocket, client);
+                                        OnClientConnected(args);
+
+                                        // 如果当前的连接量达到最大连接数，则关闭新连接的监听
+                                        if (MaxConnections > 0 && clients.Count >= MaxConnections)
+                                        {
+                                            StopAsync().Wait();
+                                        }
                                     }
                                     else
                                     {
@@ -252,7 +278,7 @@ namespace STTech.BytesIO.Tcp
                                 }
                                 catch (Exception ex)
                                 {
-                                    OnExceptionOccurs?.BeginInvoke(this, new ExceptionOccursEventArgs(ex), null, null);
+                                    OnExceptionOccurs?.Invoke(this, new ExceptionOccursEventArgs(ex));
                                 }
                             }
                         }, socket);
@@ -263,14 +289,67 @@ namespace STTech.BytesIO.Tcp
             });
         }
 
-        private void TcpClient_OnDisconnected(object sender, Core.DisconnectedEventArgs e)
+        /// <summary>
+        /// 当服务启动时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnStarted(EventArgs e)
+        {
+            Task.Run(() => Started?.Invoke(this, e));
+        }
+
+        /// <summary>
+        /// 当停止监听新连接加入时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnPaused(EventArgs e)
+        {
+            Task.Run(() => Paused?.Invoke(this, e));
+        }
+
+        /// <summary>
+        /// 当关闭服务时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnClosed(EventArgs e)
+        {
+            Task.Run(() => Closed?.Invoke(this, e));
+        }
+
+        /// <summary>
+        /// 当新客户端连接时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnClientConnected(ClientConnectedEventArgs e)
+        {
+            Task.Run(() => ClientConnected?.Invoke(this, e));
+        }
+
+        /// <summary>
+        /// 当客户端断开连接时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnClientDisconnected(ClientDisconnectedEventArgs e)
+        {
+            Task.Run(() => ClientDisconnected?.Invoke(this, e));
+
+            if (State == ServerState.Paused && MaxConnections > 0 && clients.Count == MaxConnections - 1)
+            {
+                StartAsync();
+            }
+        }
+
+        private void TcpClient_OnDisconnected(object sender, DisconnectedEventArgs e)
         {
             lock (clients)
             {
                 T client = (T)sender;
                 client.OnDisconnected -= TcpClient_OnDisconnected;
                 clients.Remove(client);
-                ClientDisconnected?.BeginInvoke(this, new ClientDisconnectedEventArgs(client), null, null);
+
+                // 触发事件
+                var args = new ClientDisconnectedEventArgs(client);
+                OnClientDisconnected(args);
             }
         }
 
@@ -310,7 +389,7 @@ namespace STTech.BytesIO.Tcp
             task.ContinueWith(t =>
             {
                 State = ServerState.Closed;
-                Closed?.BeginInvoke(this, EventArgs.Empty, null, null);
+                OnClosed(EventArgs.Empty);
             });
 
             return task;
@@ -339,7 +418,7 @@ namespace STTech.BytesIO.Tcp
                 finally
                 {
                     State = ServerState.Paused;
-                    Paused?.BeginInvoke(this, EventArgs.Empty, null, null);
+                    OnPaused(EventArgs.Empty);
                 }
             });
 

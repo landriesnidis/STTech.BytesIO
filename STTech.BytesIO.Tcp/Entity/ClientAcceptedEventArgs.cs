@@ -1,7 +1,7 @@
 ﻿using STTech.BytesIO.Core;
 using System;
 
-namespace STTech.BytesIO.Tcp.Entity
+namespace STTech.BytesIO.Tcp
 {
     public class ClientAcceptedEventArgs : EventArgs
     {
