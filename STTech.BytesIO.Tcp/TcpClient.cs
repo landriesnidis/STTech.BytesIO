@@ -153,20 +153,8 @@ namespace STTech.BytesIO.Tcp
                 // 如果超时，则返回超时结果
                 if (completedTaskIndex == 1)
                 {
-                    connectTask.ContinueWith(t =>
-                    {
-                        try
-                        {
-                            if (t.Result == null && socket.Connected)
-                            {
-                                socket.Disconnect(false);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-
-                        }
-                    });
+                    // 重置Socket对象
+                    ResetInnerClient();
 
                     // 设置内部状态为空闲
                     innerStatus = InnerStatus.Free;
