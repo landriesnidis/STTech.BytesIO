@@ -205,8 +205,6 @@ namespace STTech.BytesIO.Serial
                     RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
                     Disconnect(new DisconnectArgument(DisconnectionReasonCode.Error, ex));
                 }
-
-
             }
         }
     }
