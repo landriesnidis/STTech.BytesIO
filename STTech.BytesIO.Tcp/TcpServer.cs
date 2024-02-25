@@ -68,7 +68,7 @@ namespace STTech.BytesIO.Tcp
         private Socket socket;
         private List<T> clients = new List<T>();
         private uint maxConnections = 0;
-
+        private readonly object serverStateLocker = new object();
         /// <summary>
         /// 服务器状态
         /// </summary>
@@ -196,18 +196,21 @@ namespace STTech.BytesIO.Tcp
                 return Task.FromResult(0);
             }
 
-            // 初始化监听Socket
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            IPAddress ipAddress = IPAddress.Parse(Host);
-            IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, Port);
-            socket.Bind(ipEndPoint);
-            socket.Listen(Backlog);
+            lock (serverStateLocker)
+            {
+                // 初始化监听Socket
+                socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                IPAddress ipAddress = IPAddress.Parse(Host);
+                IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, Port);
+                socket.Bind(ipEndPoint);
+                socket.Listen(Backlog);
 
-            // 修改服务器状态
-            State = ServerState.Listening;
+                // 修改服务器状态
+                State = ServerState.Listening;
 
-            // 触发事件
-            OnStarted(EventArgs.Empty);
+                // 触发事件
+                OnStarted(EventArgs.Empty);
+            }
 
             return Task.Run(() =>
             {
@@ -373,23 +376,24 @@ namespace STTech.BytesIO.Tcp
 
             var task = Task.Run(() =>
             {
-                while (clients.Any())
+                lock (serverStateLocker)
                 {
-                    try
-                    {
-                        clients[0].Disconnect();
-                    }
-                    catch (Exception) { }
-                }
-                clients.Clear();
-                socket?.Close();
-                socket?.Dispose();
-            });
+                    try { socket?.Close(); } catch (Exception) { }
+                    try { socket?.Dispose(); } catch (Exception) { }
+                    socket = null;
+                    State = ServerState.Closed;
 
-            task.ContinueWith(t =>
-            {
-                State = ServerState.Closed;
-                OnClosed(EventArgs.Empty);
+                    while (clients.Any())
+                    {
+                        try
+                        {
+                            clients[0].Disconnect();
+                        }
+                        catch (Exception) { }
+                    }
+                    clients.Clear();
+                    OnClosed(EventArgs.Empty);
+                }
             });
 
             return task;
@@ -407,18 +411,21 @@ namespace STTech.BytesIO.Tcp
 
             var task = Task.Run(() =>
             {
-                try
+                lock (serverStateLocker)
                 {
-                    socket?.Close();
-                    socket?.Dispose();
-                }
-                catch (Exception ex)
-                {
-                }
-                finally
-                {
-                    State = ServerState.Paused;
-                    OnPaused(EventArgs.Empty);
+                    try
+                    {
+                        socket?.Close();
+                        socket?.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                    }
+                    finally
+                    {
+                        State = ServerState.Paused;
+                        OnPaused(EventArgs.Empty);
+                    }
                 }
             });
 
