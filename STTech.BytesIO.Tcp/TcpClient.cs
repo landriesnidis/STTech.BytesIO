@@ -137,15 +137,11 @@ namespace STTech.BytesIO.Tcp
                 // 连接是否完成
                 var connectTask = Task.Run(() =>
                 {
-                    try
+                    if (localEndPoint != null)
                     {
-                        socket.Connect(Host, Port);
+                        socket.Bind(localEndPoint);
                     }
-                    catch (SocketException ex)
-                    {
-                        return ex;
-                    }
-                    return null;
+                    socket.Connect(Host, Port);
                 });
 
                 var completedTaskIndex = Task.WaitAny(connectTask, Task.Delay(argument.Timeout));
@@ -159,14 +155,15 @@ namespace STTech.BytesIO.Tcp
                     // 设置内部状态为空闲
                     innerStatus = InnerStatus.Free;
 
+                    // 触发连接失败（超时）事件
                     RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Timeout));
                     return new ConnectResult(ConnectErrorCode.Timeout);
                 }
 
                 // 如果连接失败了则抛出异常信息
-                if (connectTask.Result != null)
+                if (connectTask.IsFaulted)
                 {
-                    throw connectTask.Result;
+                    throw connectTask.Exception;
                 }
 
                 // 是否使用SSL/TLS通信
@@ -207,7 +204,16 @@ namespace STTech.BytesIO.Tcp
                 {
                     switch (socketEx.SocketErrorCode)
                     {
+                        case SocketError.InvalidArgument:
+                        case SocketError.AddressAlreadyInUse:
+                        case SocketError.AddressFamilyNotSupported:
+                        case SocketError.AddressNotAvailable:
+                        case SocketError.DestinationAddressRequired:
                         case SocketError.HostNotFound:
+                        case SocketError.ProtocolFamilyNotSupported:
+                        case SocketError.ProtocolNotSupported:
+                        case SocketError.ProtocolOption:
+                        case SocketError.ProtocolType:
                             RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.ConnectionParameterError, ex));
                             return new ConnectResult(ConnectErrorCode.ConnectionParameterError, ex);
                         default:
