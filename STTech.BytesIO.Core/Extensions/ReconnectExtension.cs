@@ -14,7 +14,16 @@ namespace STTech.BytesIO.Core
         private readonly static Lazy<Dictionary<BytesClient, ReconnectTimer>> dictReconnectTimers = new Lazy<Dictionary<BytesClient, ReconnectTimer>>();
 
         /// <summary>
-        /// 启动自动重连
+        /// 禁用自动重连功能
+        /// </summary>
+        /// <param name="client"></param>
+        public static void DisableAutoReconnect(this BytesClient client)
+        {
+            client.UseAutoReconnect(0, 0);
+        }
+
+        /// <summary>
+        /// 启动自动重连功能
         /// </summary>
         /// <param name="client"></param>
         /// <param name="delay">重连延时</param>
@@ -34,6 +43,7 @@ namespace STTech.BytesIO.Core
                     client.OnConnectedSuccessfully -= Client_OnConnectedSuccessfully;
                     client.OnDisconnected -= Client_OnDisconnected;
                     timer.Dispose();
+                    dict.Remove(client);
                 }
                 return;
             }
@@ -43,8 +53,9 @@ namespace STTech.BytesIO.Core
             {
                 timer.Enabled = false;
                 timer.Interval = delay;
+                timer.ReconnectTimes = times;
                 timer.ResetReconnectTimes();
-                timer.Enabled = true;
+                //timer.Enabled = true;
             }
             else
             {
@@ -55,10 +66,11 @@ namespace STTech.BytesIO.Core
                 timer.ReconnectTimes = times;
                 timer.ResetReconnectTimes();
                 timer.Interval = delay;
-                timer.Enabled = !client.IsConnected;
                 client.OnConnectedSuccessfully += Client_OnConnectedSuccessfully;
                 client.OnDisconnected += Client_OnDisconnected;
                 dict[client] = timer;
+
+                //timer.Enabled = !client.IsConnected;
             }
         }
 
@@ -72,10 +84,6 @@ namespace STTech.BytesIO.Core
             else
             {
                 timer.Client.ConnectAsync();
-                //    .ContinueWith(task => {
-                //    var result = task.Result;
-                //    result.
-                //});
             }
         }
 
