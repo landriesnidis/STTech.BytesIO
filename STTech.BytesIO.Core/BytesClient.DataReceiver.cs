@@ -55,10 +55,18 @@ namespace STTech.BytesIO.Core
             {
                 ReceiveTaskCancellationTokenSource = null;
 
-                // TODO: 这里有优化空间，针对Task的不同状态分别处理
+                // 不同状态分别处理
                 if (t.IsCompleted)
                 {
-                    SafelyInvokeCallback(ReceiveDataCompletedHandle);
+                    ReceiveDataCompletedHandle();
+                }
+                else if (t.IsCanceled)
+                {
+                    Disconnect(new DisconnectArgument(DisconnectionReasonCode.Active));
+                }
+                else if (t.IsFaulted)
+                {
+                    Disconnect(new DisconnectArgument(DisconnectionReasonCode.Error, t.Exception));
                 }
             });
             task.Start();
