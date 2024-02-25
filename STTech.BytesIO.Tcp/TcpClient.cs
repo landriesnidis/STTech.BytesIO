@@ -432,9 +432,21 @@ namespace STTech.BytesIO.Tcp
         public int Port { get; set; } = 8086;
 
         /// <inheritdoc/>
-        public int LocalPort => IsConnected ? ((IPEndPoint)InnerClient.LocalEndPoint).Port : 0;
+        public IPEndPoint LocalEndPoint
+        {
+            get
+            {
+                return IsConnected ? ((IPEndPoint)InnerClient.LocalEndPoint) : localEndPoint;
+            }
+            set => localEndPoint = value;
+        }
+        private IPEndPoint localEndPoint;
 
         /// <inheritdoc/>
         public IPEndPoint RemoteEndPoint => (IPEndPoint)InnerClient.RemoteEndPoint;
+
+        /// <inheritdoc/>
+        [Obsolete("该属性已过时。请通过 LocalEndPoint 属性获取本地端口号。")]
+        public int LocalPort => LocalEndPoint?.Port ?? 0;
     }
 }

@@ -1,14 +1,12 @@
 ﻿using STTech.BytesIO.Tcp.Entity;
+using System;
 using System.Net;
 
 namespace STTech.BytesIO.Tcp
 {
     public interface ITcpClient
     {
-        /// <summary>
-        /// 本地端口号
-        /// </summary>
-        int LocalPort { get; }
+
 
         /// <summary>
         ///远程主机网络地址
@@ -34,6 +32,17 @@ namespace STTech.BytesIO.Tcp
         /// 远程终端信息
         /// </summary>
         IPEndPoint RemoteEndPoint { get; }
+
+        /// <summary>
+        /// 本地终端信息
+        /// </summary>
+        IPEndPoint LocalEndPoint { get; set; }
+
+        /// <summary>
+        /// 本地端口号
+        /// </summary>
+        [Obsolete("该属性已过时。请通过 LocalEndPoint 属性获取本地端口号。")]
+        int LocalPort { get; }
     }
 
 
