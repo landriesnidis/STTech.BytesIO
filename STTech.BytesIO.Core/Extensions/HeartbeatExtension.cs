@@ -33,9 +33,9 @@ namespace STTech.BytesIO.Core
             // 如果客户端已启用心跳功能则移除之前的定时器
             if (dict.ContainsKey(client))
             {
-                var t = dict[client];
-                t.Stop();
-                t.Dispose();
+                var timer = dict[client];
+                timer.Stop();
+                timer.Dispose();
                 dict.TryRemove(client, out _);
             }
 
