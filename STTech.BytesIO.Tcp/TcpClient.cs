@@ -355,6 +355,7 @@ namespace STTech.BytesIO.Tcp
                         // 连续5次接收到空数据 则看作通信已断开
                         if (++CheckTimes > 5)
                         {
+                            Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
                             return;
                         }
                         else
