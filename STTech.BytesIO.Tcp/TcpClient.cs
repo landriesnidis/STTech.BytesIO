@@ -270,11 +270,21 @@ namespace STTech.BytesIO.Tcp
                 // 如果TcpClient没有关闭，则关闭连接
                 if (InnerClient != null && (IsConnected || innerStatus == InnerStatus.Busy))
                 {
-                    // 关闭异步任务
-                    CancelReceiveDataTask();
+                    try
+                    {
+                        // 停止收发
+                        InnerClient.Shutdown(SocketShutdown.Both);
 
-                    // 关闭内部Socket客户端
-                    InnerClient.Close();
+                        // 关闭异步任务
+                        CancelReceiveDataTask();
+
+                        // 关闭内部Socket客户端
+                        InnerClient.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                    }
 
                     // 重置TCP客户端
                     ResetInnerClient();
