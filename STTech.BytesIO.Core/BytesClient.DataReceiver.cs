@@ -93,13 +93,13 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 调用数据接收事件的回调
         /// </summary>
-        /// <param name="data"></param>
-        protected void InvokeDataReceivedEventCallback(byte[] data)
+        /// <param name="block"></param>
+        protected void InvokeDataReceivedEventCallback(MemoryBlock block)
         {
             // 更新时间戳
             UpdateLastMessageTimestamp();
 
-            var args = new DataReceivedEventArgs(data, receivedDataFrameId++);
+            var args = new DataReceivedEventArgs(block, receivedDataFrameId++);
             dataReceiveTaskQueue.Join(args);
         }
 
@@ -107,6 +107,11 @@ namespace STTech.BytesIO.Core
         {
             // 执行接收到数据的回调事件
             RaiseDataReceived(this, e);
+
+            if (e.Data.AutoDispose)
+            {
+                e.Data.Dispose();
+            }
         }
     }
 }

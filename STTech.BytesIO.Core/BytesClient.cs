@@ -9,6 +9,11 @@ namespace STTech.BytesIO.Core
     public abstract partial class BytesClient : IBytesClient
     {
         /// <summary>
+        /// 内存块池
+        /// </summary>
+        protected MemoryBlockPool MemoryBlockPool = new MemoryBlockPool(64 * 1024, 10);
+
+        /// <summary>
         /// 当前是否已连接
         /// </summary>
         public abstract bool IsConnected { get; }
@@ -16,7 +21,18 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 接受缓存区大小
         /// </summary>
-        public virtual int ReceiveBufferSize { get; set; }
+        public virtual int ReceiveBufferSize
+        {
+            get => MemoryBlockPool.BlockSize;
+            set
+            {
+                if (IsConnected)
+                {
+                    throw new InvalidOperationException("连接时不允许修改ReceiveBufferSize");
+                }
+                MemoryBlockPool = new MemoryBlockPool(value);
+            }
+        }
 
         /// <summary>
         /// 发送缓存区大小
