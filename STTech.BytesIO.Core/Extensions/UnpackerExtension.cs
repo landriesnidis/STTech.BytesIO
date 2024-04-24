@@ -13,31 +13,6 @@ namespace STTech.BytesIO.Core
     public static class UnpackerExtension
     {
         /// <summary>
-        /// 创建解包器
-        /// </summary>
-        /// <typeparam name="TRecv"></typeparam>
-        /// <param name="unpackerSupport"></param>
-        /// <param name="calculatePacketLengthHandler"></param>
-        /// <returns></returns>
-        [Obsolete("不建议使用该方法，请继承Unpacker实现自定义解包器类型，再使用BindUnpacker方法将实例与BytesClient进行绑定。")]
-        public static Unpacker<TRecv> CreateUnpacker<TRecv>(this IUnpackerSupport<TRecv> unpackerSupport, Func<IEnumerable<byte>, int> calculatePacketLengthHandler)
-            where TRecv : Response
-        {
-            if (unpackerSupport is BytesClient client)
-            {
-                var unpacker = new Unpacker<TRecv>(client, calculatePacketLengthHandler);
-
-                client.BindUnpacker(unpacker);
-
-                return unpacker;
-            }
-            else
-            {
-                throw new InvalidOperationException($"{unpackerSupport.GetType().FullName} is not a type inherited from BytesClient.");
-            }
-        }
-
-        /// <summary>
         /// 为基于BytesClient的客户端绑定解包器
         /// </summary>
         /// <param name="client"></param>
@@ -50,14 +25,9 @@ namespace STTech.BytesIO.Core
             };
         }
 
-
         /// <summary>
         /// 发送数据
         /// 阻塞等待单次发送的响应结果
-        /// <code>
-        /// ctor:
-        /// this.Unpacker = this.CreateUnpacker&lt;T&gt;(()=>{});
-        /// </code>
         /// </summary>
         /// <param name="unpackerSupport"></param>
         /// <param name="request">数据</param>
@@ -165,10 +135,6 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 发送数据
         /// 异步等待单次发送的响应结果
-        /// <code>
-        /// ctor:
-        /// this.Unpacker = this.CreateUnpacker&lt;T&gt;(()=>{});
-        /// </code>
         /// </summary>
         /// <param name="unpackerSupport"></param>
         /// <param name="request">数据</param>
