@@ -125,16 +125,16 @@ namespace STTech.BytesIO.Core
     /// <summary>
     /// 单次发送数据的远端响应（字节数组）
     /// </summary>
-    public class ReplyBytes : BaseReply<byte[]>
+    public class ReplyBytes : BaseReply<MemoryBlock>
     {
         public ReplyBytes(IBytesClient client, ReplyStatus status, Exception exception) : base(client, status, exception) { }
-        public ReplyBytes(IBytesClient client, byte[] data) : base(client, data) { }
+        public ReplyBytes(IBytesClient client, MemoryBlock data) : base(client, data) { }
 
         /// <summary>
         /// 获取响应对象
         /// </summary>
         /// <returns></returns>
-        public byte[] GetBytes() => GetData();
+        public ArraySegment<byte> GetBytes() => GetData().Segment;
     }
 
 

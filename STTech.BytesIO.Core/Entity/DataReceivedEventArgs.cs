@@ -5,9 +5,9 @@ namespace STTech.BytesIO.Core
     public class DataReceivedEventArgs : EventArgs
     {
         /// <summary>
-        /// 接收到的数据
+        /// 接收到的数据块
         /// </summary>
-        public virtual byte[] Data { get; }
+        public virtual MemoryBlock Data { get; }
 
         /// <summary>
         /// 帧ID
@@ -17,9 +17,9 @@ namespace STTech.BytesIO.Core
         protected DataReceivedEventArgs() { }
 
         [Obsolete]
-        public DataReceivedEventArgs(byte[] data) : this(data, 0) { }
+        public DataReceivedEventArgs(MemoryBlock data) : this(data, 0) { }
 
-        public DataReceivedEventArgs(byte[] data, uint frameId)
+        public DataReceivedEventArgs(MemoryBlock data, uint frameId)
         {
             Data = data;
             FrameId = frameId;
