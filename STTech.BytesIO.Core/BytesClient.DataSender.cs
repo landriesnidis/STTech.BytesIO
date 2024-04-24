@@ -89,12 +89,12 @@ namespace STTech.BytesIO.Core
         /// </param>
         /// <param name="options"></param>
         /// <returns>单次发送数据的远端响应</returns>
-        public ReplyBytes Send(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null, SendOptions options = null)
+        public ReplyBytes Send(byte[] data, int timeout, ReplyMatchHandler<byte[], MemoryBlock> matchHandler = null, SendOptions options = null)
         {
             EventHandler<DataReceivedEventArgs> dataReceivedHandle = null;
             EventHandler<DisconnectedEventArgs> disconnectedHandle = null;
 
-            byte[] buffer = null;
+            MemoryBlock? buffer = null;
 
             // 是否接收到有效数据
             bool isCompleted = false;
@@ -146,7 +146,7 @@ namespace STTech.BytesIO.Core
                 // 通过客户端当前的连接状态判断是成功响应还是通信中断
                 if (IsConnected)
                 {
-                    return new ReplyBytes(this, buffer);
+                    return new ReplyBytes(this, buffer.Value);
                 }
                 else
                 {
@@ -174,7 +174,7 @@ namespace STTech.BytesIO.Core
         /// 3.过滤高频的主动推送数据（如：心跳包、状态更新、异常报告等）,取其后第一帧；
         /// </param>
         /// <returns>单次发送数据并等待远端响应的任务</returns>
-        public Task<ReplyBytes> SendAsync(byte[] data, int timeout, ReplyMatchHandler<byte[], byte[]> matchHandler = null, SendOptions options = null)
+        public Task<ReplyBytes> SendAsync(byte[] data, int timeout, ReplyMatchHandler<byte[], MemoryBlock> matchHandler = null, SendOptions options = null)
         {
             return Task.Run(() => Send(data, timeout, matchHandler, options));
         }
