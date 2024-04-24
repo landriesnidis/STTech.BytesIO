@@ -37,9 +37,6 @@ namespace STTech.BytesIO.Tcp
         public override bool IsConnected => InnerClient != null && InnerClient.Connected;
 
         /// <inheritdoc/>
-        public override int ReceiveBufferSize { get; set; } = 65536;
-
-        /// <inheritdoc/>
         public override int SendBufferSize { get; set; } = 32768;
 
         /// <summary>
@@ -344,13 +341,12 @@ namespace STTech.BytesIO.Tcp
                 stream = UseSsl ? SslStream : new NetworkStream(socket);
                 while (IsConnected)
                 {
+                    var block = MemoryBlockPool.Get();
+
                     // 获取数据长度
-                    int len = stream.Read(socketDataReceiveBuffer, 0, socketDataReceiveBuffer.Length);
+                    int len = stream.Read(block.Segment.Array, 0, socketDataReceiveBuffer.Length);
 
-                    // 截取有效数据
-                    byte[] data = socketDataReceiveBuffer.Take(len).ToArray();
-
-                    if (data.Length == 0)
+                    if (len == 0)
                     {
                         // 连续5次接收到空数据 则看作通信已断开
                         if (++CheckTimes > 5)
@@ -366,9 +362,10 @@ namespace STTech.BytesIO.Tcp
                     else
                     {
                         CheckTimes = 0;
+                        block = block.Cut(0, len);
                     }
 
-                    InvokeDataReceivedEventCallback(data);
+                    InvokeDataReceivedEventCallback(block);
                 }
             }
             catch (Exception ex)

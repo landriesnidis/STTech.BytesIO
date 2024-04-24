@@ -1,4 +1,5 @@
 ﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core.Extensions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -145,27 +146,23 @@ namespace STTech.BytesIO.Serial
         {
             SerialPort sp = InnerClient;
 
-            byte[] buffer = new byte[0];
-            List<byte> recv = new();
-            int len;
+            int len, offset = 0;
             DateTime? startFrameTimestamp = null;
+            MemoryBlock block = new MemoryBlock();
             try
             {
                 while (IsConnected)
                 {
-                    if (buffer.Length != ReceiveBufferSize)
+                    if (offset == 0)
                     {
-                        buffer = new byte[ReceiveBufferSize];
+                        block = MemoryBlockPool.Get();
                     }
 
                     // 获取数据长度
-                    len = sp.Read(buffer, 0, ReceiveBufferSize);
+                    len = sp.Read(block.Segment.Array, offset, ReceiveBufferSize - offset);
 
                     // 接收到首帧的时间戳
                     startFrameTimestamp ??= ReceiveTimeout > 0 ? DateTime.Now : null;
-
-                    // 将读取到的数据保存
-                    recv.AddRange(buffer.Take(len).ToArray());
 
                     // 延迟等待
                     if (ReceiveTimeout > 0)
@@ -176,14 +173,15 @@ namespace STTech.BytesIO.Serial
                             Task.Delay((int)Math.Ceiling(ReceiveTimeout / 10.0)).Wait();
                             if (sp.BytesToRead > 0)
                             {
+                                offset += len;
                                 continue;
                             }
                         }
                     }
 
-                    InvokeDataReceivedEventCallback(recv.ToArray());
+                    InvokeDataReceivedEventCallback(block);
                     startFrameTimestamp = null;
-                    recv.Clear();
+                    offset = 0;
                 }
             }
             catch (Exception ex)

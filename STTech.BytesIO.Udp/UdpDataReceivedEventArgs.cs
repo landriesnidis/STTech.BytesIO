@@ -11,7 +11,7 @@ namespace STTech.BytesIO.Udp
         /// <summary>
         /// 接收到的字节数组
         /// </summary>
-        public override byte[] Data => ReceiveResult.Buffer;
+        public override MemoryBlock Data => new MemoryBlock(ReceiveResult.Buffer);
 
         /// <summary>
         /// UDP接收结果
