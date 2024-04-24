@@ -1,6 +1,8 @@
-﻿using System;
+﻿using STTech.CodePlus.Algorithm;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Schema;
 
 namespace STTech.BytesIO.Core.Component
 {
@@ -17,7 +19,7 @@ namespace STTech.BytesIO.Core.Component
         /// <summary>
         /// 缓存数据
         /// </summary>
-        private List<byte> _UnprocessedDataCache;
+        private MemoryPacket _UnprocessedDataCache;
 
         /// <summary>
         /// 异步锁
@@ -36,12 +38,12 @@ namespace STTech.BytesIO.Core.Component
         /// 输入当前缓存的数据
         /// 输出第一个数据包的长度，若暂无法判断数据包总长度，可返回0
         /// </summary>
-        protected abstract int CalculatePacketLength(byte[] bytes);
+        protected abstract int CalculatePacketLength(MemoryPacket packet);
 
         /// <summary>
         /// 起始标记
         /// </summary>
-        public IEnumerable<byte> StartMark { get; set; }
+        public byte[] StartMark { get; set; }
 
         /// <summary>
         /// 中断帧(断包)拼接的超时时长
@@ -67,15 +69,18 @@ namespace STTech.BytesIO.Core.Component
         /// 输入收到的数据
         /// </summary>
         /// <param name="bytes">接收到的数据</param>
-        public void Input(IEnumerable<byte> bytes)
+        public void Input(MemoryBlock block)
         {
+            // 使用解包器处理的MemoryBlock不会自动释放
+            block.AutoDispose = false;
+
             lock (asyncDataCacheLocker)
             {
                 // 是否有缓存数据
                 if (_UnprocessedDataCache == null)
                 {
                     // 若无缓存数据则当前数据即为缓存数据
-                    _UnprocessedDataCache = bytes.ToList();
+                    _UnprocessedDataCache = new MemoryPacket(block);
                 }
                 else
                 {
@@ -87,14 +92,14 @@ namespace STTech.BytesIO.Core.Component
                         _interruptFrameReceivedTime.Value.AddMilliseconds(InterruptFrameTimeoutValue) < DateTime.Now)
                     {
                         // 直接替换缓存数据（丢弃断包头部）
-                        _UnprocessedDataCache = bytes.ToList();
+                        _UnprocessedDataCache = new MemoryPacket(block);
                         // 清空计时
                         _interruptFrameReceivedTime = null;
                     }
                     else
                     {
                         // 若有缓存数据则将原数据与新数据合并
-                        _UnprocessedDataCache = _UnprocessedDataCache.Merge(bytes);
+                        _UnprocessedDataCache.Append(block);
                     }
                 }
 
@@ -113,28 +118,35 @@ namespace STTech.BytesIO.Core.Component
                             return;
                         }
 
+                        // 计算起始标识在数据中的位置
+                        var index = _UnprocessedDataCache.IndexOf(StartMark);
+
                         // 判断头部是否一致
-                        if (!_UnprocessedDataCache.StartWith(StartMark))
+                        if (index != 0)
                         {
-                            // 起始位不匹配时，查看缓存区中是否能找到起始位
-                            var index = _UnprocessedDataCache.IndexOf(StartMark);
+                            //block.Segment
+
                             if (index == -1)
                             {
                                 // 未找到起始位则只保留起始标识长度-1位的数据
                                 ErrorOccurHandler?.Invoke(ErrorCode.StartMarkNotMatch);
-                                _UnprocessedDataCache = _UnprocessedDataCache.Skip(_UnprocessedDataCache.Count() - StartMark.Count() + 1).ToList();
+
+                                var len = _UnprocessedDataCache.Count();
+                                var cache = _UnprocessedDataCache.AsEnumerable().Skip(len - StartMark.Count() + 1).ToArray();
+                                _UnprocessedDataCache.Dispose();
+                                _UnprocessedDataCache = new MemoryPacket(new MemoryBlock(cache, null));
                                 return;
                             }
                             else
                             {
                                 // 若找到起始位则认为缓冲区前段混入脏数据，跳过这些字节
-                                _UnprocessedDataCache = _UnprocessedDataCache.Skip(index).ToList();
+                                _UnprocessedDataCache.Skip(index);
                             }
                         }
                     }
 
                     // 通过回调提供的方法计算该包的长度(根据具体协议)
-                    int packetLen = CalculatePacketLength(_UnprocessedDataCache.ToArray());
+                    int packetLen = CalculatePacketLength(_UnprocessedDataCache);
 
                     // 当返回的数据包长度计算结果小于等于0时，标识当前缓存中的数据无法判断出数据包的长度，则结束本次处理，继续接收数据
                     // 当返回的数据包长度计算结果小于缓存数据长度时，则结束本次处理，继续接收数据
@@ -149,12 +161,13 @@ namespace STTech.BytesIO.Core.Component
                     }
 
                     // 取出解包数据
-                    var data = _UnprocessedDataCache.Take(packetLen).ToArray();
+                    var data = _UnprocessedDataCache.ReadBytes(packetLen);
+                    _UnprocessedDataCache.Skip(packetLen);
 
                     // 如果缓存还有粘包，则将剩余数据保存至缓存中
                     if (packetLen < cacheLen)
                     {
-                        _UnprocessedDataCache = _UnprocessedDataCache.Skip(packetLen).ToList();
+                        _UnprocessedDataCache.Skip(packetLen);
                     }
                     else
                     {
@@ -172,7 +185,8 @@ namespace STTech.BytesIO.Core.Component
         /// </summary>
         public void ClearCache()
         {
-            _UnprocessedDataCache.Clear();
+            _UnprocessedDataCache.Dispose();
+            _UnprocessedDataCache = null;
         }
 
         /// <summary>
@@ -186,6 +200,4 @@ namespace STTech.BytesIO.Core.Component
             StartMarkNotMatch,
         }
     }
-
-
 }

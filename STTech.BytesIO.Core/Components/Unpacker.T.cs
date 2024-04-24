@@ -12,7 +12,7 @@ namespace STTech.BytesIO.Core.Component
     /// 注意：基于Response对象必须拥有一个带参的构造函数且参数类型为IEnumerable&lt;byte&gt;
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class Unpacker<T> : Unpacker where T : Response
+    public abstract class Unpacker<T> : Unpacker where T : Response
     {
         /// <summary>
         /// 当解析出结果时发生
@@ -25,18 +25,12 @@ namespace STTech.BytesIO.Core.Component
         public BytesClient Client { get; internal set; }
 
         /// <summary>
-        /// 计算包长度回调方法
-        /// </summary>
-        private readonly Func<IEnumerable<byte>, int> _calculatePacketLengthHandler;
-
-        /// <summary>
         /// 构造解包器
         /// </summary>
-        public Unpacker(BytesClient client, Func<IEnumerable<byte>, int> calculatePacketLengthHandler = null)
+        public Unpacker(BytesClient client)
         {
             base.OnDataParsed += Unpacker_OnDataParsed;
             Client = client;
-            _calculatePacketLengthHandler = calculatePacketLengthHandler;
         }
 
         private void Unpacker_OnDataParsed(object sender, DataParsedEventArgs e)
@@ -59,19 +53,6 @@ namespace STTech.BytesIO.Core.Component
             T resp = Activator.CreateInstance(typeof(T), [bytes]) as T;
 
             return resp;
-        }
-
-        /// <summary>
-        /// 计算数据包长度的处理程序
-        /// 输入当前缓存的数据
-        /// 输出第一个数据包的长度，若暂无法判断数据包总长度，可返回0
-        /// </summary>
-        /// <param name="bytes"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        protected override int CalculatePacketLength(byte[] bytes)
-        {
-            return _calculatePacketLengthHandler(bytes);
         }
     }
 
