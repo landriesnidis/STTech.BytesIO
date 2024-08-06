@@ -41,7 +41,7 @@ namespace STTech.BytesIO.Core.Component
         /// <summary>
         /// 起始标记
         /// </summary>
-        public IEnumerable<byte> StartMark { get; set; }
+        public byte[] StartMark { get; set; }
 
         /// <summary>
         /// 中断帧(断包)拼接的超时时长
