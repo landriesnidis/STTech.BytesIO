@@ -3,11 +3,11 @@
 	<PropertyGroup>
 		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.14.6.1-alpha0807</Version>
+		<Version>2.14.6.2</Version>
 
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
-		<Copyright>Copyright © 2019-2024 KarFans, All Rights Reserved.</Copyright>
+		<Copyright>Copyright © 2019-2025 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Description>BytesIO 串口通信库，提供通信事件、异步通信、同步通信等功能。</Description>

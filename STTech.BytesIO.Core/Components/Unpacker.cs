@@ -172,7 +172,7 @@ namespace STTech.BytesIO.Core.Component
         /// </summary>
         public void ClearCache()
         {
-            _UnprocessedDataCache.Clear();
+            _UnprocessedDataCache?.Clear();
         }
 
         /// <summary>
