@@ -30,6 +30,7 @@
 	
   <ItemGroup>
     <PackageReference Include="KcpSharp" Version="0.8.8" />
+    <PackageReference Include="STTech.CodePlus" Version="1.7.4" />
   </ItemGroup>
 
   <ItemGroup>

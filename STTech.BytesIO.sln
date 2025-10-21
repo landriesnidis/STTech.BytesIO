@@ -18,7 +18,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Udp", "STTech.BytesIO.Udp\STTech.BytesIO.Udp.csproj", "{FF579423-EF33-44AE-8140-61C122F20AF5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.BytesIO.Kcp", "STTech.BytesIO.Kcp\STTech.BytesIO.Kcp.csproj", "{BAB3DEB9-97BE-49AD-A840-BF2D54359CEE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.BytesIO.Kcp", "STTech.BytesIO.Kcp\STTech.BytesIO.Kcp.csproj", "{BAB3DEB9-97BE-49AD-A840-BF2D54359CEE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "STTech.CodePlus", "..\STTech.CodePlus\STTech.CodePlus\STTech.CodePlus.csproj", "{6DFEED36-425A-4CD9-A97B-1849BF65AB92}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -46,6 +48,10 @@ Global
 		{BAB3DEB9-97BE-49AD-A840-BF2D54359CEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BAB3DEB9-97BE-49AD-A840-BF2D54359CEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BAB3DEB9-97BE-49AD-A840-BF2D54359CEE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DFEED36-425A-4CD9-A97B-1849BF65AB92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DFEED36-425A-4CD9-A97B-1849BF65AB92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DFEED36-425A-4CD9-A97B-1849BF65AB92}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DFEED36-425A-4CD9-A97B-1849BF65AB92}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

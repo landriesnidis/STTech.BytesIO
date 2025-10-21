@@ -30,6 +30,9 @@
 	<ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
 		<PackageReference Include="System.Net.Security" Version="4.3.2" />
 	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="STTech.CodePlus" Version="1.7.4" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />

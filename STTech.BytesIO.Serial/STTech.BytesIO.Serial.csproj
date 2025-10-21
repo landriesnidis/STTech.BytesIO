@@ -25,6 +25,10 @@
 			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="STTech.CodePlus" Version="1.7.4" />
+	</ItemGroup>
 	
 	<ItemGroup>
 		<ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
