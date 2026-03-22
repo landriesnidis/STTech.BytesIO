@@ -3,13 +3,16 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>2.14.6.1-alpha0807</Version>
+		<Version>3.0.1-beta0323</Version>
 
-		<Company>ApeFree</Company>
-		<Copyright>Copyright © 2022-2024 ApeFree, All Rights Reserved.</Copyright>
+		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
+		<Authors>Guijie Lee</Authors>
+		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Description>BytesIO Modbus通信库，提供Modbus-SerialPort/Modbus-TCP通信客户端，支持ASCII、RTU。ReadCoilRegister(读线圈寄存器)、ReadDiscreteInputRegister(读离散输入寄存器)、ReadHoldingRegister(读保持寄存器)、ReadInputRegister(读输入寄存器)、WriteSingleCoilRegister(写单个线圈寄存器)、WriteSingleHoldingRegister(写单个保持寄存器)、WriteMultipleCoilRegisters(写多个线圈寄存器)、WriteMultipleHoldingRegisters(写多个保持寄存器)八种命令的收发操作。</Description>
+		<Description>BytesIO Modbus 通信库，提供 Modbus-SerialPort / Modbus-TCP 通信客户端，支持 ASCII、RTU 协议及多种标准寄存器操作命令。</Description>
+		<PackageTags>STTech;BytesIO;Modbus;TCP;RTU;ASCII;Industrial;Protocol;Automation</PackageTags>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
@@ -20,6 +23,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 		<None Include="..\stdiag.png">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>

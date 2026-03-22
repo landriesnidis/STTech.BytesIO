@@ -104,6 +104,7 @@ graph TD
 ## 📦 关联项目 (Extensions)
 
 - **[STTech.BytesIO.Modbus](https://github.com/landriesnidis/STTech.BytesIO/tree/master/STTech.BytesIO.Modbus)**: 全方位的 Modbus RTU/TCP/ASCII 协议实现。
+- **[STTech.BytesIO.SerialPortStream](https://github.com/landriesnidis/STTech.BytesIO/tree/master/STTech.BytesIO.SerialPortStream)**: 基于 `SerialPortStream` 的增强型串口通信实现。
 
 ---
 

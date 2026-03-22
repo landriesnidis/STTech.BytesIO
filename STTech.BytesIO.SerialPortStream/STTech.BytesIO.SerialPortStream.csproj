@@ -1,16 +1,42 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+	  <Version>3.0.1-beta0323</Version>
+	  <LangVersion>latest</LangVersion>
+	  <Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
+	  <Authors>Guijie Lee</Authors>
+	  <Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
+	  <PackageIcon>stdiag.png</PackageIcon>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	  <Description>STTech.BytesIO 串口扩展库，基于 SerialPortStream 实现，提供比原生 SerialPort 更稳定、更高性能的串口通信支持。</Description>
+	  <PackageTags>STTech;BytesIO;Serial;SerialPort;SerialPortStream;Communication;Industrial</PackageTags>
+	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
+	  <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+	  <RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+	  <RepositoryType>git</RepositoryType>
+	  <PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
   </PropertyGroup>
+  
+  <ItemGroup>
+	  <None Include="README.md">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\stdiag.png">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+	  </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="SerialPortStream" Version="2.4.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\STTech.BytesIO.Serial\STTech.BytesIO.Serial.csproj" />
-    <ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
+    <ProjectReference Include="..\STTech.BytesIO\STTech.BytesIO.csproj" />
   </ItemGroup>
 
 </Project>
