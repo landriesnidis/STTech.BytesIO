@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SerialPortStream" Version="2.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\STTech.BytesIO.Serial\STTech.BytesIO.Serial.csproj" />
+    <ProjectReference Include="..\STTech.BytesIO.Core\STTech.BytesIO.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,126 @@
+using STTech.BytesIO.Core;
+using STTech.BytesIO.Core.Exceptions;
+using STTech.CodePlus.Components;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace STTech.BytesIO.Core
+{
+    // ===============================================================================
+    // 
+    //                                  接收数据
+    // 
+    // ===============================================================================
+
+    public abstract partial class BytesClient
+    {
+        /// <summary>
+        /// 异步接收数据任务取消令牌
+        /// </summary>
+        protected CancellationTokenSource ReceiveTaskCancellationTokenSource { get; private set; }
+
+        /// <summary>
+        /// 数据接收任务队列
+        /// </summary>
+        private TaskQueue<DataReceivedEventArgs> dataReceiveTaskQueue;
+
+        /// <summary>
+        /// 接收数据帧的ID
+        /// </summary>
+        private uint receivedDataFrameId = 0;
+
+        public BytesClient()
+        {
+            dataReceiveTaskQueue = new FloaterTaskQueue<DataReceivedEventArgs>(DataReceiveTaskQueueHandler);
+        }
+
+        /// <summary>
+        /// 启动异步数据接收任务
+        /// </summary>
+        protected virtual void StartReceiveDataTask()
+        {
+            ReceiveTaskCancellationTokenSource?.Cancel();
+            ReceiveTaskCancellationTokenSource?.Dispose();
+            ReceiveTaskCancellationTokenSource = new CancellationTokenSource();
+
+            var token = ReceiveTaskCancellationTokenSource.Token;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ReceiveDataHandleAsync(token).ConfigureAwait(false);
+                    
+                    if (!token.IsCancellationRequested)
+                    {
+                        ReceiveDataCompletedHandle();
+                    }
+                    else
+                    {
+                        Disconnect(new DisconnectArgument(DisconnectionReasonCode.Active));
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                    Disconnect(new DisconnectArgument(DisconnectionReasonCode.Active));
+                }
+                catch (Exception ex)
+                {
+                    Disconnect(new DisconnectArgument(DisconnectionReasonCode.Error, ex));
+                }
+                finally
+                {
+                    if (ReceiveTaskCancellationTokenSource != null && ReceiveTaskCancellationTokenSource.Token == token)
+                    {
+                        ReceiveTaskCancellationTokenSource = null;
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// 取消异步数据接收任务
+        /// </summary>
+        protected virtual void CancelReceiveDataTask()
+        {
+            ReceiveTaskCancellationTokenSource?.Cancel();
+        }
+
+        /// <summary>
+        /// 异步接收数据的处理过程
+        /// </summary>
+        protected abstract Task ReceiveDataHandleAsync(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// 数据接收完成的处理过程
+        /// </summary>
+        protected abstract void ReceiveDataCompletedHandle();
+
+        /// <summary>
+        /// 调用数据接收事件的回调
+        /// </summary>
+        /// <param name="context">接收到的数据上下文</param>
+        protected void InvokeDataReceivedEventCallback(ReceiveContext context)
+        {
+            // 更新时间戳
+            UpdateLastMessageTimestamp();
+
+            var args = new DataReceivedEventArgs(context, receivedDataFrameId++);
+            dataReceiveTaskQueue.Join(args);
+        }
+
+        private void DataReceiveTaskQueueHandler(DataReceivedEventArgs e)
+        {
+            // 执行接收到数据的回调事件
+            RaiseDataReceived(this, e);
+
+            // 回调完成后自动释放 ReceiveContext
+            // 如果用户在回调中需要保留数据，应调用 ToArray() 复制数据
+            e.Data.Dispose();
+        }
+    }
+}
