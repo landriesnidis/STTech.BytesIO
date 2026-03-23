@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
+    <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
+    <Authors>Guijie Lee</Authors>
+    <Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
+    <Description>这是一个基于 QUIC 协议的高性能 .NET 字节流通信库，作为 STTech.BytesIO 的扩展库，提供了统一的编程模型。</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\STTech.BytesIO\STTech.BytesIO.csproj" />
+  </ItemGroup>
+
+</Project>
