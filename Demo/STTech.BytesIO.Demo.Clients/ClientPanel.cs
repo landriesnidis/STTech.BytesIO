@@ -1,5 +1,3 @@
-using Demo.BytesIO.ChatProtocol;
-using Demo.BytesIO.ChatSdk;
 using Newtonsoft.Json;
 using STTech.BytesIO.Core;
 using STTech.BytesIO.Serial;
@@ -45,7 +43,7 @@ namespace STTech.BytesIO.Demo.Clients
 
         private void Client_OnDataReceived(object sender, STTech.BytesIO.Core.DataReceivedEventArgs e)
         {
-            Print($"接收：{e.Data.ToHexString()}");
+            Print($"接收：{e.Data.ToArray().ToHexString()}");
         }
 
         private void Client_OnConnectionFailed(object sender, ConnectionFailedEventArgs e)

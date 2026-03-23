@@ -38,5 +38,20 @@ namespace STTech.BytesIO.Ipc
         /// 是否在运行
         /// </summary>
         bool IsRunning { get; }
+
+        /// <summary>
+        /// 是否暂停监听新客户端的加入
+        /// </summary>
+        bool IsPaused { get; }
+
+        /// <summary>
+        /// 是否正在监听新客户端的连接
+        /// </summary>
+        bool IsListening { get; }
+
+        /// <summary>
+        /// 服务器暂停监听事件
+        /// </summary>
+        event EventHandler Paused;
     }
 }

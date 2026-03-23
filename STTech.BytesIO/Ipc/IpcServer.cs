@@ -40,6 +40,12 @@ namespace STTech.BytesIO.Ipc
         public bool IsRunning => State != ServerState.Closed;
 
         /// <inheritdoc/>
+        public bool IsPaused => State == ServerState.Paused;
+
+        /// <inheritdoc/>
+        public bool IsListening => State == ServerState.Listening;
+
+        /// <inheritdoc/>
         public string PipeName { get; set; } = "STTech.BytesIO.Ipc.Default";
 
         /// <summary>
@@ -52,11 +58,16 @@ namespace STTech.BytesIO.Ipc
         /// </summary>
         public T[] Clients => clients.Keys.ToArray();
 
+        private Func<object, IpcClientAcceptedEventArgs, bool> clientConnectionAcceptedHandle = (s, e) => true;
         /// <summary>
         /// 接收客户端连接时的处理过程
         /// 默认允许连接
         /// </summary>
-        public Func<object, IpcClientAcceptedEventArgs, bool> ClientConnectionAcceptedHandle { get; set; } = (s, e) => true;
+        public Func<object, IpcClientAcceptedEventArgs, bool> ClientConnectionAcceptedHandle
+        {
+            get => clientConnectionAcceptedHandle;
+            set => clientConnectionAcceptedHandle = value ?? ((s, e) => true);
+        }
 
         /// <summary>
         /// 封装管道流的处理过程
@@ -88,16 +99,21 @@ namespace STTech.BytesIO.Ipc
         /// </summary>
         public virtual event EventHandler Closed;
 
+        /// <summary>
+        /// 服务器暂停监听事件
+        /// </summary>
+        public virtual event EventHandler Paused;
+
         /// <inheritdoc/>
         public Task StartAsync()
         {
-            if (State == ServerState.Listening) return Task.FromResult(0);
+            if (IsListening) return Task.FromResult(0);
 
             lock (serverStateLocker)
             {
                 cts = new CancellationTokenSource();
                 State = ServerState.Listening;
-                Started?.Invoke(this, EventArgs.Empty);
+                OnStarted(EventArgs.Empty);
             }
 
             _ = AcceptLoopAsync(cts.Token);
@@ -106,7 +122,7 @@ namespace STTech.BytesIO.Ipc
 
         private async Task AcceptLoopAsync(CancellationToken token)
         {
-            while (!token.IsCancellationRequested && State == ServerState.Listening)
+            while (!token.IsCancellationRequested && IsListening)
             {
                 NamedPipeServerStream pipeServerStream = null;
                 try
@@ -122,6 +138,12 @@ namespace STTech.BytesIO.Ipc
 
                     if (ClientConnectionAcceptedHandle(this, new IpcClientAcceptedEventArgs(pipeServerStream)))
                     {
+                        // 若由于任何原因进入暂停或即将关闭状态，则拒绝新连接
+                        if (!IsListening)
+                        {
+                            pipeServerStream.Dispose();
+                            continue;
+                        }
                         _ = ProcessNewClientAsync(pipeServerStream);
                     }
                     else
@@ -152,7 +174,7 @@ namespace STTech.BytesIO.Ipc
                 clients.TryAdd(client, 0);
                 client.OnDisconnected += Client_OnDisconnected;
                 
-                ClientConnected?.Invoke(this, new IpcClientConnectedEventArgs(pipeServerStream, client));
+                OnClientConnected(new IpcClientConnectedEventArgs(pipeServerStream, client));
             }
             catch (Exception ex)
             {
@@ -165,35 +187,73 @@ namespace STTech.BytesIO.Ipc
         {
             if (sender is T client)
             {
-                clients.TryRemove(client, out _);
                 client.OnDisconnected -= Client_OnDisconnected;
-                ClientDisconnected?.Invoke(this, new IpcClientDisconnectedEventArgs(client, e));
+                clients.TryRemove(client, out _);
+                OnClientDisconnected(new IpcClientDisconnectedEventArgs(client, e));
             }
         }
+
+        /// <summary>
+        /// 在产生启动事件时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnStarted(EventArgs e) => Task.Run(() => Started?.Invoke(this, e));
+
+        /// <summary>
+        /// 在产生关闭事件时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnClosed(EventArgs e) => Task.Run(() => Closed?.Invoke(this, e));
+
+        /// <summary>
+        /// 在产生暂停事件时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnPaused(EventArgs e) => Task.Run(() => Paused?.Invoke(this, e));
+
+        /// <summary>
+        /// 在客户端建立连接时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnClientConnected(IpcClientConnectedEventArgs e) => Task.Run(() => ClientConnected?.Invoke(this, e));
+
+        /// <summary>
+        /// 在客户端断开连接时
+        /// </summary>
+        /// <param name="e"></param>
+        protected virtual void OnClientDisconnected(IpcClientDisconnectedEventArgs e) => Task.Run(() => ClientDisconnected?.Invoke(this, e));
 
         /// <inheritdoc/>
         public Task StopAsync()
         {
-            return CloseAsync();
+            if (!IsListening) return Task.FromResult(0);
+
+            lock (serverStateLocker)
+            {
+                State = ServerState.Paused;
+                cts?.Cancel();
+                OnPaused(EventArgs.Empty);
+            }
+            return Task.FromResult(0);
         }
 
         /// <inheritdoc/>
         public Task CloseAsync()
         {
+            if (!IsRunning) return Task.FromResult(0);
+
             lock (serverStateLocker)
             {
-                if (State == ServerState.Closed) return Task.FromResult(0);
-
                 State = ServerState.Closed;
                 cts?.Cancel();
 
                 foreach (var client in clients.Keys)
                 {
-                    client.Disconnect();
+                    try { client.Disconnect(); } catch { }
                 }
                 clients.Clear();
 
-                Closed?.Invoke(this, EventArgs.Empty);
+                OnClosed(EventArgs.Empty);
             }
             return Task.FromResult(0);
         }

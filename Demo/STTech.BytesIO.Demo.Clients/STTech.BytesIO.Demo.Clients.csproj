@@ -35,26 +35,29 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ApeFree.ApeDialogs, Version=0.10.18.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\STTech.BytesIO\packages\ApeFree.ApeDialogs.0.10.18\lib\net45\ApeFree.ApeDialogs.dll</HintPath>
+      <HintPath>..\..\packages\ApeFree.ApeDialogs.0.10.18\lib\net45\ApeFree.ApeDialogs.dll</HintPath>
     </Reference>
     <Reference Include="ApeFree.ApeForms.Core, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\STTech.BytesIO\packages\ApeFree.ApeForms.Core.0.11.15.1\lib\net461\ApeFree.ApeForms.Core.dll</HintPath>
+      <HintPath>..\..\packages\ApeFree.ApeForms.Core.0.11.15.1\lib\net461\ApeFree.ApeForms.Core.dll</HintPath>
     </Reference>
     <Reference Include="ApeFree.ApeForms.Forms, Version=0.11.15.1, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\STTech.BytesIO\packages\ApeFree.ApeForms.Forms.0.11.15.1\lib\net461\ApeFree.ApeForms.Forms.dll</HintPath>
+      <HintPath>..\..\packages\ApeFree.ApeForms.Forms.0.11.15.1\lib\net461\ApeFree.ApeForms.Forms.dll</HintPath>
     </Reference>
     <Reference Include="ApeFree.Cake2D, Version=0.1.0.2, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\STTech.BytesIO\packages\ApeFree.Cake2D.0.1.0.2\lib\net45\ApeFree.Cake2D.dll</HintPath>
+      <HintPath>..\..\packages\ApeFree.Cake2D.0.1.0.2\lib\net45\ApeFree.Cake2D.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="STTech.CodePlus, Version=1.7.5.1, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\STTech.BytesIO\packages\STTech.CodePlus.1.7.5.1\lib\net45\STTech.CodePlus.dll</HintPath>
+    <Reference Include="STTech.CodePlus, Version=1.7.5.2, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\STTech.CodePlus.1.7.5.2\lib\net45\STTech.CodePlus.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Design" />
+    <Reference Include="System.IO.Ports, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.IO.Ports.10.0.5\lib\net462\System.IO.Ports.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -73,12 +76,6 @@
     <Compile Include="ClientPanel.Designer.cs">
       <DependentUpon>ClientPanel.cs</DependentUpon>
     </Compile>
-    <Compile Include="ChatClientPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="ChatClientPanel.Designer.cs">
-      <DependentUpon>ChatClientPanel.cs</DependentUpon>
-    </Compile>
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -89,9 +86,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="ClientPanel.resx">
       <DependentUpon>ClientPanel.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="ChatClientPanel.resx">
-      <DependentUpon>ChatClientPanel.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
@@ -124,14 +118,6 @@
     <ProjectReference Include="..\..\STTech.BytesIO\STTech.BytesIO.csproj">
       <Project>{F858D4F6-0126-44A8-9E41-653D7E168120}</Project>
       <Name>STTech.BytesIO</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Demo.BytesIO.ChatProtocol\Demo.BytesIO.ChatProtocol.csproj">
-      <Project>{73707105-d2b9-257c-1210-152d525d0c3e}</Project>
-      <Name>Demo.BytesIO.ChatProtocol</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Demo.BytesIO.ChatSdk\Demo.BytesIO.ChatSdk.csproj">
-      <Project>{f27df5c8-b701-14d4-70ee-163f10d7918a}</Project>
-      <Name>Demo.BytesIO.ChatSdk</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
