@@ -29,6 +29,7 @@
 		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<UserSecretsId>3434f4a9-8e31-4feb-8f53-840cb292a3fb</UserSecretsId>
 	</PropertyGroup>
 

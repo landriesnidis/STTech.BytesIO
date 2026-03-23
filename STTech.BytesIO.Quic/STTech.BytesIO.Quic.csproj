@@ -22,11 +22,12 @@ QUIC 协议原生支持加密（TLS 1.3）和多流并发，适用于高可靠�
     <RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\README.md">
+    <None Include="README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
