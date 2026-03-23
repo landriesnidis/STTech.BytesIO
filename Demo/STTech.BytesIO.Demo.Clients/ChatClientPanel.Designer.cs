@@ -1,4 +1,4 @@
-﻿namespace Demo.BytesIO.Client
+namespace STTech.BytesIO.Demo.Clients
 {
     partial class ChatClientPanel
     {

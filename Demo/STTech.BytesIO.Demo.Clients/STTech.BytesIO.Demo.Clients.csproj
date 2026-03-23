@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{BD8E6584-6D8D-4973-B89F-0F4E6FC637D9}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>Demo.BytesIO.Client</RootNamespace>
-    <AssemblyName>Demo.BytesIO.Client</AssemblyName>
+    <RootNamespace>STTech.BytesIO.Demo.Clients</RootNamespace>
+    <AssemblyName>STTech.BytesIO.Demo.Clients</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -121,8 +121,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\STTech.BytesIO\STTech.BytesIO\STTech.BytesIO.csproj">
-      <Project>{7e1f6469-fb93-4a03-ac03-29a47d2ac3b0}</Project>
+    <ProjectReference Include="..\..\STTech.BytesIO\STTech.BytesIO.csproj">
+      <Project>{F858D4F6-0126-44A8-9E41-653D7E168120}</Project>
       <Name>STTech.BytesIO</Name>
     </ProjectReference>
     <ProjectReference Include="..\Demo.BytesIO.ChatProtocol\Demo.BytesIO.ChatProtocol.csproj">

@@ -1,4 +1,4 @@
-﻿using Demo.BytesIO.ChatProtocol;
+using Demo.BytesIO.ChatProtocol;
 using Demo.BytesIO.ChatSdk;
 using Newtonsoft.Json;
 using STTech.BytesIO.Core;
@@ -13,7 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Demo.BytesIO.Client
+namespace STTech.BytesIO.Demo.Clients
 {
     public partial class ChatClientPanel : UserControl
     {

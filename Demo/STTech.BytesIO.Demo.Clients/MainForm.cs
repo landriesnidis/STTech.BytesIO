@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core;
 using STTech.BytesIO.Serial;
 using STTech.BytesIO.Tcp;
 using System;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Demo.BytesIO.Client
+namespace STTech.BytesIO.Demo.Clients
 {
     public partial class MainForm : Form
     {

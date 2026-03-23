@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Demo.BytesIO.Client
+namespace STTech.BytesIO.Demo.Clients
 {
     internal static class Program
     {
