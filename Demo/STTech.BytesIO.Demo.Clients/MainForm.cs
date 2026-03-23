@@ -2,6 +2,7 @@ using STTech.BytesIO.Core;
 using STTech.BytesIO.Ipc;
 using STTech.BytesIO.Serial;
 using STTech.BytesIO.Tcp;
+using STTech.BytesIO.Quic;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -34,6 +35,11 @@ namespace STTech.BytesIO.Demo.Clients
         private void tsmiCreateUdpClient_Click(object sender, EventArgs e)
         {
             tab.AddPage("IPC客户端", new ClientPanel(new IpcClient() { PipeName = "STTech.BytesIO.Demo" }));
+        }
+
+        private void tsmiCreateQuicClient_Click(object sender, EventArgs e)
+        {
+            tab.AddPage("QUIC客户端", new ClientPanel(new QuicClient() { Port = 443 }));
         }
     }
 }

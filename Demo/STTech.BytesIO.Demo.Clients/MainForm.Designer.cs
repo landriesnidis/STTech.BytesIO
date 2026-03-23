@@ -34,6 +34,7 @@ namespace STTech.BytesIO.Demo.Clients
             this.tsmiCreateTcpClient = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmiCreateUdpClient = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmiCreateSerialClient = new System.Windows.Forms.ToolStripMenuItem();
+            this.tsmiCreateQuicClient = new System.Windows.Forms.ToolStripMenuItem();
             this.tab = new ApeFree.ApeForms.Core.Controls.SlideTabControl();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -55,7 +56,8 @@ namespace STTech.BytesIO.Demo.Clients
             this.新建ToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsmiCreateTcpClient,
             this.tsmiCreateUdpClient,
-            this.tsmiCreateSerialClient});
+            this.tsmiCreateSerialClient,
+            this.tsmiCreateQuicClient});
             this.新建ToolStripMenuItem.Name = "新建ToolStripMenuItem";
             this.新建ToolStripMenuItem.Size = new System.Drawing.Size(116, 28);
             this.新建ToolStripMenuItem.Text = "新建客户端";
@@ -80,6 +82,13 @@ namespace STTech.BytesIO.Demo.Clients
             this.tsmiCreateSerialClient.Size = new System.Drawing.Size(270, 34);
             this.tsmiCreateSerialClient.Text = "串口客户端";
             this.tsmiCreateSerialClient.Click += new System.EventHandler(this.tsmiCreateSerialClient_Click);
+            // 
+            // tsmiCreateQuicClient
+            // 
+            this.tsmiCreateQuicClient.Name = "tsmiCreateQuicClient";
+            this.tsmiCreateQuicClient.Size = new System.Drawing.Size(270, 34);
+            this.tsmiCreateQuicClient.Text = "QUIC客户端";
+            this.tsmiCreateQuicClient.Click += new System.EventHandler(this.tsmiCreateQuicClient_Click);
             // 
             // tab
             // 
@@ -134,5 +143,6 @@ namespace STTech.BytesIO.Demo.Clients
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateSerialClient;
         private ApeFree.ApeForms.Core.Controls.SlideTabControl tab;
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateUdpClient;
+        private System.Windows.Forms.ToolStripMenuItem tsmiCreateQuicClient;
     }
 }

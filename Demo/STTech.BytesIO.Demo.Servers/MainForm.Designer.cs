@@ -33,6 +33,7 @@ namespace STTech.BytesIO.Demo.Servers
             this.新建ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmiCreateTcpServer = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmiCreateIpcServer = new System.Windows.Forms.ToolStripMenuItem();
+            this.tsmiCreateQuicServer = new System.Windows.Forms.ToolStripMenuItem();
             this.tab = new ApeFree.ApeForms.Core.Controls.SlideTabControl();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -52,7 +53,8 @@ namespace STTech.BytesIO.Demo.Servers
             // 
             this.新建ToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsmiCreateTcpServer,
-            this.tsmiCreateIpcServer});
+            this.tsmiCreateIpcServer,
+            this.tsmiCreateQuicServer});
             this.新建ToolStripMenuItem.Name = "新建ToolStripMenuItem";
             this.新建ToolStripMenuItem.Size = new System.Drawing.Size(116, 28);
             this.新建ToolStripMenuItem.Text = "新建服务端";
@@ -64,12 +66,12 @@ namespace STTech.BytesIO.Demo.Servers
             this.tsmiCreateTcpServer.Text = "TCP服务端";
             this.tsmiCreateTcpServer.Click += new System.EventHandler(this.tsmiCreateTcpServer_Click);
             // 
-            // tsmiCreateIpcServer
+            // tsmiCreateQuicServer
             // 
-            this.tsmiCreateIpcServer.Name = "tsmiCreateIpcServer";
-            this.tsmiCreateIpcServer.Size = new System.Drawing.Size(270, 34);
-            this.tsmiCreateIpcServer.Text = "IPC服务端";
-            this.tsmiCreateIpcServer.Click += new System.EventHandler(this.tsmiCreateIpcServer_Click);
+            this.tsmiCreateQuicServer.Name = "tsmiCreateQuicServer";
+            this.tsmiCreateQuicServer.Size = new System.Drawing.Size(270, 34);
+            this.tsmiCreateQuicServer.Text = "QUIC服务端";
+            this.tsmiCreateQuicServer.Click += new System.EventHandler(this.tsmiCreateQuicServer_Click);
             // 
             // tab
             // 
@@ -116,6 +118,7 @@ namespace STTech.BytesIO.Demo.Servers
         private System.Windows.Forms.ToolStripMenuItem 新建ToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateTcpServer;
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateIpcServer;
+        private System.Windows.Forms.ToolStripMenuItem tsmiCreateQuicServer;
         private ApeFree.ApeForms.Core.Controls.SlideTabControl tab;
     }
 }

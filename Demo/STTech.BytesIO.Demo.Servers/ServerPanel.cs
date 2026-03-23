@@ -44,6 +44,15 @@ namespace STTech.BytesIO.Demo.Servers
                 };
                 ipcServer.ClientDisconnected += (s, e) => Log($"[IPC] 客户端已断开: {e.Client.PipeName} ({e.ReasonCode}) {e.Exception?.Message}");
             }
+            else if (server is BytesServer<STTech.BytesIO.Quic.QuicClient> quicServer)
+            {
+                quicServer.ClientConnected += (s, e) =>
+                {
+                    Log($"[QUIC] 客户端已连接: {e.Client.ConnectionId}");
+                    SubscribeToClientEvents(e.Client);
+                };
+                quicServer.ClientDisconnected += (s, e) => Log($"[QUIC] 客户端已断开: {e.Client.ConnectionId} ({e.ReasonCode}) {e.Exception?.Message}");
+            }
 
             server.Started += (s, e) => Log("服务已启动");
             server.Closed += (s, e) => Log("服务已关闭");
