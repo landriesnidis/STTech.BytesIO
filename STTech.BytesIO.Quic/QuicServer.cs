@@ -45,7 +45,8 @@ namespace STTech.BytesIO.Quic
             {
                 if (ServerCertificate == null)
                 {
-                    throw new InvalidOperationException("QUIC 服务端必须提供有效的服务器证书。");
+                    // throw new InvalidOperationException("QUIC 服务端必须提供有效的服务器证书。");
+                    ServerCertificate = QuicCertificateHelper.CreateSelfSignedCertificate();
                 }
 
                 var options = new QuicListenerOptions
