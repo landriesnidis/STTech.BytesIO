@@ -96,31 +96,9 @@ namespace STTech.BytesIO.Tcp
         public SslProtocols SslProtocol { get; set; }
     }
 
-    public abstract partial class TcpServer<T> : ITcpServer where T : TcpClient
+    public abstract partial class TcpServer<T> : BytesServer<T>, ITcpServer where T : TcpClient
     {
         private Socket socket;
-        private ConcurrentDictionary<T, byte> clients = new ConcurrentDictionary<T, byte>();
-        private uint maxConnections = 0;
-        private readonly object serverStateLocker = new object();
-        /// <summary>
-        /// 服务器状态
-        /// </summary>
-        public ServerState State { get; private set; }
-
-        /// <summary>
-        /// 是否在运行
-        /// </summary>
-        public bool IsRunning => State != ServerState.Closed;
-
-        /// <summary>
-        /// 是否停止监听新客户端的加入
-        /// </summary>
-        public bool IsPaused => State == ServerState.Paused;
-
-        /// <summary>
-        /// 是否正在监听新客户端的连接
-        /// </summary>
-        public bool IsListening => State == ServerState.Listening;
 
         /// <summary>
         /// 接受客户端连接时
@@ -153,22 +131,6 @@ namespace STTech.BytesIO.Tcp
         public int Port { get; set; } = 8086;
 
         /// <summary>
-        /// 最大连接数量
-        /// 当该值为0时表示不限制客户端的连接数量
-        /// </summary>
-        public uint MaxConnections
-        {
-            get => maxConnections; set
-            {
-                maxConnections = value;
-            }
-        }
-        /// <summary>
-        /// 客户端列表
-        /// </summary>
-        public TcpClient[] Clients => clients.Keys.ToArray();
-
-        /// <summary>
         /// 接收客户端连接时的处理过程
         /// 默认允许连接
         /// </summary>
@@ -181,46 +143,16 @@ namespace STTech.BytesIO.Tcp
         protected EncapsulateSocketHandler EncapsulateSocket { get; set; }
 
         /// <summary>
-        /// 客户端建立连接事件
-        /// </summary>
-        public virtual event EventHandler<ClientConnectedEventArgs> ClientConnected;
-
-        /// <summary>
-        /// 客户端断开连接事件
-        /// </summary>
-        public virtual event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
-
-        /// <summary>
-        /// 在产生异常时发生
-        /// </summary>
-        public virtual event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
-
-        /// <summary>
-        /// 服务器启动事件
-        /// </summary>
-        public virtual event EventHandler Started;
-
-        /// <summary>
-        /// 服务器关闭事件
-        /// </summary>
-        public virtual event EventHandler Closed;
-
-        /// <summary>
-        /// 服务器暂停监听事件
-        /// </summary>
-        public virtual event EventHandler Paused;
-
-        /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public Task StartAsync()
+        public override Task StartAsync()
         {
             if (IsListening)
             {
                 return Task.FromResult(0);
             }
 
-            lock (serverStateLocker)
+            lock (ServerStateLocker)
             {
                 // 初始化监听Socket
                 socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -263,14 +195,14 @@ namespace STTech.BytesIO.Tcp
                 }
                 catch (Exception ex)
                 {
-                    OnExceptionOccurs?.Invoke(this, new ExceptionOccursEventArgs(ex));
+                    RaiseExceptionOccurs(ex);
                     continue;
                 }
 
                 if (clientSocket != null)
                 {
                     // 若服务器暂停或达到最大连接数，不再粗暴停止监听，而是使用安全拒绝策略
-                    if (State == ServerState.Paused || (MaxConnections > 0 && clients.Count >= MaxConnections))
+                    if (State == ServerState.Paused || (MaxConnections > 0 && InternalClients.Count >= MaxConnections))
                     {
                         try
                         {
@@ -313,11 +245,8 @@ namespace STTech.BytesIO.Tcp
                         }
                     }
 
-                    clients.TryAdd(client, 0);
-                    client.OnDisconnected += TcpClient_OnDisconnected;
                     // 触发连接事件
-                    var args = new ClientConnectedEventArgs(clientSocket, client);
-                    OnClientConnected(args);
+                    OnClientConnected(client);
                 }
                 else
                 {
@@ -327,78 +256,14 @@ namespace STTech.BytesIO.Tcp
             }
             catch (Exception ex)
             {
-                OnExceptionOccurs?.Invoke(this, new ExceptionOccursEventArgs(ex));
+                RaiseExceptionOccurs(ex);
             }
-        }
-
-        /// <summary>
-        /// 当服务启动时
-        /// </summary>
-        /// <param name="e"></param>
-        protected virtual void OnStarted(EventArgs e)
-        {
-            Task.Run(() => Started?.Invoke(this, e));
-        }
-
-        /// <summary>
-        /// 当停止监听新连接加入时
-        /// </summary>
-        /// <param name="e"></param>
-        protected virtual void OnPaused(EventArgs e)
-        {
-            Task.Run(() => Paused?.Invoke(this, e));
-        }
-
-        /// <summary>
-        /// 当关闭服务时
-        /// </summary>
-        /// <param name="e"></param>
-        protected virtual void OnClosed(EventArgs e)
-        {
-            Task.Run(() => Closed?.Invoke(this, e));
-        }
-
-        /// <summary>
-        /// 当新客户端连接时
-        /// </summary>
-        /// <param name="e"></param>
-        protected virtual void OnClientConnected(ClientConnectedEventArgs e)
-        {
-            Task.Run(() => ClientConnected?.Invoke(this, e));
-        }
-
-        /// <summary>
-        /// 当客户端断开连接时
-        /// </summary>
-        /// <param name="e">事件参数</param>
-        protected virtual void OnClientDisconnected(ClientDisconnectedEventArgs e)
-        {
-            Task.Run(() => ClientDisconnected?.Invoke(this, e));
-        }
-
-        private void TcpClient_OnDisconnected(object sender, DisconnectedEventArgs e)
-        {
-            T client = (T)sender;
-            client.OnDisconnected -= TcpClient_OnDisconnected;
-            clients.TryRemove(client, out _);
-
-            // 触发事件
-            var args = new ClientDisconnectedEventArgs(client);
-            OnClientDisconnected(args);
-        }
-
-        /// <summary>
-        /// 销毁
-        /// </summary>
-        public void Dispose()
-        {
-            CloseAsync();
         }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public Task CloseAsync()
+        public override Task CloseAsync()
         {
             if (!IsRunning)
             {
@@ -407,15 +272,15 @@ namespace STTech.BytesIO.Tcp
 
             var task = Task.Run(() =>
             {
-                lock (serverStateLocker)
+                lock (ServerStateLocker)
                 {
                     try { socket?.Close(); } catch (Exception) { }
                     try { socket?.Dispose(); } catch (Exception) { }
                     socket = null;
                     State = ServerState.Closed;
 
-                    var activeClients = clients.Keys.ToList();
-                    clients.Clear();
+                    var activeClients = InternalClients.Keys.ToList();
+                    InternalClients.Clear();
                     foreach (var client in activeClients)
                     {
                         try
@@ -434,7 +299,7 @@ namespace STTech.BytesIO.Tcp
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public Task StopAsync()
+        public override Task StopAsync()
         {
             if (!IsListening)
             {
@@ -443,14 +308,14 @@ namespace STTech.BytesIO.Tcp
 
             var task = Task.Run(() =>
             {
-                lock (serverStateLocker)
+                lock (ServerStateLocker)
                 {
                     try
                     {
                         socket?.Close();
                         socket?.Dispose();
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                     }
                     finally
@@ -464,13 +329,4 @@ namespace STTech.BytesIO.Tcp
             return task;
         }
     }
-
-
-
-
-
-    //public class SslException : BytesIOException
-    //{
-    //    public SslException(string message, Exception ex) : base(message, ex) { }
-    //}
 }
