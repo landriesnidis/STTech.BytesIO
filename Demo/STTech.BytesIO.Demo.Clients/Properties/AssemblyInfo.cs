@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("STTech.BytesIO.Modbus.Demo")]
+[assembly: AssemblyTitle("Demo.BytesIO.Client")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("STTech.BytesIO.Modbus.Demo")]
-[assembly: AssemblyCopyright("Copyright ©  2026")]
+[assembly: AssemblyProduct("Demo.BytesIO.Client")]
+[assembly: AssemblyCopyright("Copyright ©  2022")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // 如果此项目向 COM 公开，则下列 GUID 用于类型库的 ID
-[assembly: Guid("33b53e53-9dc1-4848-9adc-3f55e63fb05c")]
+[assembly: Guid("bd8e6584-6d8d-4973-b89f-0f4e6fc637d9")]
 
 // 程序集的版本信息由下列四个值组成: 
 //
@@ -29,5 +29,8 @@ using System.Runtime.InteropServices;
 //      生成号
 //      修订号
 //
+//可以指定所有这些值，也可以使用“生成号”和“修订号”的默认值
+//通过使用 "*"，如下所示:
+// [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]

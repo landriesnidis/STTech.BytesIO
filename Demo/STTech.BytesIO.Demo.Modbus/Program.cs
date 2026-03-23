@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace STTech.BytesIO.Modbus.Demo
+namespace STTech.BytesIO.Demo.Modbus
 {
     internal static class Program
     {

@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace STTech.BytesIO.Modbus.Demo
+namespace STTech.BytesIO.Demo.Modbus
 {
     public partial class ClientForm : Form
     {

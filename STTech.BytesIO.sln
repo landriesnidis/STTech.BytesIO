@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.5.11612.153
@@ -7,18 +7,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		LICENSE = LICENSE
 		README.md = README.md
-		待完善.txt = 待完善.txt
 	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Reference", "Reference", "{DBB83D09-C2DD-4833-A042-C0A6CB2E8D17}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.CodePlus", "..\STTech.CodePlus\STTech.CodePlus\STTech.CodePlus.csproj", "{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.BytesIO.Modbus", "STTech.BytesIO.Modbus\STTech.BytesIO.Modbus.csproj", "{F61D0A9E-8355-4D21-224A-E62B69FDB542}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Demo", "Demo", "{228220EF-F2C3-41C1-A95A-A888738FA072}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.BytesIO.Modbus.Demo", "Demo\STTech.BytesIO.Modbus.Demo\STTech.BytesIO.Modbus.Demo.csproj", "{33B53E53-9DC1-4848-9ADC-3F55E63FB05C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.BytesIO.Demo.Modbus", "Demo\STTech.BytesIO.Demo.Modbus\STTech.BytesIO.Demo.Modbus.csproj", "{33B53E53-9DC1-4848-9ADC-3F55E63FB05C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "STTech.BytesIO", "STTech.BytesIO\STTech.BytesIO.csproj", "{F858D4F6-0126-44A8-9E41-653D7E168120}"
 EndProject
@@ -40,18 +35,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Debug|x64.Build.0 = Debug|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Debug|x86.Build.0 = Debug|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Release|x64.ActiveCfg = Release|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Release|x64.Build.0 = Release|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Release|x86.ActiveCfg = Release|Any CPU
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD}.Release|x86.Build.0 = Release|Any CPU
 		{F61D0A9E-8355-4D21-224A-E62B69FDB542}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F61D0A9E-8355-4D21-224A-E62B69FDB542}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F61D0A9E-8355-4D21-224A-E62B69FDB542}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -129,7 +112,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{0B8061FE-1D2C-F6DF-4948-BBE36EFB91CD} = {DBB83D09-C2DD-4833-A042-C0A6CB2E8D17}
 		{33B53E53-9DC1-4848-9ADC-3F55E63FB05C} = {228220EF-F2C3-41C1-A95A-A888738FA072}
 		{BC89F916-F032-4D9F-B9E4-5ABCAD1AC17F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{3FED8D65-988D-4EEE-9933-545FF18FA37D} = {0AB3BF05-4346-4AA6-1389-037BE0695223}

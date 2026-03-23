@@ -1,4 +1,4 @@
-namespace STTech.BytesIO.Modbus.Demo
+namespace STTech.BytesIO.Demo.Modbus
 {
     partial class ServerForm
     {

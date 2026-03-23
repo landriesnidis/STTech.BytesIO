@@ -1,3 +1,4 @@
+using STTech.BytesIO.Modbus;
 using STTech.BytesIO.Modbus.Monitors;
 using STTech.BytesIO.Tcp;
 using STTech.BytesIO.Core;
@@ -11,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace STTech.BytesIO.Modbus.Demo
+namespace STTech.BytesIO.Demo.Modbus
 {
     public partial class ServerForm : Form
     {
