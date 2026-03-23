@@ -19,7 +19,7 @@ namespace STTech.BytesIO.Ipc
         /// </summary>
         public IpcServer()
         {
-            EncapsulateStream = pipeStream => new IpcClient(pipeStream);
+            EncapsulateStream = pipeStream => new IpcClient(pipeStream) { PipeName = this.PipeName };
         }
     }
 

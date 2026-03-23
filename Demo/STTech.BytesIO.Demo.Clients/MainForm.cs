@@ -33,7 +33,7 @@ namespace STTech.BytesIO.Demo.Clients
 
         private void tsmiCreateUdpClient_Click(object sender, EventArgs e)
         {
-            tab.AddPage("IPC客户端", new ClientPanel(new IpcClient() { }));
+            tab.AddPage("IPC客户端", new ClientPanel(new IpcClient() { PipeName = "STTech.BytesIO.Demo" }));
         }
     }
 }

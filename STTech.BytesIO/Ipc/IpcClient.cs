@@ -43,8 +43,30 @@ namespace STTech.BytesIO.Ipc
             innerClient = pipeStream;
             if (innerClient.IsConnected)
             {
+                GenerateNewConnectionId();
+
+                if (pipeStream is NamedPipeServerStream serverStream)
+                {
+                    // 无法直接从流中获取管道名称，通常由服务端在创建后赋值，或者保持默认
+                }
+
                 StartReceiveDataTask();
             }
+        }
+
+        /// <inheritdoc/>
+        public override event EventHandler<DataReceivedEventArgs> OnDataReceived
+        {
+            add
+            {
+                base.OnDataReceived += value;
+
+                if (IsConnected && ReceiveTaskCancellationTokenSource == null)
+                {
+                    StartReceiveDataTask();
+                }
+            }
+            remove { base.OnDataReceived -= value; }
         }
 
         /// <inheritdoc/>
@@ -209,6 +231,7 @@ namespace STTech.BytesIO.Ipc
                         System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
                         if (!cancellationToken.IsCancellationRequested)
                         {
+                            RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
                             Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive, ex));
                         }
                         return;

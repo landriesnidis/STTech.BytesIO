@@ -142,10 +142,13 @@ namespace STTech.BytesIO.Core
             }
         }
 
-        protected void RaiseExceptionOccurs(Exception ex)
+        public void RaiseExceptionOccurs(Exception ex)
         {
             OnExceptionOccurs?.Invoke(this, new ExceptionOccursEventArgs(ex));
         }
+
+        /// <inheritdoc/>
+        public IEnumerable<BytesClient> GetClients() => InternalClients.Keys;
     }
 
     /// <summary>
@@ -164,5 +167,11 @@ namespace STTech.BytesIO.Core
         Task StartAsync();
         Task StopAsync();
         Task CloseAsync();
+
+        /// <summary>
+        /// 获取所有客户端
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<BytesClient> GetClients();
     }
 }
