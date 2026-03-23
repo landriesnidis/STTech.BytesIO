@@ -1,0 +1,25 @@
+using STTech.BytesIO.Tcp;
+using STTech.BytesIO.Ipc;
+using System;
+using System.Windows.Forms;
+
+namespace STTech.BytesIO.Demo.Servers
+{
+    public partial class MainForm : Form
+    {
+        public MainForm()
+        {
+            InitializeComponent();
+        }
+
+        private void tsmiCreateTcpServer_Click(object sender, EventArgs e)
+        {
+            tab.AddPage("TCP服务端", new ServerPanel(new TcpServer() { Port = 60000 }));
+        }
+
+        private void tsmiCreateIpcServer_Click(object sender, EventArgs e)
+        {
+            tab.AddPage("IPC服务端", new ServerPanel(new IpcServer() { PipeName = "STTech.BytesIO.Demo" }));
+        }
+    }
+}

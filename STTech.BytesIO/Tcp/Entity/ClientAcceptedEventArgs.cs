@@ -64,6 +64,11 @@ namespace STTech.BytesIO.Tcp
             Client = client;
         }
 
+        public ClientDisconnectedEventArgs(TcpClient client, DisconnectionReasonCode reasonCode, Exception exception = null) : base(reasonCode, exception)
+        {
+            Client = client;
+        }
+
         /// <summary>
         /// TCP 客户端对象
         /// </summary>

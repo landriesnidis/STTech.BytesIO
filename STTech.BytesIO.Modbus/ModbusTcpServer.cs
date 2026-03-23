@@ -60,21 +60,21 @@ namespace STTech.BytesIO.Modbus
             InnerServer.ClientDisconnected += InnerServer_ClientDisconnected;
         }
 
-        private void InnerServer_ClientDisconnected(object sender, ClientDisconnectedEventArgs e)
+        private void InnerServer_ClientDisconnected(object sender, STTech.BytesIO.Core.ServerClientDisconnectedEventArgs<TcpClient> e)
         {
-            if (unpackers.TryRemove((TcpClient)e.Client, out var unpacker))
+            if (unpackers.TryRemove(e.Client, out var unpacker))
             {
                 unpacker.OnDataParsed -= Unpacker_OnDataParsed;
             }
-            ClientDisconnected?.Invoke(this, e);
+            ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(e.Client, e.ReasonCode, e.Exception) { ConnectionId = e.ConnectionId, Duration = e.Duration });
         }
 
-        private void InnerServer_ClientConnected(object sender, ClientConnectedEventArgs e)
+        private void InnerServer_ClientConnected(object sender, STTech.BytesIO.Core.ServerClientConnectedEventArgs<TcpClient> e)
         {
             // 在绑定解包器前，先给用户一个注入点（或者用户直接在 ClientConnected 里监听 OnDataReceived）
-            ClientConnected?.Invoke(this, e);
+            ClientConnected?.Invoke(this, new ClientConnectedEventArgs(e.Client.GetInnerClient(), e.Client));
 
-            var unpacker = new ModbusRequestUnpacker((TcpClient)e.Client, ProtocolFormat)
+            var unpacker = new ModbusRequestUnpacker(e.Client, ProtocolFormat)
             {
                 IsLocalSlaveId = (id) => id == this.SlaveId
             };

@@ -10,7 +10,7 @@ namespace STTech.BytesIO.Core
     /// 字节流服务器基类
     /// </summary>
     /// <typeparam name="TClient">客户端类型</typeparam>
-    public abstract class BytesServer<TClient> : IDisposable where TClient : BytesClient
+    public abstract class BytesServer<TClient> : IBytesServer where TClient : BytesClient
     {
         /// <summary>
         /// 客户端列表字典
@@ -155,6 +155,12 @@ namespace STTech.BytesIO.Core
     {
         ServerState State { get; }
         bool IsRunning { get; }
+
+        event EventHandler Started;
+        event EventHandler Closed;
+        event EventHandler Paused;
+        event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
+
         Task StartAsync();
         Task StopAsync();
         Task CloseAsync();
