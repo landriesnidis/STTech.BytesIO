@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using STTech.BytesIO.SerialPortStream;
 
 namespace STTech.BytesIO.Demo.Clients
 {
@@ -30,6 +31,11 @@ namespace STTech.BytesIO.Demo.Clients
         private void tsmiCreateSerialClient_Click(object sender, EventArgs e)
         {
             tab.AddPage("串口客户端", new ClientPanel(new SerialClient() { ReceiveBufferSize = 65536, SendBufferSize = 65536 }));
+        }
+
+        private void tsmiCreateRJCPSerialClient_Click(object sender, EventArgs e)
+        {
+            tab.AddPage("串口客户端(RJCP)", new ClientPanel(new SerialClient() { ReceiveBufferSize = 65536, SendBufferSize = 65536 }.UseSerialPortStream()));
         }
 
         private void tsmiCreateUdpClient_Click(object sender, EventArgs e)

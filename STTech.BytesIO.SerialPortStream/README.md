@@ -1,9 +1,5 @@
 # STTech.BytesIO.SerialPortStream
 
-<p align="center">
-  <img src="../stdiag.png" alt="STTech.BytesIO Logo" width="100"/>
-</p>
-
 **STTech.BytesIO.SerialPortStream** 是 `STTech.BytesIO` 的增强型串口扩展库。它基于成熟的 `SerialPortStream` 开源库实现，旨在为 .NET 开发者提供比原生 `System.IO.Ports.SerialPort` 更稳定、更高效以及跨平台一致性更强的串口通信体验。
 
 ## ✨ 核心优势 (Key Advantages)

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\STTech.BytesIO.SerialPortStream\STTech.BytesIO.SerialPortStream.csproj" />
     <ProjectReference Include="..\..\STTech.BytesIO\STTech.BytesIO.csproj" />
     <ProjectReference Include="..\..\STTech.BytesIO.Quic\STTech.BytesIO.Quic.csproj" />
   </ItemGroup>

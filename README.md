@@ -1,15 +1,5 @@
 # STTech.BytesIO
 
-<p align="center">
-  <img src="stdiag.png" alt="STTech.BytesIO Logo" width="200"/>
-</p>
-
-<p align="center">
-  <a href="https://www.nuget.org/packages/STTech.BytesIO"><img src="https://img.shields.io/nuget/v/STTech.BytesIO.svg" alt="NuGet Version"/></a>
-  <a href="https://www.nuget.org/packages/STTech.BytesIO"><img src="https://img.shields.io/nuget/dt/STTech.BytesIO.svg" alt="NuGet Downloads"/></a>
-  <a href="https://github.com/landriesnidis/STTech.BytesIO/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-brightgreen.svg" alt="License"/></a>
-</p>
-
 ---
 
 ## 🚀 简介 (Introduction)

@@ -34,7 +34,7 @@ namespace STTech.BytesIO.Serial
 
         /// <inheritdoc/>
         [IgnoreDataMember]
-        public override bool IsConnected => InnerClient.IsOpen;
+        public override bool IsConnected => InnerClient?.IsOpen ?? false;
 
         /// <summary>
         /// 构造串口通信客户端
@@ -247,27 +247,27 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public Handshake Handshake { get => InnerClient.Handshake; set => InnerClient.Handshake = value; }
+        public virtual Handshake Handshake { get => InnerClient.Handshake; set => InnerClient.Handshake = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool DtrEnable { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }
+        public virtual bool DtrEnable { get => InnerClient.DtrEnable; set => InnerClient.DtrEnable = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool DiscardNull { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }
+        public virtual bool DiscardNull { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int DataBits { get => InnerClient.DataBits; set => InnerClient.DataBits = value; }
+        public virtual int DataBits { get => InnerClient.DataBits; set => InnerClient.DataBits = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public string NewLine { get => InnerClient.NewLine; set => InnerClient.NewLine = value; }
+        public virtual string NewLine { get => InnerClient.NewLine; set => InnerClient.NewLine = value; }
 
         /// <summary>
         /// <inheritdoc/>
@@ -277,32 +277,32 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public byte ParityReplace { get => InnerClient.ParityReplace; set => InnerClient.ParityReplace = value; }
+        public virtual byte ParityReplace { get => InnerClient.ParityReplace; set => InnerClient.ParityReplace = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public string PortName { get => InnerClient.PortName; set => InnerClient.PortName = value; }
+        public virtual string PortName { get => InnerClient.PortName; set => InnerClient.PortName = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int ReadTimeout { get => InnerClient.ReadTimeout; set => InnerClient.ReadTimeout = value; }
+        public virtual int ReadTimeout { get => InnerClient.ReadTimeout; set => InnerClient.ReadTimeout = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int ReceivedBytesThreshold { get; set; }
+        public virtual int ReceivedBytesThreshold { get; set; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public bool RtsEnable { get => InnerClient.RtsEnable; set => InnerClient.RtsEnable = value; }
+        public virtual bool RtsEnable { get => InnerClient.RtsEnable; set => InnerClient.RtsEnable = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public StopBits StopBits { get => InnerClient.StopBits; set => InnerClient.StopBits = value; }
+        public virtual StopBits StopBits { get => InnerClient.StopBits; set => InnerClient.StopBits = value; }
 
         /// <summary>
         /// <inheritdoc/>
@@ -312,27 +312,27 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int WriteTimeout { get => InnerClient.WriteTimeout; set => InnerClient.WriteTimeout = value; }
+        public virtual int WriteTimeout { get => InnerClient.WriteTimeout; set => InnerClient.WriteTimeout = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public Parity Parity { get => InnerClient.Parity; set => InnerClient.Parity = value; }
+        public virtual Parity Parity { get => InnerClient.Parity; set => InnerClient.Parity = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int BaudRate { get => InnerClient.BaudRate; set => InnerClient.BaudRate = value; }
+        public virtual int BaudRate { get => InnerClient.BaudRate; set => InnerClient.BaudRate = value; }
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public int ReceiveTimeout { get; set; } = 50;
+        public virtual int ReceiveTimeout { get; set; } = 50;
 
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public void DiscardInBuffer()
+        public virtual void DiscardInBuffer()
         {
             InnerClient.DiscardInBuffer();
         }
@@ -340,7 +340,7 @@ namespace STTech.BytesIO.Serial
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
-        public void DiscardOutBuffer()
+        public virtual void DiscardOutBuffer()
         {
             InnerClient.DiscardOutBuffer();
         }

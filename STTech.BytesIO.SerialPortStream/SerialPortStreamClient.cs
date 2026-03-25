@@ -25,6 +25,28 @@ namespace STTech.BytesIO.SerialPortStream
             InnerClient = new RJCP.IO.Ports.SerialPortStream();
         }
 
+        public override bool IsConnected => InnerClient?.IsOpen ?? false;
+
+        public override int ReceiveBufferSize { get => InnerClient.ReadBufferSize; set => InnerClient.ReadBufferSize = value; }
+        public override int SendBufferSize { get => InnerClient.WriteBufferSize; set => InnerClient.WriteBufferSize = value; }
+
+        public override string PortName { get => InnerClient.PortName; set => InnerClient.PortName = value; }
+        public override int BaudRate { get => InnerClient.BaudRate; set => InnerClient.BaudRate = value; }
+        public override int DataBits { get => InnerClient.DataBits; set => InnerClient.DataBits = value; }
+        public override System.IO.Ports.Parity Parity { get => BuildParity(InnerClient.Parity); set => InnerClient.Parity = BuildParity(value); }
+        public override System.IO.Ports.StopBits StopBits { get => BuildStopBits(InnerClient.StopBits); set => InnerClient.StopBits = BuildStopBits(value); }
+        public override System.IO.Ports.Handshake Handshake { get => BuildHandshake(InnerClient.Handshake); set => InnerClient.Handshake = BuildHandshake(value); }
+        public override bool DtrEnable { get => InnerClient.DtrEnable; set => InnerClient.DtrEnable = value; }
+        public override bool RtsEnable { get => InnerClient.RtsEnable; set => InnerClient.RtsEnable = value; }
+        public override bool DiscardNull { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }
+        public override string NewLine { get => InnerClient.NewLine; set => InnerClient.NewLine = value; }
+        public override int ReadTimeout { get => InnerClient.ReadTimeout; set => InnerClient.ReadTimeout = value; }
+        public override int WriteTimeout { get => InnerClient.WriteTimeout; set => InnerClient.WriteTimeout = value; }
+        public override int ReceivedBytesThreshold { get => InnerClient.ReceivedBytesThreshold; set => InnerClient.ReceivedBytesThreshold = value; }
+
+        public override void DiscardInBuffer() => InnerClient.DiscardInBuffer();
+        public override void DiscardOutBuffer() => InnerClient.DiscardOutBuffer();
+
         public override ConnectResult Connect(ConnectArgument argument = null)
         {
             return ConnectAsync(argument).GetAwaiter().GetResult();
@@ -62,17 +84,6 @@ namespace STTech.BytesIO.SerialPortStream
 
             try
             {
-                // 把基类的暴露配置转化为 RJCP 的专属底层枚举：
-                InnerClient.PortName = base.PortName;
-                InnerClient.BaudRate = base.BaudRate;
-                InnerClient.DataBits = base.DataBits;
-                InnerClient.Parity = BuildParity(base.Parity);
-                InnerClient.StopBits = BuildStopBits(base.StopBits);
-                InnerClient.Handshake = BuildHandshake(base.Handshake);
-                InnerClient.DtrEnable = base.DtrEnable;
-                InnerClient.DiscardNull = base.DiscardNull;
-                InnerClient.ReadBufferSize = base.ReceiveBufferSize;
-
                 // 打开串行端口
                 InnerClient.Open();
 
@@ -228,6 +239,19 @@ namespace STTech.BytesIO.SerialPortStream
             }
         }
 
+        private System.IO.Ports.Parity BuildParity(RJCP.IO.Ports.Parity parity)
+        {
+            switch (parity)
+            {
+                case RJCP.IO.Ports.Parity.None: return System.IO.Ports.Parity.None;
+                case RJCP.IO.Ports.Parity.Odd: return System.IO.Ports.Parity.Odd;
+                case RJCP.IO.Ports.Parity.Even: return System.IO.Ports.Parity.Even;
+                case RJCP.IO.Ports.Parity.Mark: return System.IO.Ports.Parity.Mark;
+                case RJCP.IO.Ports.Parity.Space: return System.IO.Ports.Parity.Space;
+                default: return System.IO.Ports.Parity.None;
+            }
+        }
+
         private RJCP.IO.Ports.StopBits BuildStopBits(System.IO.Ports.StopBits stopBits)
         {
             switch (stopBits)
@@ -240,6 +264,17 @@ namespace STTech.BytesIO.SerialPortStream
             }
         }
 
+        private System.IO.Ports.StopBits BuildStopBits(RJCP.IO.Ports.StopBits stopBits)
+        {
+            switch (stopBits)
+            {
+                case RJCP.IO.Ports.StopBits.One: return System.IO.Ports.StopBits.One;
+                case RJCP.IO.Ports.StopBits.Two: return System.IO.Ports.StopBits.Two;
+                case RJCP.IO.Ports.StopBits.One5: return System.IO.Ports.StopBits.OnePointFive;
+                default: return System.IO.Ports.StopBits.One;
+            }
+        }
+
         private RJCP.IO.Ports.Handshake BuildHandshake(System.IO.Ports.Handshake handshake)
         {
             switch (handshake)
@@ -249,6 +284,18 @@ namespace STTech.BytesIO.SerialPortStream
                 case System.IO.Ports.Handshake.RequestToSend: return RJCP.IO.Ports.Handshake.Rts;
                 case System.IO.Ports.Handshake.RequestToSendXOnXOff: return RJCP.IO.Ports.Handshake.RtsXOn;
                 default: return RJCP.IO.Ports.Handshake.None;
+            }
+        }
+
+        private System.IO.Ports.Handshake BuildHandshake(RJCP.IO.Ports.Handshake handshake)
+        {
+            switch (handshake)
+            {
+                case RJCP.IO.Ports.Handshake.None: return System.IO.Ports.Handshake.None;
+                case RJCP.IO.Ports.Handshake.XOn: return System.IO.Ports.Handshake.XOnXOff;
+                case RJCP.IO.Ports.Handshake.Rts: return System.IO.Ports.Handshake.RequestToSend;
+                case RJCP.IO.Ports.Handshake.RtsXOn: return System.IO.Ports.Handshake.RequestToSendXOnXOff;
+                default: return System.IO.Ports.Handshake.None;
             }
         }
     }

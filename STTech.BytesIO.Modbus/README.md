@@ -1,9 +1,5 @@
 # STTech.BytesIO.Modbus
 
-<p align="center">
-  <img src="../stdiag.png" alt="STTech.BytesIO Logo" width="100"/>
-</p>
-
 **STTech.BytesIO.Modbus** 是一个基于 `STTech.BytesIO` 核心架构实现的全方位 Modbus 协议库。它为提供了统一且易用的接口来处理 Modbus RTU、TCP 及 ASCII 通信。
 
 ## ✨ 特性 (Features)
