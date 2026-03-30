@@ -38,12 +38,12 @@ namespace STTech.BytesIO.Demo.Clients
 
         private void Client_OnDataSent(object sender, DataSentEventArgs e)
         {
-            Print($"发送：{e.Data.ToHexString()}");
+            Print($"发送：{e.Data.EncodeToString()}");
         }
 
         private void Client_OnDataReceived(object sender, STTech.BytesIO.Core.DataReceivedEventArgs e)
         {
-            Print($"接收：{e.Data.ToArray().ToHexString()}");
+            Print($"接收：{e.Data.ToArray().EncodeToString()}");
         }
 
         private void Client_OnConnectionFailed(object sender, ConnectionFailedEventArgs e)
