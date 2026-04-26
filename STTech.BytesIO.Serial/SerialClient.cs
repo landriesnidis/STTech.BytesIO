@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,6 +17,8 @@ namespace STTech.BytesIO.Serial
 {
     public partial class SerialClient : BytesClient
     {
+        private readonly object lockerStatus = new object();
+
         /// <summary>
         /// 串口通信对象
         /// </summary>
@@ -45,30 +47,33 @@ namespace STTech.BytesIO.Serial
         /// </summary>
         public override ConnectResult Connect(ConnectArgument argument = null)
         {
-            // 如果串口已经打开了，则此次连接无效
-            if (InnerClient.IsOpen)
+            lock (lockerStatus)
             {
-                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.IsConnected));
-                return new ConnectResult(ConnectErrorCode.IsConnected);
-            }
+                // 如果串口已经打开了，则此次连接无效
+                if (InnerClient.IsOpen)
+                {
+                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.IsConnected));
+                    return new ConnectResult(ConnectErrorCode.IsConnected);
+                }
 
-            try
-            {
-                InnerClient.Open();
+                try
+                {
+                    InnerClient.Open();
 
-                // 执行连接成功回调事件
-                RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
+                    // 执行连接成功回调事件
+                    RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs());
 
-                // 启动接收数据的异步任务
-                StartReceiveDataTask();
+                    // 启动接收数据的异步任务
+                    StartReceiveDataTask();
 
-                return new ConnectResult();
-            }
-            catch (Exception ex)
-            {
-                // 连接失败
-                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
-                return new ConnectResult(ConnectErrorCode.Error, ex);
+                    return new ConnectResult();
+                }
+                catch (Exception ex)
+                {
+                    // 连接失败
+                    RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
+                    return new ConnectResult(ConnectErrorCode.Error, ex);
+                }
             }
         }
 
@@ -79,30 +84,38 @@ namespace STTech.BytesIO.Serial
         {
             argument ??= new DisconnectArgument();
 
-            if (argument.ReasonCode == DisconnectionReasonCode.Active && !InnerClient.IsOpen)
+            lock (lockerStatus)
             {
-                return new DisconnectResult(DisconnectErrorCode.NoConnection);
-            }
+                if (InnerClient != null && InnerClient.IsOpen)
+                {
+                    Exception closeException = null;
+                    try
+                    {
+                        CancelReceiveDataTask();
 
-            // 关闭异步任务
-            // 注：SerialPort已提供了DataReceived事件，不需要再实现异步接收
-            // CancelReceiveDataTask();
+                        // 关闭串口
+                        InnerClient.Close();
+                    }
+                    catch (Exception ex)
+                    {
+                        closeException = ex;
+                    }
 
-            try
-            {
-                CancelReceiveDataTask();
+                    if (closeException != null)
+                    {
+                        RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(closeException));
+                    }
 
-                // 关闭串口
-                InnerClient.Close();
+                    // 执行通信已断开的回调事件 
+                    RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
 
-                // 执行通信已断开的回调事件 
-                RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
-
-                return new DisconnectResult();
-            }
-            catch (Exception ex)
-            {
-                return new DisconnectResult(DisconnectErrorCode.Error, ex);
+                    return new DisconnectResult();
+                }
+                else
+                {
+                    // 当前无连接
+                    return new DisconnectResult(DisconnectErrorCode.NoConnection);
+                }
             }
         }
 
