@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core;
 using STTech.BytesIO.Tcp.Entity;
 using System;
 using System.Collections.Concurrent;
@@ -270,6 +270,7 @@ namespace STTech.BytesIO.Tcp
                 // 如果TcpClient没有关闭，则关闭连接
                 if (InnerClient != null && (IsConnected || innerStatus == InnerStatus.Busy))
                 {
+                    Exception closeException = null;
                     try
                     {
                         // 停止收发
@@ -283,7 +284,7 @@ namespace STTech.BytesIO.Tcp
                     }
                     catch (Exception ex)
                     {
-                        RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                        closeException = ex;
                     }
 
                     // 重置TCP客户端
@@ -291,6 +292,11 @@ namespace STTech.BytesIO.Tcp
 
                     // 重置内部状态为空闲
                     innerStatus = InnerStatus.Free;
+
+                    if (closeException != null)
+                    {
+                        RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(closeException));
+                    }
 
                     // 执行通信已断开的回调事件 
                     RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
