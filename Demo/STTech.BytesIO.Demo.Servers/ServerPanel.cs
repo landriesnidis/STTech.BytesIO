@@ -1,4 +1,5 @@
 using STTech.BytesIO.Core;
+using STTech.BytesIO.P2P;
 using System;
 using System.Windows.Forms;
 
@@ -52,6 +53,15 @@ namespace STTech.BytesIO.Demo.Servers
                     SubscribeToClientEvents(e.Client);
                 };
                 quicServer.ClientDisconnected += (s, e) => Log($"[QUIC] 客户端已断开: {e.Client.ConnectionId} ({e.ReasonCode}) {e.Exception?.Message}");
+            }
+            else if (server is BootstrapServer p2pServer)
+            {
+                p2pServer.PeerConnected += (s, e) =>
+                {
+                    Log($"[P2P] 节点已连接: {e.Client.RemoteAddress} (PeerId: {e.Client.RemotePeerId})");
+                    SubscribeToClientEvents(e.Client);
+                };
+                p2pServer.PeerDisconnected += (s, e) => Log($"[P2P] 节点已断开: {e.Client.RemoteAddress} ({e.DisconnectedInfo.ReasonCode}) {e.DisconnectedInfo.Exception?.Message}");
             }
 
             server.Started += (s, e) => Log("服务已启动");

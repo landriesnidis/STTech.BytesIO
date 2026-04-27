@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
     <Nullable>enable</Nullable>
@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\STTech.BytesIO\STTech.BytesIO.csproj" />
     <ProjectReference Include="..\..\STTech.BytesIO.Quic\STTech.BytesIO.Quic.csproj" />
+    <ProjectReference Include="..\..\STTech.BytesIO.P2P\STTech.BytesIO.P2P.csproj" />
   </ItemGroup>
 
 </Project>

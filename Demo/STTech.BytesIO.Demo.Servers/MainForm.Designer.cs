@@ -34,6 +34,7 @@ namespace STTech.BytesIO.Demo.Servers
             tsmiCreateTcpServer = new ToolStripMenuItem();
             tsmiCreateIpcServer = new ToolStripMenuItem();
             tsmiCreateQuicServer = new ToolStripMenuItem();
+            tsmiCreateP2PServer = new ToolStripMenuItem();
             tab = new ApeFree.ApeForms.Core.Controls.SlideTabControl();
             menuStrip1.SuspendLayout();
             SuspendLayout();
@@ -51,7 +52,7 @@ namespace STTech.BytesIO.Demo.Servers
             // 
             // 新建ToolStripMenuItem
             // 
-            新建ToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { tsmiCreateTcpServer, tsmiCreateIpcServer, tsmiCreateQuicServer });
+            新建ToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { tsmiCreateTcpServer, tsmiCreateIpcServer, tsmiCreateQuicServer, tsmiCreateP2PServer });
             新建ToolStripMenuItem.Name = "新建ToolStripMenuItem";
             新建ToolStripMenuItem.Size = new Size(116, 28);
             新建ToolStripMenuItem.Text = "新建服务端";
@@ -76,6 +77,13 @@ namespace STTech.BytesIO.Demo.Servers
             tsmiCreateQuicServer.Size = new Size(270, 34);
             tsmiCreateQuicServer.Text = "QUIC服务端";
             tsmiCreateQuicServer.Click += tsmiCreateQuicServer_Click;
+            // 
+            // tsmiCreateP2PServer
+            // 
+            tsmiCreateP2PServer.Name = "tsmiCreateP2PServer";
+            tsmiCreateP2PServer.Size = new Size(270, 34);
+            tsmiCreateP2PServer.Text = "P2P种子节点";
+            tsmiCreateP2PServer.Click += tsmiCreateP2PServer_Click;
             // 
             // tab
             // 
@@ -129,6 +137,7 @@ namespace STTech.BytesIO.Demo.Servers
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateTcpServer;
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateIpcServer;
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateQuicServer;
+        private ToolStripMenuItem tsmiCreateP2PServer;
         private ApeFree.ApeForms.Core.Controls.SlideTabControl tab;
     }
 }

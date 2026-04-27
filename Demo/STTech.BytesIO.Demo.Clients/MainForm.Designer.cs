@@ -35,6 +35,7 @@ namespace STTech.BytesIO.Demo.Clients
             tsmiCreateUdpClient = new ToolStripMenuItem();
             tsmiCreateSerialClient = new ToolStripMenuItem();
             tsmiCreateQuicClient = new ToolStripMenuItem();
+            tsmiCreateP2PClient = new ToolStripMenuItem();
             tab = new ApeFree.ApeForms.Core.Controls.SlideTabControl();
             tsmiCreateRJCPSerialClient = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
@@ -53,7 +54,7 @@ namespace STTech.BytesIO.Demo.Clients
             // 
             // 新建ToolStripMenuItem
             // 
-            新建ToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { tsmiCreateTcpClient, tsmiCreateUdpClient, tsmiCreateSerialClient, tsmiCreateRJCPSerialClient, tsmiCreateQuicClient });
+            新建ToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { tsmiCreateTcpClient, tsmiCreateUdpClient, tsmiCreateSerialClient, tsmiCreateRJCPSerialClient, tsmiCreateQuicClient, tsmiCreateP2PClient });
             新建ToolStripMenuItem.Name = "新建ToolStripMenuItem";
             新建ToolStripMenuItem.Size = new Size(116, 28);
             新建ToolStripMenuItem.Text = "新建客户端";
@@ -85,6 +86,13 @@ namespace STTech.BytesIO.Demo.Clients
             tsmiCreateQuicClient.Size = new Size(209, 34);
             tsmiCreateQuicClient.Text = "QUIC客户端";
             tsmiCreateQuicClient.Click += tsmiCreateQuicClient_Click;
+            // 
+            // tsmiCreateP2PClient
+            // 
+            tsmiCreateP2PClient.Name = "tsmiCreateP2PClient";
+            tsmiCreateP2PClient.Size = new Size(209, 34);
+            tsmiCreateP2PClient.Text = "P2P客户端";
+            tsmiCreateP2PClient.Click += tsmiCreateP2PClient_Click;
             // 
             // tab
             // 
@@ -148,5 +156,6 @@ namespace STTech.BytesIO.Demo.Clients
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateUdpClient;
         private System.Windows.Forms.ToolStripMenuItem tsmiCreateQuicClient;
         private ToolStripMenuItem tsmiCreateRJCPSerialClient;
+        private ToolStripMenuItem tsmiCreateP2PClient;
     }
 }

@@ -1,93 +1,72 @@
-# TcpServer 库 API 手册
+# TcpServer Class
 
-`STTech.BytesIO.Tcp.TcpServer` 提供了一个不依赖旧式 `BeginAccept/EndAccept` 死锁线程的现代化零阻塞并发服务器基座。它可以自动维护一个内建并发字典连接池并实现安全的最大终端抗压熔断。
+## 概述
+`TcpServer` 是一个高性能、支持多连接及 SSL/TLS 加密的 TCP 服务端实现。它继承自 `BytesServer<TcpClient>`，为开发者提供了开箱即用的 TCP 网络监听能力。该类处理了复杂的底层 Socket 接受逻辑、连接限流、以及客户端实例的自动化封装。
 
-## 属性 (Properties)
-
-| 成员列表 | 类型 | 说明 |
-| :--- | :--- | :--- |
-| `Host` | `string` | 绑定的本地监听地址。(如 `"0.0.0.0"`) |
-| `Port` | `int` | 绑定的本地监听端口。 |
-| `UseSsl` | `bool` | 获取或设置是否开启 SSL/TLS 加密。 |
-| `Certificate` | `X509Certificate2` | 获取或设置服务器证书。 |
-| `ServerCertificateName` | `string` | 获取或设置服务器证书名称。 |
-| `SslProtocol` | `SslProtocols` | 获取或设置 SSL 协议版本 (如 `Tls12`)。 |
-| `MaxConnections` | `uint` | 获取或设置服务器承载的最大客户端数量。达到此阈值后，新的外部 Accept 请求会被秒速安全关闭释放，而不是崩溃或者直接掐断整个服务端口。设定为 `0` 代表不限并发。 |
-| `Clients` | `TcpClient[]` | (**只读**) 获取当前服务成功建立连接的所有活动的客户端对象快照数组。 |
-
----
-
-## SSL/TLS 加密支持
-
-从 3.0 版本开始，`TcpServer` 提供了深度集成的 SSL/TLS 支持：
+## 定义
+- **命名空间**: `STTech.BytesIO.Tcp`
+- **程序集**: `STTech.BytesIO.dll`
 
 ```csharp
-var server = new TcpServer() {
-    Port = 8086,
-    UseSsl = true,
-    Certificate = new X509Certificate2("server.pfx", "password")
+public partial class TcpServer : TcpServer<TcpClient>
+```
+
+**继承关系**: `Object` -> `BytesServer<TcpClient>` -> `TcpServer<T>` -> `TcpServer`
+
+## 注解
+- **连接拒绝策略**: 当服务器状态为 `Paused` 或达到 `MaxConnections` 限制时，服务器将自动拒绝并断开新连入的 Socket。
+- **SSL 支持**: 支持在服务端配置证书，一旦启用 `UseSsl`，服务器将在接受新连接后自动异步执行 SSL 握手。
+- **泛型扩展**: 虽然提供了默认的 `TcpServer`（使用 `TcpClient`），由于采用了泛型基类 `TcpServer<T>`，开发者可以轻松创建使用自定义客户端类型的服务端。
+
+## 构造函数概览
+| 名称 | 说明 |
+| :--- | :--- |
+| `TcpServer()` | 初始化 `TcpServer` 类的新实例，并默认将 Socket 封装为 `TcpClient`。 |
+
+## 属性概览
+| 名称 | 说明 |
+| :--- | :--- |
+| `Backlog` | 获取或设置挂起连接队列的最大长度。默认为 10。 |
+| `Certificate` | 获取或设置服务端用于 SSL 身份验证的证书。 |
+| `Host` | 获取或设置服务端监听的网络地址（如 `0.0.0.0` 或 `127.0.0.1`）。 |
+| `Port` | 获取或设置服务端监听的端口号。 |
+| `ServerCertificateName` | 获取或设置服务器证书的显示名称。 |
+| `SslProtocol` | 获取或设置支持的 SSL/TLS 协议版本。 |
+| `UseSsl` | 获取或设置一个值，指示是否启用 SSL/TLS 通信。 |
+| `ClientConnectionAcceptedHandle` | 获取或设置一个委托，用于判定是否接受特定的客户端连接。 |
+
+## 方法概览
+| 名称 | 说明 |
+| :--- | :--- |
+| `CloseAsync()` | 异步关闭服务器并释放所有客户端连接。 |
+| `StartAsync()` | 异步启动网络监听任务。 |
+| `StopAsync()` | 异步停止网络监听（不影响已连接的客户端）。 |
+| `EncapsulateSocket` | （受保护）获取或设置将 Socket 包装为客户端实例的处理程序。 |
+
+## 方法详细说明
+
+### StartAsync
+根据配置的 `Host` 和 `Port` 绑定并监听 Socket。启动后会进入后台接收循环 `AcceptLoopAsync`。
+- **签名**: `public override Task StartAsync()`
+- **备注**: 如果已处于监听状态，调用此方法将直接返回。
+
+### StopAsync (暂停)
+关闭当前的监听 Socket，并将服务器状态置为 `Paused`。已连接的客户端仍然可以继续通信，但不再接受新连接。
+- **签名**: `public override Task StopAsync()`
+
+## 示例
+### 1. 基础启动
+```csharp
+var server = new TcpServer { Host = "0.0.0.0", Port = 6000 };
+server.ClientConnected += (s, e) => {
+    Console.WriteLine($"客户端连入: {e.Client.RemoteEndPoint}");
 };
 await server.StartAsync();
 ```
 
-## 方法 (Methods)
-
-### StartAsync()
-**定义：**
+### 2. SSL/TLS 加密服务端
 ```csharp
-public Task StartAsync();
-```
-**说明：**
-监听绑定的网络设备并无阻塞地启动并发 `Accept` 数据入场泵队列守护协程。调用此方法会直接返回，不会引发单点锁块执行假死。
-
-### StopAsync()
-暂停服务端的数据接入操作（挂起）。在此时如果有处于最大并发熔断状态，其依旧遵循拒绝安全策略而不会关闭正在通信池里的其他通讯兵。
-
-## 事件 (Events)
-
-- **`ClientConnected`**
-  新客户端设备无损连入并完成了安全分配（包括完成非常耗时的内部 TLS 重计算）后触发。
-
-- **`ClientDisconnected`**
-  当由于外界拔网线、超时或对方主动切断长连接造成的套接字 0 字节捕获时，它能秒感知并向你触发汇报离线原因及哪个客户端下线。
-
-## 示例学习 (Examples)
-
-### 示例 1： 构建坚不可摧极速转发网关
-
-```csharp
-using STTech.BytesIO.Tcp;
-
-var server = new TcpServer()
-{
-    Host = "0.0.0.0",
-    Port = 5002,
-    MaxConnections = 10000, 
-    // 若达到 10000 活跃，直接返回 SYN 包熔断但不关服务！ 
-};
-
-// 某台机器建立完好套接字分配了新的处理槽以后激发
-server.ClientConnected += (s, e) =>
-{
-    Console.WriteLine($"[网关联动] 终端上线 - {e.Client.RemoteEndPoint}");
-
-    // 对于被 Server 分解出的连接设备，你直接注入其接收事件即可：
-    e.Client.OnDataReceived += (cs, ce) =>
-    {
-         Console.WriteLine($"服务器处理中...已收发包量：{ce.Data.Length} 字节");
-         // 甚至无需装箱，直接投进原生异步发送管道将同样数据发送回去(Echo 服务器):
-         // fire-and-forget: 
-         _ = e.Client.SendAsync(ce.Data.ToArray());
-    };
-};
-
-server.OnExceptionOccurs += (s, e) =>
-{
-    Console.WriteLine($"[网关异常告警] : {e.Exception.Message}");
-};
-
+var server = new TcpServer { Port = 8888, UseSsl = true };
+server.Certificate = new X509Certificate2("server.pfx", "password");
 await server.StartAsync();
-
-Console.WriteLine("万级网关处于监听，敲击任意按盘关闭");
-Console.ReadKey();
 ```

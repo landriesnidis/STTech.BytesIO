@@ -300,7 +300,7 @@ namespace STTech.BytesIO.Demo.Modbus
             this.labelHoldingInterval.AutoSize = true;
             this.labelHoldingInterval.Location = new System.Drawing.Point(440, 72);
             this.labelHoldingInterval.Name = "labelHoldingInterval";
-            this.labelHoldingInterval.Size = new System.Drawing.Size(98, 18);
+            this.labelHoldingInterval.Size = new System.Drawing.Size(89, 18);
             this.labelHoldingInterval.TabIndex = 12;
             this.labelHoldingInterval.Text = "间隔(ms):";
             // 
@@ -321,7 +321,7 @@ namespace STTech.BytesIO.Demo.Modbus
             this.labelHoldingQty.AutoSize = true;
             this.labelHoldingQty.Location = new System.Drawing.Point(280, 72);
             this.labelHoldingQty.Name = "labelHoldingQty";
-            this.labelHoldingQty.Size = new System.Drawing.Size(62, 18);
+            this.labelHoldingQty.Size = new System.Drawing.Size(53, 18);
             this.labelHoldingQty.TabIndex = 10;
             this.labelHoldingQty.Text = "数量:";
             // 
@@ -342,7 +342,7 @@ namespace STTech.BytesIO.Demo.Modbus
             this.labelHoldingAddr.AutoSize = true;
             this.labelHoldingAddr.Location = new System.Drawing.Point(120, 72);
             this.labelHoldingAddr.Name = "labelHoldingAddr";
-            this.labelHoldingAddr.Size = new System.Drawing.Size(62, 18);
+            this.labelHoldingAddr.Size = new System.Drawing.Size(53, 18);
             this.labelHoldingAddr.TabIndex = 8;
             this.labelHoldingAddr.Text = "地址:";
             // 
@@ -383,7 +383,7 @@ namespace STTech.BytesIO.Demo.Modbus
             this.labelCoilInterval.AutoSize = true;
             this.labelCoilInterval.Location = new System.Drawing.Point(440, 32);
             this.labelCoilInterval.Name = "labelCoilInterval";
-            this.labelCoilInterval.Size = new System.Drawing.Size(98, 18);
+            this.labelCoilInterval.Size = new System.Drawing.Size(89, 18);
             this.labelCoilInterval.TabIndex = 5;
             this.labelCoilInterval.Text = "间隔(ms):";
             // 
@@ -404,7 +404,7 @@ namespace STTech.BytesIO.Demo.Modbus
             this.labelCoilQty.AutoSize = true;
             this.labelCoilQty.Location = new System.Drawing.Point(280, 32);
             this.labelCoilQty.Name = "labelCoilQty";
-            this.labelCoilQty.Size = new System.Drawing.Size(62, 18);
+            this.labelCoilQty.Size = new System.Drawing.Size(53, 18);
             this.labelCoilQty.TabIndex = 3;
             this.labelCoilQty.Text = "数量:";
             // 
@@ -425,7 +425,7 @@ namespace STTech.BytesIO.Demo.Modbus
             this.labelCoilAddr.AutoSize = true;
             this.labelCoilAddr.Location = new System.Drawing.Point(120, 32);
             this.labelCoilAddr.Name = "labelCoilAddr";
-            this.labelCoilAddr.Size = new System.Drawing.Size(62, 18);
+            this.labelCoilAddr.Size = new System.Drawing.Size(53, 18);
             this.labelCoilAddr.TabIndex = 1;
             this.labelCoilAddr.Text = "地址:";
             // 
@@ -450,9 +450,9 @@ namespace STTech.BytesIO.Demo.Modbus
             // 
             // tbData
             // 
-            this.tbData.Location = new System.Drawing.Point(137, 191);
+            this.tbData.Location = new System.Drawing.Point(159, 191);
             this.tbData.Name = "tbData";
-            this.tbData.Size = new System.Drawing.Size(587, 28);
+            this.tbData.Size = new System.Drawing.Size(565, 28);
             this.tbData.TabIndex = 7;
             // 
             // lblData
@@ -460,7 +460,7 @@ namespace STTech.BytesIO.Demo.Modbus
             this.lblData.AutoSize = true;
             this.lblData.Location = new System.Drawing.Point(10, 196);
             this.lblData.Name = "lblData";
-            this.lblData.Size = new System.Drawing.Size(134, 18);
+            this.lblData.Size = new System.Drawing.Size(143, 18);
             this.lblData.TabIndex = 6;
             this.lblData.Text = "数据(逗号间隔):";
             // 

@@ -1,84 +1,95 @@
-# TcpClient 库 API 手册
+# TcpClient Class
 
-<a name="TcpClient"></a>
-`STTech.BytesIO.Tcp.TcpClient` 类提供了在 .NET 中原生支持非阻塞、全异步调用的 TCP 客户端。它继承自 `BytesClient`。由于内部利用了 `SocketAsyncEventArgs` / `NetworkStream.ReadAsync` / `NetworkStream.WriteAsync`，本类不仅适用于单连接硬件终端通信，即便同时实例化一万个对象，也不会阻塞线程池资源。
+## 概述
+`TcpClient` 是基于 TCP 协议的通信客户端实现。它继承自 `BytesClient`，提供了标准的 TCP 连接管理、异步数据收发以及高度集成的 SSL/TLS 加密通信功能。该类支持同步与异步操作模式，并内置了针对 TCP 连接生命周期的完整处理逻辑，包括自动重连支持（配合插件使用）和优雅的资源释放。
 
-## 属性 (Properties)
+## 定义
+- **命名空间**: `STTech.BytesIO.Tcp`
+- **程序集**: `STTech.BytesIO.dll`
 
-| 成员列表 | 类型 | 说明 |
-| :--- | :--- | :--- |
-| `Host` | `string` | 获取或设置要连接的服务器 IP 地址 / 域名。(默认值 `"127.0.0.1"`) |
-| `Port` | `int` | 获取或设置要连接的服务器目标监听端口号。(默认值 `8086`) |
-| `IsConnected` | `bool` | (**只读**) 获取当前套接字的实时物理与逻辑在线状态。 |
-| `ReceiveBufferSize` | `int` | 获取或设置单次网卡最大下发读取容量。(默认 `32768` 即 32KB) |
-| `UseSsl` | `bool` | 获取或设置是否开启 SSL/TLS 加密。 |
-| `SslProtocol` | `SslProtocols` | 获取或设置 SSL 协议版本 (如 `Tls12`)。 |
-| `Certificate` | `X509Certificate2` | 获取或设置用于客户端身份验证的证书。 |
-| `ServerCertificateName` | `string` | 获取或设置服务器证书的预期名称（用于 SNI 验证）。 |
-
-## 方法 (Methods)
-
-### ConnectAsync()
-**定义：**
 ```csharp
-public Task<ConnectResult> ConnectAsync(ConnectArgument argument = null);
+public partial class TcpClient : BytesClient, ITcpClient, ITcpSSL
 ```
-**说明：**
-使用纯异步非阻塞形式将客户端连接到所配置的 `Host` 和 `Port`。
 
-**返回：**
-返回代表当前重载操作连接状态的 `ConnectResult` 结构。检查 `ConnectResult.IsSuccess` 来验证。
+**继承关系**: `Object` -> `BytesClient` -> `TcpClient`
+**实现接口**: `IBytesClient`, `ITcpClient`, `ITcpSSL`, `IDisposable`
 
----
+## 注解
+- **性能**: 内部利用 `System.IO.Pipelines` 思路及 `ArrayPool` 进行接收缓存管理，在高吞吐量的 TCP 通信中表现优异。
+- **安全性**: 通过 `UseSsl` 开关可一键启用 TLS 安全传输。支持自定义证书验证回调和本地证书选择，兼容绝大多数工业级 SSL 连接场景。
+- **线程安全性**: `Connect` 和 `Disconnect` 操作内部持有状态锁，确保在多线程环境下并发调用时不会导致 Socket 状态混乱。
 
-### SendAsync(...)
-**定义：**
+## 构造函数概览
+| 名称 | 说明 |
+| :--- | :--- |
+| `TcpClient()` | 使用默认设置初始化一个新的 `TcpClient` 实例。 |
+| `TcpClient(Socket)` | 使用现有的 `Socket` 对象初始化 `TcpClient` 实例。 |
+
+## 属性概览
+| 名称 | 说明 |
+| :--- | :--- |
+| `Certificate` | 获取或设置用于 SSL 身份验证的证书。 |
+| `Host` | 获取或设置远程主机的 IP 地址或域名。默认为 `127.0.0.1`。 |
+| `IsConnected` | 获取一个值，指示 Socket 是否已建立连接并处于活动状态。 |
+| `LocalEndPoint` | 获取本地终端节点（IP 和 端口）。 |
+| `Port` | 获取或设置远程主机的端口号。默认为 `8086`。 |
+| `RemoteEndPoint` | 获取远程主机的终端节点。 |
+| `ServerCertificateName` | 获取或设置服务端证书的名称。 |
+| `SslProtocol` | 获取或设置适用的 TLS 协议版本。默认为 `Tls12`。 |
+| `SslStream` | 获取当前的 SSL 通信流（仅在 `UseSsl` 为 `true` 时有效）。 |
+| `UseSsl` | 获取或设置一个值，指示是否启用 SSL/TLS 加密通信。 |
+| `InnerClient` | （受保护）获取内部使用的 `Socket` 实例。 |
+
+## 方法概览
+| 名称 | 说明 |
+| :--- | :--- |
+| `Connect(ConnectArgument)` | 建立 TCP 通信连接。 |
+| `Disconnect(DisconnectArgument)` | 断开 TCP 通信连接。 |
+| `GetInnerClient()` | 获取底层的 `Socket` 对象。 |
+| `InitializeSslStream()` | 手动初始化 SSL 通信流。 |
+| `LocalCertificateSelectionCallback(...)` | 用于本地证书选择的默认回调实现。 |
+| `PerformTlsVerifySuccessfully(...)` | 手动触发 TLS 验证成功事件。 |
+| `ReceiveDataCompletedHandle()` | （受保护）重写父类的数据接收完成处理逻辑。 |
+| `ReceiveDataHandleAsync(...)` | （受保护）核心异步接收循环实现。 |
+| `RemoteCertificateValidateCallback(...)` | （受保护）用于远端证书验证的默认回调逻辑。 |
+| `SendHandlerAsync(...)` | （受保护）核心异步发送底层实现。 |
+
+## 事件概览
+| 名称 | 说明 |
+| :--- | :--- |
+| `OnTlsVerifySuccessfully` | 在 SSL/TLS 手握手成功且验证通过时触发。 |
+
+## 方法详细说明
+
+### Connect
+执行 TCP 连接逻辑。如果启用了 SSL，将在底层 Socket 连接成功后自动执行 TLS 握手。
+- **签名**: `public override ConnectResult Connect(ConnectArgument argument = null)`
+- **返回值**: `ConnectResult`。如果连接中途超时或 SSL 握手失败，会返回对应的错误码。
+
+### InitializeSslStream
+该方法会基于当前的 `InnerClient` 创建 `SslStream` 并根据配置的证书进行身份验证。
+- **签名**: `public void InitializeSslStream()`
+- **异常**: 若证书非法或握手被拒绝，可能抛出 `AuthenticationException`。
+
+### ReceiveDataHandleAsync (Protected)
+实现了基于 `Stream.ReadAsync` 的生产-消费模型。该方法会不断租借池化缓冲区，直到连接断开。
+- **签名**: `protected override async Task ReceiveDataHandleAsync(CancellationToken cancellationToken)`
+
+## 示例
+### 1. 基础连接
 ```csharp
-// 基本用法：直接向远程宿主机异步发射字节队列
-public Task SendAsync(byte[] data, SendOptions options = null);
-
-// 高级用法：发出数据之后挂起，直到通过 matchHandler 检测到合法的“心跳回应”或“请求答复”帧才继续执行流
-public Task<ReplyBytes> SendAsync(byte[] data, int timeout, ReplyMatchHandler<byte[], ReceiveContext> matchHandler, SendOptions options = null);
+var client = new TcpClient { Host = "192.168.1.10", Port = 502 };
+var result = await client.ConnectAsync();
+if(result.IsSuccess) 
+{
+    await client.SendAsync(new byte[] { 0x00, 0x01 });
+}
 ```
-**说明：**
-完全消除线程阻塞，通过 `TaskCompletionSource` 返回发送/接受等待凭证，只有实际调用网卡 IO 完成或触发超时才会返回。利用了内部的 `ConcurrentQueue` 实现，绝对线程安全。
 
-### Disconnect()
-断开目前 TCP 连接，并安全释放当前相关的长驻异步协程监听。
-
-## 事件 (Events)
-
-- **`OnDataReceived`**
-  当有远端消息投递时触发。携带 `DataReceivedEventArgs`，内含零拷贝缓冲区序列的装载类型 `ReceiveContext`。
-
-- **`OnDisconnected`**
-  触发断开连接事件，无论时远端主动发来 FIN 关闭双流，还是被动产生本地错误或超时，都会被可靠拦截。
-
----
-
-## 示例学习 (Examples)
-
-### 示例 1: 等待具体的设备响应 (Sync-over-Async) 的现代写法
-以往开发者常被“请求-等待响应”的复杂黏包处理逼疯。借助最新的 `.SendAsync` 函数重载以及底层的真异步：
-
+### 2. TLS 安全连接
 ```csharp
-// 我们给远端发送 0x01 命令并要求在 5 秒内得到 0x01 开头的响应，否则属于超时中断。
-var reply = await client.SendAsync(
-    data: new byte[] { 0x01, 0xFF, 0xFE }, 
-    timeout: 5000, 
-    matchHandler: (request, response) => 
-    {
-        // 此委托用于确定当前从网络流剥离的接收帧是不是我们这发请求对应的响应
-        // 如果是，返回 true。否则会被底层抛弃继续等待下一个底层事件
-        return response.Data.Length > 0 && response.Data.FirstSpan[0] == request[0]; 
-    });
-
-if (reply.Status == ReplyStatus.Success)
-{
-    Console.WriteLine("收到答复：" + string.Join("-", reply.Response.Data.ToArray().Select(b=>b.ToString("X2"))));
-}
-else if(reply.Status == ReplyStatus.Timeout)
-{
-    Console.WriteLine("这台硬件迟迟不出声！超时了！");
-}
+var client = new TcpClient { Host = "myserver.com", Port = 443, UseSsl = true };
+client.ServerCertificateName = "myserver.com";
+client.OnTlsVerifySuccessfully += (s, e) => Console.WriteLine("SSL连接安全");
+await client.ConnectAsync();
 ```

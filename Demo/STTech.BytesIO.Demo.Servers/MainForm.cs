@@ -1,6 +1,7 @@
 using STTech.BytesIO.Tcp;
 using STTech.BytesIO.Ipc;
 using STTech.BytesIO.Quic;
+using STTech.BytesIO.P2P;
 using System;
 using System.Windows.Forms;
 
@@ -27,5 +28,11 @@ namespace STTech.BytesIO.Demo.Servers
         {
             tab.AddPage("QUIC服务端", new ServerPanel(new QuicServer() { Port = 443 }));
         }
+
+        private void tsmiCreateP2PServer_Click(object sender, EventArgs e)
+        {
+            tab.AddPage("P2P种子节点", new ServerPanel(new BootstrapServer()));
+        }
+
     }
 }

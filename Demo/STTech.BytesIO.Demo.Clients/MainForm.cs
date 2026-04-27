@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using STTech.BytesIO.SerialPortStream;
+using STTech.BytesIO.P2P;
 
 namespace STTech.BytesIO.Demo.Clients
 {
@@ -46,6 +47,11 @@ namespace STTech.BytesIO.Demo.Clients
         private void tsmiCreateQuicClient_Click(object sender, EventArgs e)
         {
             tab.AddPage("QUIC客户端", new ClientPanel(new QuicClient() { Port = 443 }));
+        }
+
+        private void tsmiCreateP2PClient_Click(object sender, EventArgs e)
+        {
+            tab.AddPage("P2P客户端", new ClientPanel(new PeerClient()));
         }
     }
 }
