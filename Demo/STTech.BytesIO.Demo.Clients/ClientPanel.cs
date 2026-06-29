@@ -38,12 +38,26 @@ namespace STTech.BytesIO.Demo.Clients
 
         private void Client_OnDataSent(object sender, DataSentEventArgs e)
         {
-            Print($"发送：{e.Data.EncodeToString()}");
+            if (btnHexMode.Checked)
+            {
+                Print($"发送：{e.Data.ToHexString()}");
+            }
+            else
+            {
+                Print($"发送：{e.Data.EncodeToString()}");
+            }
         }
 
         private void Client_OnDataReceived(object sender, STTech.BytesIO.Core.DataReceivedEventArgs e)
         {
-            Print($"接收：{e.Data.ToArray().EncodeToString()}");
+            if (btnHexMode.Checked)
+            {
+                Print($"接收：{e.Data.ToArray().ToHexString()}");
+            }
+            else
+            {
+                Print($"接收：{e.Data.ToArray().EncodeToString()}");
+            }
         }
 
         private void Client_OnConnectionFailed(object sender, ConnectionFailedEventArgs e)
@@ -78,12 +92,25 @@ namespace STTech.BytesIO.Demo.Clients
 
         private void btnSend_Click(object sender, EventArgs e)
         {
-            client.Send(tbSend.Text.GetBytes());
+            try
+            {
+                var data = btnHexMode.Checked ? tbSend.Text.HexStringToBytes() : tbSend.Text.GetBytes();
+                client.Send(data);
+            }
+            catch (Exception ex)
+            {
+                tbRecv.AppendText($"#ERROR# {ex.Message}");
+            }
         }
 
         private void Print(string msg)
         {
             tbRecv.AppendText($"[{DateTime.Now}] {msg}\r\n");
+        }
+
+        private void btnScreenClean_Click(object sender, EventArgs e)
+        {
+            tbRecv.Clear();
         }
     }
 }

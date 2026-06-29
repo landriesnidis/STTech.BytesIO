@@ -29,142 +29,198 @@ namespace STTech.BytesIO.Demo.Clients
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ClientPanel));
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.propertyGrid = new System.Windows.Forms.PropertyGrid();
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.btnConnect = new System.Windows.Forms.ToolStripButton();
-            this.btnDisconnect = new System.Windows.Forms.ToolStripButton();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.tbRecv = new System.Windows.Forms.RichTextBox();
-            this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.tbSend = new System.Windows.Forms.RichTextBox();
-            this.btnSend = new System.Windows.Forms.Button();
-            this.groupBox1.SuspendLayout();
-            this.toolStrip1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            this.groupBox3.SuspendLayout();
-            this.SuspendLayout();
+            groupBox1 = new GroupBox();
+            propertyGrid = new PropertyGrid();
+            toolStrip1 = new ToolStrip();
+            btnConnect = new ToolStripButton();
+            btnDisconnect = new ToolStripButton();
+            groupBox2 = new GroupBox();
+            tbRecv = new RichTextBox();
+            groupBox3 = new GroupBox();
+            tbSend = new RichTextBox();
+            btnSend = new Button();
+            toolStrip2 = new ToolStrip();
+            btnScreenClean = new ToolStripButton();
+            btnHexMode = new ToolStripButton();
+            toolStripSeparator1 = new ToolStripSeparator();
+            groupBox1.SuspendLayout();
+            toolStrip1.SuspendLayout();
+            groupBox2.SuspendLayout();
+            groupBox3.SuspendLayout();
+            toolStrip2.SuspendLayout();
+            SuspendLayout();
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.propertyGrid);
-            this.groupBox1.Controls.Add(this.toolStrip1);
-            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Left;
-            this.groupBox1.Location = new System.Drawing.Point(0, 0);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(259, 546);
-            this.groupBox1.TabIndex = 0;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "连接信息";
+            groupBox1.Controls.Add(propertyGrid);
+            groupBox1.Controls.Add(toolStrip1);
+            groupBox1.Dock = DockStyle.Left;
+            groupBox1.Location = new Point(0, 0);
+            groupBox1.Margin = new Padding(4);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Padding = new Padding(4);
+            groupBox1.Size = new Size(302, 774);
+            groupBox1.TabIndex = 0;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "连接信息";
             // 
             // propertyGrid
             // 
-            this.propertyGrid.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.propertyGrid.Location = new System.Drawing.Point(3, 42);
-            this.propertyGrid.Name = "propertyGrid";
-            this.propertyGrid.Size = new System.Drawing.Size(253, 501);
-            this.propertyGrid.TabIndex = 0;
+            propertyGrid.BackColor = SystemColors.Control;
+            propertyGrid.Dock = DockStyle.Fill;
+            propertyGrid.Location = new Point(4, 45);
+            propertyGrid.Margin = new Padding(4);
+            propertyGrid.Name = "propertyGrid";
+            propertyGrid.Size = new Size(294, 725);
+            propertyGrid.TabIndex = 0;
             // 
             // toolStrip1
             // 
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.btnConnect,
-            this.btnDisconnect});
-            this.toolStrip1.Location = new System.Drawing.Point(3, 17);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(253, 25);
-            this.toolStrip1.TabIndex = 1;
-            this.toolStrip1.Text = "toolStrip1";
+            toolStrip1.Items.AddRange(new ToolStripItem[] { btnConnect, btnDisconnect });
+            toolStrip1.Location = new Point(4, 20);
+            toolStrip1.Name = "toolStrip1";
+            toolStrip1.Size = new Size(294, 25);
+            toolStrip1.TabIndex = 1;
+            toolStrip1.Text = "toolStrip1";
             // 
             // btnConnect
             // 
-            this.btnConnect.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.btnConnect.Image = ((System.Drawing.Image)(resources.GetObject("btnConnect.Image")));
-            this.btnConnect.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnConnect.Name = "btnConnect";
-            this.btnConnect.Size = new System.Drawing.Size(36, 22);
-            this.btnConnect.Text = "连接";
-            this.btnConnect.Click += new System.EventHandler(this.btnConnect_Click);
+            btnConnect.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            btnConnect.Image = (Image)resources.GetObject("btnConnect.Image");
+            btnConnect.ImageTransparentColor = Color.Magenta;
+            btnConnect.Name = "btnConnect";
+            btnConnect.Size = new Size(36, 22);
+            btnConnect.Text = "连接";
+            btnConnect.Click += btnConnect_Click;
             // 
             // btnDisconnect
             // 
-            this.btnDisconnect.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.btnDisconnect.Image = ((System.Drawing.Image)(resources.GetObject("btnDisconnect.Image")));
-            this.btnDisconnect.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnDisconnect.Name = "btnDisconnect";
-            this.btnDisconnect.Size = new System.Drawing.Size(36, 22);
-            this.btnDisconnect.Text = "断开";
-            this.btnDisconnect.Click += new System.EventHandler(this.btnDisconnect_Click);
+            btnDisconnect.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            btnDisconnect.Image = (Image)resources.GetObject("btnDisconnect.Image");
+            btnDisconnect.ImageTransparentColor = Color.Magenta;
+            btnDisconnect.Name = "btnDisconnect";
+            btnDisconnect.Size = new Size(36, 22);
+            btnDisconnect.Text = "断开";
+            btnDisconnect.Click += btnDisconnect_Click;
             // 
             // groupBox2
             // 
-            this.groupBox2.Controls.Add(this.tbRecv);
-            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupBox2.Location = new System.Drawing.Point(259, 0);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(576, 446);
-            this.groupBox2.TabIndex = 1;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "日志";
+            groupBox2.Controls.Add(tbRecv);
+            groupBox2.Dock = DockStyle.Fill;
+            groupBox2.Location = new Point(302, 0);
+            groupBox2.Margin = new Padding(4);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Padding = new Padding(4);
+            groupBox2.Size = new Size(672, 632);
+            groupBox2.TabIndex = 1;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "日志";
             // 
             // tbRecv
             // 
-            this.tbRecv.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tbRecv.Location = new System.Drawing.Point(3, 17);
-            this.tbRecv.Name = "tbRecv";
-            this.tbRecv.ReadOnly = true;
-            this.tbRecv.Size = new System.Drawing.Size(570, 426);
-            this.tbRecv.TabIndex = 0;
-            this.tbRecv.Text = "";
+            tbRecv.Dock = DockStyle.Fill;
+            tbRecv.Location = new Point(4, 20);
+            tbRecv.Margin = new Padding(4);
+            tbRecv.Name = "tbRecv";
+            tbRecv.ReadOnly = true;
+            tbRecv.Size = new Size(664, 608);
+            tbRecv.TabIndex = 0;
+            tbRecv.Text = "";
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.tbSend);
-            this.groupBox3.Controls.Add(this.btnSend);
-            this.groupBox3.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.groupBox3.Location = new System.Drawing.Point(259, 446);
-            this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(576, 100);
-            this.groupBox3.TabIndex = 2;
-            this.groupBox3.TabStop = false;
-            this.groupBox3.Text = "输入区";
+            groupBox3.Controls.Add(tbSend);
+            groupBox3.Controls.Add(btnSend);
+            groupBox3.Controls.Add(toolStrip2);
+            groupBox3.Dock = DockStyle.Bottom;
+            groupBox3.Location = new Point(302, 632);
+            groupBox3.Margin = new Padding(4);
+            groupBox3.Name = "groupBox3";
+            groupBox3.Padding = new Padding(4);
+            groupBox3.Size = new Size(672, 142);
+            groupBox3.TabIndex = 2;
+            groupBox3.TabStop = false;
+            groupBox3.Text = "输入区";
             // 
             // tbSend
             // 
-            this.tbSend.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tbSend.Location = new System.Drawing.Point(3, 17);
-            this.tbSend.Name = "tbSend";
-            this.tbSend.Size = new System.Drawing.Size(514, 80);
-            this.tbSend.TabIndex = 1;
-            this.tbSend.Text = "";
+            tbSend.Dock = DockStyle.Fill;
+            tbSend.Location = new Point(4, 45);
+            tbSend.Margin = new Padding(4);
+            tbSend.Name = "tbSend";
+            tbSend.Size = new Size(599, 93);
+            tbSend.TabIndex = 1;
+            tbSend.Text = "";
             // 
             // btnSend
             // 
-            this.btnSend.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnSend.Location = new System.Drawing.Point(517, 17);
-            this.btnSend.Name = "btnSend";
-            this.btnSend.Size = new System.Drawing.Size(56, 80);
-            this.btnSend.TabIndex = 2;
-            this.btnSend.Text = "发送";
-            this.btnSend.UseVisualStyleBackColor = true;
-            this.btnSend.Click += new System.EventHandler(this.btnSend_Click);
+            btnSend.Dock = DockStyle.Right;
+            btnSend.Location = new Point(603, 45);
+            btnSend.Margin = new Padding(4);
+            btnSend.Name = "btnSend";
+            btnSend.Size = new Size(65, 93);
+            btnSend.TabIndex = 2;
+            btnSend.Text = "发送";
+            btnSend.UseVisualStyleBackColor = true;
+            btnSend.Click += btnSend_Click;
+            // 
+            // toolStrip2
+            // 
+            toolStrip2.Items.AddRange(new ToolStripItem[] { btnScreenClean, btnHexMode, toolStripSeparator1 });
+            toolStrip2.Location = new Point(4, 20);
+            toolStrip2.Name = "toolStrip2";
+            toolStrip2.Size = new Size(664, 25);
+            toolStrip2.TabIndex = 3;
+            toolStrip2.Text = "toolStrip2";
+            // 
+            // btnScreenClean
+            // 
+            btnScreenClean.Alignment = ToolStripItemAlignment.Right;
+            btnScreenClean.CheckOnClick = true;
+            btnScreenClean.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            btnScreenClean.ForeColor = Color.Green;
+            btnScreenClean.Image = (Image)resources.GetObject("btnScreenClean.Image");
+            btnScreenClean.ImageTransparentColor = Color.Magenta;
+            btnScreenClean.Name = "btnScreenClean";
+            btnScreenClean.Size = new Size(44, 22);
+            btnScreenClean.Text = "Clean";
+            btnScreenClean.Click += btnScreenClean_Click;
+            // 
+            // btnHexMode
+            // 
+            btnHexMode.CheckOnClick = true;
+            btnHexMode.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            btnHexMode.Image = (Image)resources.GetObject("btnHexMode.Image");
+            btnHexMode.ImageTransparentColor = Color.Magenta;
+            btnHexMode.Name = "btnHexMode";
+            btnHexMode.Size = new Size(73, 22);
+            btnHexMode.Text = "Hex Mode";
+            // 
+            // toolStripSeparator1
+            // 
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new Size(6, 25);
             // 
             // ClientPanel
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.groupBox3);
-            this.Controls.Add(this.groupBox1);
-            this.Name = "ClientPanel";
-            this.Size = new System.Drawing.Size(835, 546);
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox1.PerformLayout();
-            this.toolStrip1.ResumeLayout(false);
-            this.toolStrip1.PerformLayout();
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox3.ResumeLayout(false);
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 17F);
+            AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(groupBox2);
+            Controls.Add(groupBox3);
+            Controls.Add(groupBox1);
+            Margin = new Padding(4);
+            Name = "ClientPanel";
+            Size = new Size(974, 774);
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
+            toolStrip1.ResumeLayout(false);
+            toolStrip1.PerformLayout();
+            groupBox2.ResumeLayout(false);
+            groupBox3.ResumeLayout(false);
+            groupBox3.PerformLayout();
+            toolStrip2.ResumeLayout(false);
+            toolStrip2.PerformLayout();
+            ResumeLayout(false);
 
         }
 
@@ -180,6 +236,10 @@ namespace STTech.BytesIO.Demo.Clients
         private System.Windows.Forms.RichTextBox tbRecv;
         private System.Windows.Forms.RichTextBox tbSend;
         private System.Windows.Forms.Button btnSend;
+        private ToolStrip toolStrip2;
+        private ToolStripButton btnHexMode;
+        private ToolStripButton btnScreenClean;
+        private ToolStripSeparator toolStripSeparator1;
     }
 }
 
