@@ -36,7 +36,7 @@ namespace STTech.BytesIO.Core
 
         public BytesClient()
         {
-            dataReceiveTaskQueue = new FloaterTaskQueue<DataReceivedEventArgs>(DataReceiveTaskQueueHandler);
+            dataReceiveTaskQueue = new WaiterTaskQueue<DataReceivedEventArgs>(DataReceiveTaskQueueHandler);
         }
 
         /// <summary>

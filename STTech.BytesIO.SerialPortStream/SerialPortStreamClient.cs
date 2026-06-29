@@ -147,7 +147,7 @@ namespace STTech.BytesIO.SerialPortStream
             var sp = InnerClient;
 
             int len, offset = 0;
-            DateTime? startFrameTimestamp = null;
+            DateTime? frameDeadline = null;
             byte[] buffer = null;
 
             try
@@ -168,26 +168,40 @@ namespace STTech.BytesIO.SerialPortStream
                         continue;
                     }
 
-                    if (startFrameTimestamp == null) startFrameTimestamp = ReceiveTimeout > 0 ? DateTime.Now : (DateTime?)null;
-
-                    if (ReceiveTimeout > 0)
+                    // 收到首字节时记录本帧的绝对截止时间
+                    if (frameDeadline == null && ReceiveTimeout > 0)
                     {
-                        var diffTime = (DateTime.Now - startFrameTimestamp.Value).TotalMilliseconds;
-                        if (diffTime < ReceiveTimeout)
+                        frameDeadline = DateTime.Now.AddMilliseconds(ReceiveTimeout);
+                    }
+
+                    if (ReceiveTimeout > 0 && frameDeadline.HasValue)
+                    {
+                        var remaining = (frameDeadline.Value - DateTime.Now).TotalMilliseconds;
+                        if (remaining > 0)
                         {
+                            // 尚未到截止时间：短暂等待后继续累积（无论缓冲区是否还有数据）
                             await Task.Delay((int)Math.Ceiling(ReceiveTimeout / 10.0), cancellationToken).ConfigureAwait(false);
-                            if (sp.BytesToRead > 0)
+                            offset += len;
+                            // 若缓冲区仍有数据或尚未超时，继续读取
+                            if (sp.BytesToRead > 0 || (frameDeadline.Value - DateTime.Now).TotalMilliseconds > 0)
                             {
-                                offset += len;
                                 continue;
                             }
+                            // 超时期间缓冲区已空，直接派发
+                            len = 0;
+                        }
+                        else
+                        {
+                            // 已超过截止时间，直接派发当前读到的数据
+                            offset += len;
+                            len = 0;
                         }
                     }
 
                     var context = CreateReceiveContext(buffer, 0, offset + len);
 
                     InvokeDataReceivedEventCallback(context);
-                    startFrameTimestamp = null;
+                    frameDeadline = null;
                     offset = 0;
                 }
             }

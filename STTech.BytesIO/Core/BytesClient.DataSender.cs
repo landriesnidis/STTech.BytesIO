@@ -47,6 +47,12 @@ namespace STTech.BytesIO.Core
             {
                 try
                 {
+                    // 检测：是否已被取消？
+                    if (args.Tcs != null && args.Tcs.Task.IsCanceled)
+                    {
+                        continue;
+                    }
+
                     // 检测：是否已经被提供者取消？
                     if (args.Options.CancellationToken.IsCancellationRequested)
                     {
@@ -99,6 +105,17 @@ namespace STTech.BytesIO.Core
         }
 
         /// <summary>
+        /// 清空当前发送队列中所有尚未开始发送的任务。
+        /// </summary>
+        public void ClearSendQueue()
+        {
+            while (asyncSendQueue.TryDequeue(out var args))
+            {
+                args.Tcs?.TrySetCanceled();
+            }
+        }
+
+        /// <summary>
         /// 发送数据 (同步代理)
         /// </summary>
         /// <param name="data"></param>
@@ -118,6 +135,19 @@ namespace STTech.BytesIO.Core
         {
             options ??= DefaultSendOptions;
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (options.CancellationToken.CanBeCanceled)
+            {
+                if (options.CancellationToken.IsCancellationRequested)
+                {
+                    tcs.TrySetCanceled();
+                    return tcs.Task;
+                }
+
+                var registration = options.CancellationToken.Register(() => tcs.TrySetCanceled());
+                tcs.Task.ContinueWith(_ => registration.Dispose(), TaskScheduler.Default);
+            }
+
             asyncSendQueue.Enqueue(new SendArgs(data, options, tcs));
             TriggerSendPump();
             return tcs.Task;

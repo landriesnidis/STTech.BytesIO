@@ -164,7 +164,7 @@ namespace STTech.BytesIO.Serial
             SerialPort sp = InnerClient;
 
             int len, offset = 0;
-            DateTime? startFrameTimestamp = null;
+            DateTime? frameDeadline = null;
             byte[] buffer = null;
             try
             {
@@ -176,32 +176,43 @@ namespace STTech.BytesIO.Serial
                         buffer = RentBuffer();
                     }
 
-                    // 原生异步获取数据，利用硬件中断恢复线程，释放CPU
+                    // 原生异步获取数据，利用硬件中断恢复线程，释放 CPU
                     len = await baseStream.ReadAsync(buffer, offset, ReceiveBufferSize - offset, cancellationToken).ConfigureAwait(false);
 
                     if (len == 0 && sp.BytesToRead == 0)
                     {
-                        // 零散断连检测与兜底
+                        // 零散断连检测与兑底
                         await Task.Delay(10, cancellationToken).ConfigureAwait(false);
                         continue;
                     }
 
-                    // 接收到首帧的时间戳
-                    startFrameTimestamp ??= ReceiveTimeout > 0 ? DateTime.Now : (DateTime?)null;
+                    // 收到首字节时记录本帧的绝对截止时间
+                    if (frameDeadline == null && ReceiveTimeout > 0)
+                    {
+                        frameDeadline = DateTime.Now.AddMilliseconds(ReceiveTimeout);
+                    }
 
                     // 延迟等待(粘包接收缓冲)
-                    if (ReceiveTimeout > 0)
+                    if (ReceiveTimeout > 0 && frameDeadline.HasValue)
                     {
-                        var diffTime = (DateTime.Now - startFrameTimestamp.Value).TotalMilliseconds;
-                        if (diffTime < ReceiveTimeout)
+                        var remaining = (frameDeadline.Value - DateTime.Now).TotalMilliseconds;
+                        if (remaining > 0)
                         {
-                            // 真异步延时，不再阻塞底层工作线程！
+                            // 尚未到截止时间：短暂等待后继续累积
                             await Task.Delay((int)Math.Ceiling(ReceiveTimeout / 10.0), cancellationToken).ConfigureAwait(false);
-                            if (sp.BytesToRead > 0)
+                            offset += len;
+                            if (sp.BytesToRead > 0 || (frameDeadline.Value - DateTime.Now).TotalMilliseconds > 0)
                             {
-                                offset += len;
                                 continue;
                             }
+                            // 超时期间缓冲区已空，直接派发
+                            len = 0;
+                        }
+                        else
+                        {
+                            // 已超过截止时间，直接派发当前读到的数据
+                            offset += len;
+                            len = 0;
                         }
                     }
 
@@ -209,7 +220,7 @@ namespace STTech.BytesIO.Serial
                     var context = CreateReceiveContext(buffer, 0, offset + len);
 
                     InvokeDataReceivedEventCallback(context);
-                    startFrameTimestamp = null;
+                    frameDeadline = null;
                     offset = 0;
                 }
             }
