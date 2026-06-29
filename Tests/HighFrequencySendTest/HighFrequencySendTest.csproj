@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
+    <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <DetermineContext>true</DetermineContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="STTech.CodePlus" Version="1.7.5.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\STTech.BytesIO.SerialPortStream\STTech.BytesIO.SerialPortStream.csproj" />
+    <ProjectReference Include="..\..\STTech.BytesIO\STTech.BytesIO.csproj" />
+    <ProjectReference Include="..\..\STTech.BytesIO.Quic\STTech.BytesIO.Quic.csproj" />
+    <ProjectReference Include="..\..\STTech.BytesIO.P2P\STTech.BytesIO.P2P.csproj" />
+  </ItemGroup>
+
+</Project>
