@@ -1,47 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <Version>3.0.2-beta0324</Version>
+	<PropertyGroup>
+		<TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<Version>3.1.0-beta0629</Version>
 
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
-    <Authors>Guijie Lee</Authors>
-    <Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
-    <PackageIcon>stdiag.png</PackageIcon>
-    <Description>这是一个基于 Libp2p 协议的 .NET P2P 字节流通信库，作为 STTech.BytesIO 的扩展库，提供了统一的编程模型。
-支持 TCP/QUIC 传输、Noise/TLS 加密、DHT 节点发现、Relay 中继穿透等 P2P 网络特性。
-通过 PeerClient 和 BootstrapServer 两个核心类，快速构建去中心化点对点通信应用。</Description>
-    <PackageTags>STTech;BytesIO;P2P;Libp2p;PeerToPeer;DHT;Relay;Communication;Protocol;Async;Decentralized</PackageTags>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
-  </PropertyGroup>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
+		<Authors>Guijie Lee</Authors>
+		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
+		<PackageIcon>stdiag.png</PackageIcon>
+		<Description>
+			这是一个基于 Libp2p 协议的 .NET P2P 字节流通信库，作为 STTech.BytesIO 的扩展库，提供了统一的编程模型。
+			支持 TCP/QUIC 传输、Noise/TLS 加密、DHT 节点发现、Relay 中继穿透等 P2P 网络特性。
+			通过 PeerClient 和 BootstrapServer 两个核心类，快速构建去中心化点对点通信应用。
+		</Description>
+		<PackageTags>STTech;BytesIO;P2P;Libp2p;PeerToPeer;DHT;Relay;Communication;Protocol;Async;Decentralized</PackageTags>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Include="README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Include="..\stdiag.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\stdiag.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\STTech.BytesIO\STTech.BytesIO.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\STTech.BytesIO\STTech.BytesIO.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Nethermind.Libp2p" Version="1.0.0-preview.*" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Nethermind.Libp2p" Version="1.0.0-preview.*" />
+	</ItemGroup>
 
 </Project>

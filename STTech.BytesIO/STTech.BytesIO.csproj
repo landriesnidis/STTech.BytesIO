@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0;net10.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>3.0.2-beta0324</Version>
+		<Version>3.1.0-beta0629</Version>
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
@@ -11,18 +11,22 @@
 		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Description>这是一个高性能、轻量级的 .NET 字节流通信框架，集成了 TCP (Socket/SSL)、串口 (SerialPort) 和进程间通信 (IPC/NamedPipe) 等多种基础通信方式。
-核心特性：
-1. 统一架构：为不同传输层提供一致的编程模型 (BytesClient/BytesServer)。
-2. 零拷贝：基于 System.IO.Pipelines 优化数据收发性能。
-3. 工业级功能：内置协议解包器 (Unpacker)、心跳发送与检测、自动重连、自定义发送队列等。
-4. 易于扩展：提供丰富的扩展点，支持 Modbus 等上层协议的快速实现。</Description>
+		<Description>
+			这是一个高性能、轻量级的 .NET 字节流通信框架，集成了 TCP (Socket/SSL)、串口 (SerialPort) 和进程间通信 (IPC/NamedPipe) 等多种基础通信方式。
+			核心特性：
+			1. 统一架构：为不同传输层提供一致的编程模型 (BytesClient/BytesServer)。
+			2. 零拷贝：基于 System.IO.Pipelines 优化数据收发性能。
+			3. 工业级功能：内置协议解包器 (Unpacker)、心跳发送与检测、自动重连、自定义发送队列等。
+			4. 易于扩展：提供丰富的扩展点，支持 Modbus 等上层协议的快速实现。
+		</Description>
 		<PackageTags>STTech;BytesIO;TCP;Socket;Serial;SerialPort;IPC;NamedPipe;Communication;Protocol;Async;Pipelines;ZeroCopy;Industrial</PackageTags>
-		<PackageReleaseNotes>v3.0 Major Update:
-1. Architectural Consolidation: Merged Core, TCP, Serial, and IPC projects into a single unified library.
-2. Lightweight Dependency: Migrated to official System.IO.Ports, reducing external package dependencies.
-3. Performance Tuning: Deeply integrated System.IO.Pipelines for high-performance zero-copy data processing.
-4. Simplified API: Provided a more intuitive and consistent interface for all transport types.</PackageReleaseNotes>
+		<PackageReleaseNotes>
+			v3.0 Major Update:
+			1. Architectural Consolidation: Merged Core, TCP, Serial, and IPC projects into a single unified library.
+			2. Lightweight Dependency: Migrated to official System.IO.Ports, reducing external package dependencies.
+			3. Performance Tuning: Deeply integrated System.IO.Pipelines for high-performance zero-copy data processing.
+			4. Simplified API: Provided a more intuitive and consistent interface for all transport types.
+		</PackageReleaseNotes>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
@@ -45,9 +49,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="STTech.CodePlus" Version="1.7.5.2" />
-	  <PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
-	  <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+		<PackageReference Include="STTech.CodePlus" Version="1.7.5.2" />
+		<PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
+		<PackageReference Include="System.IO.Ports" Version="8.0.0" />
 	</ItemGroup>
 
 </Project>
