@@ -20,6 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="ChatClientPanel.cs" />
+    <Compile Remove="ChatClientPanel.Designer.cs" />
+    <EmbeddedResource Remove="ChatClientPanel.resx" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\STTech.BytesIO.SerialPortStream\STTech.BytesIO.SerialPortStream.csproj" />
     <ProjectReference Include="..\..\STTech.BytesIO\STTech.BytesIO.csproj" />
     <ProjectReference Include="..\..\STTech.BytesIO.Quic\STTech.BytesIO.Quic.csproj" />
