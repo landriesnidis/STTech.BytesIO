@@ -179,11 +179,11 @@ namespace STTech.BytesIO.SerialPortStream
                         var remaining = (frameDeadline.Value - DateTime.Now).TotalMilliseconds;
                         if (remaining > 0)
                         {
-                            // 尚未到截止时间：短暂等待后继续累积（无论缓冲区是否还有数据）
+                            // 尚未到截止时间：短暂等待后继续累积
                             await Task.Delay((int)Math.Ceiling(ReceiveTimeout / 10.0), cancellationToken).ConfigureAwait(false);
                             offset += len;
-                            // 若缓冲区仍有数据或尚未超时，继续读取
-                            if (sp.BytesToRead > 0 || (frameDeadline.Value - DateTime.Now).TotalMilliseconds > 0)
+                            // 缓冲区仍有数据，继续读取
+                            if (sp.BytesToRead > 0)
                             {
                                 continue;
                             }

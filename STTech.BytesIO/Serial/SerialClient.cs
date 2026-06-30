@@ -201,7 +201,7 @@ namespace STTech.BytesIO.Serial
                             // 尚未到截止时间：短暂等待后继续累积
                             await Task.Delay((int)Math.Ceiling(ReceiveTimeout / 10.0), cancellationToken).ConfigureAwait(false);
                             offset += len;
-                            if (sp.BytesToRead > 0 || (frameDeadline.Value - DateTime.Now).TotalMilliseconds > 0)
+                            if (sp.BytesToRead > 0)
                             {
                                 continue;
                             }
