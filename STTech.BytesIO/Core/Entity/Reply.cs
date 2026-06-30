@@ -38,6 +38,26 @@ namespace STTech.BytesIO.Core
         protected object Value { get; }
 
         /// <summary>
+        /// 是否完成
+        /// </summary>
+        public bool IsCompleted => Status == ReplyStatus.Completed;
+
+        /// <summary>
+        /// 是否超时
+        /// </summary>
+        public bool IsTimeout => Status == ReplyStatus.Timeout;
+
+        /// <summary>
+        /// 是否错误
+        /// </summary>
+        public bool IsError => Status == ReplyStatus.Error;
+
+        /// <summary>
+        /// 是否被迫中断
+        /// </summary>
+        public bool IsInterrupted => Status == ReplyStatus.Interrupted;
+
+        /// <summary>
         /// 构造失败的响应
         /// </summary>
         /// <param name="client"></param>
