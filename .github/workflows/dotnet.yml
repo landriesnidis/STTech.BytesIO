@@ -25,11 +25,14 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore STTech.BytesIO.sln
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Restore NuGet packages
+      run: nuget restore STTech.BytesIO.sln
 
     - name: Build solution
-      run: dotnet build STTech.BytesIO.sln --no-restore --configuration Release
+      run: dotnet build STTech.BytesIO.sln --configuration Release
 
     - name: Run tests
       run: dotnet test STTech.BytesIO.sln --no-build --configuration Release --verbosity normal
