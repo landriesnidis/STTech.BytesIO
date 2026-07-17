@@ -1,0 +1,35 @@
+name: .NET Build & Test CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - V2
+  pull_request:
+    branches:
+      - main
+      - develop
+      - V2
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore STTech.BytesIO.sln
+
+    - name: Build solution
+      run: dotnet build STTech.BytesIO.sln --no-restore --configuration Release
+
+    - name: Run tests
+      run: dotnet test STTech.BytesIO.sln --no-build --configuration Release --verbosity normal
