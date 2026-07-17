@@ -589,12 +589,12 @@ namespace STTech.BytesIO.Tcp.Tests
         }
 
         [Fact]
-        public void ToString_StillWorks()
+        public void EncodeToString_ReturnsCorrectValue()
         {
             byte[] data = System.Text.Encoding.UTF8.GetBytes("Hello");
             var ctx = Create(data);
 
-            Assert.Equal("Hello", ctx.ToString());
+            Assert.Equal("Hello", ctx.EncodeToString(System.Text.Encoding.UTF8));
         }
 
         #endregion

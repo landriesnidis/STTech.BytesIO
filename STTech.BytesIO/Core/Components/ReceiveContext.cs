@@ -139,15 +139,13 @@ namespace STTech.BytesIO.Core
         /// <summary>
         /// 使用指定编码将有效数据转换为字符串
         /// </summary>
-        public string ToString(Encoding encoding)
+        public string EncodeToString(Encoding encoding)
         {
             var arr = _rentedArray;
             if (arr == null)
                 throw new ObjectDisposedException(nameof(ReceiveContext));
             return (encoding ?? Encoding.UTF8).GetString(arr, _offset, _length);
         }
-
-        public override string ToString() => ToString(Encoding.UTF8);
 
         #endregion
 
