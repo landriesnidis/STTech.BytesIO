@@ -589,12 +589,84 @@ namespace STTech.BytesIO.Tcp.Tests
         }
 
         [Fact]
-        public void ToString_StillWorks()
+        public void EncodeToString_ReturnsCorrectValue()
         {
             byte[] data = System.Text.Encoding.UTF8.GetBytes("Hello");
             var ctx = Create(data);
 
-            Assert.Equal("Hello", ctx.ToString());
+            Assert.Equal("Hello", ctx.EncodeToString(System.Text.Encoding.UTF8));
+        }
+
+        #endregion
+
+        #region 池化与生命周期测试
+
+        [Fact]
+        public void PooledConstructor_StoresRentedArrayAndOffset()
+        {
+            byte[] rented = System.Buffers.ArrayPool<byte>.Shared.Rent(100);
+            rented[10] = 0xAA;
+            rented[11] = 0xBB;
+
+            // 调用内部构造函数
+            var ctx = new ReceiveContext(rented, 10, 2);
+
+            Assert.Equal(2, ctx.Length);
+            Assert.Equal(0xAA, ctx[0]);
+            Assert.Equal(0xBB, ctx[1]);
+            Assert.False(ctx.IsDisposed);
+
+            ctx.Dispose();
+            Assert.True(ctx.IsDisposed);
+        }
+
+        [Fact]
+        public void ReferenceCounting_IncrRefAndDispose()
+        {
+            byte[] rented = System.Buffers.ArrayPool<byte>.Shared.Rent(50);
+            var ctx = new ReceiveContext(rented, 0, 10);
+
+            // 初始引用计数为 1
+            Assert.False(ctx.IsDisposed);
+
+            // 增加引用计数 -> 2
+            ctx.IncrRef();
+            
+            // 第一次 Dispose -> 计数减为 1，不应该真正释放
+            ctx.Dispose();
+            Assert.False(ctx.IsDisposed);
+
+            // 第二次 Dispose -> 计数减为 0，应该释放
+            ctx.Dispose();
+            Assert.True(ctx.IsDisposed);
+        }
+
+        [Fact]
+        public void DoubleDispose_IsSafe()
+        {
+            byte[] rented = System.Buffers.ArrayPool<byte>.Shared.Rent(50);
+            var ctx = new ReceiveContext(rented, 0, 10);
+
+            ctx.Dispose();
+            Assert.True(ctx.IsDisposed);
+
+            // 再次调用 Dispose 不应抛出异常
+            var ex = Record.Exception(() => ctx.Dispose());
+            Assert.Null(ex);
+        }
+
+        [Fact]
+        public void AccessAfterDispose_ThrowsObjectDisposedException()
+        {
+            byte[] rented = System.Buffers.ArrayPool<byte>.Shared.Rent(50);
+            var ctx = new ReceiveContext(rented, 0, 10);
+            ctx.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => ctx[0]);
+            Assert.Throws<ObjectDisposedException>(() => ctx.Memory);
+            Assert.Throws<ObjectDisposedException>(() => ctx.ToArray());
+            Assert.Throws<ObjectDisposedException>(() => ctx.ToHexString());
+            Assert.Throws<ObjectDisposedException>(() => ctx.CopyTo(new byte[10], 0));
         }
 
         #endregion
