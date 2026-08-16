@@ -1,6 +1,6 @@
 ﻿# STTech.BytesIO 内存池性能测试报告
 
-测试运行时间: 2026-07-18 00:35:52
+测试运行时间: 2026-08-17 02:00:57
 运行环境: .NET 10.0.9 (Microsoft Windows NT 10.0.20348.0)
 
 本报告通过对比四种不同的内存与上下文操作方式，在不同缓冲区大小下的耗时和 GC 内存分配开销，来评估 `ArrayPool` 和 `ReceiveContext` 的池化性能优势：
@@ -16,10 +16,10 @@
 
 | 测试方案 | 总耗时 (ms) | 每次均摊 (ns) | 内存分配总量 (MB) | 每次分配量 (Bytes) |
 | :--- | :---: | :---: | :---: | :---: |
-| Raw Array (new) | 42 | 42.0 | 144.959 | 152 |
+| Raw Array (new) | 44 | 44.0 | 144.959 | 152 |
 | ArrayPool (Shared) | 57 | 57.0 | 0.000 | 0 |
-| ReceiveContext (Non-Pooled) | 355 | 355.0 | 274.658 | 288 |
-| ReceiveContext (Pooled) | 281 | 281.0 | 129.700 | 136 |
+| ReceiveContext (Non-Pooled) | 316 | 316.0 | 282.288 | 296 |
+| ReceiveContext (Pooled) | 450 | 450.0 | 221.253 | 232 |
 
 ## 中等缓冲区 (4 KB)
 
@@ -28,10 +28,10 @@
 
 | 测试方案 | 总耗时 (ms) | 每次均摊 (ns) | 内存分配总量 (MB) | 每次分配量 (Bytes) |
 | :--- | :---: | :---: | :---: | :---: |
-| Raw Array (new) | 321 | 642.0 | 1964.569 | 4120 |
-| ArrayPool (Shared) | 19 | 38.0 | 0.004 | 0 |
-| ReceiveContext (Non-Pooled) | 347 | 694.0 | 2029.419 | 4256 |
-| ReceiveContext (Pooled) | 155 | 310.0 | 64.854 | 136 |
+| Raw Array (new) | 327 | 654.0 | 1964.569 | 4120 |
+| ArrayPool (Shared) | 25 | 50.0 | 0.008 | 0 |
+| ReceiveContext (Non-Pooled) | 557 | 1114.0 | 2033.234 | 4264 |
+| ReceiveContext (Pooled) | 184 | 368.0 | 110.630 | 232 |
 
 ## 大缓冲区 (64 KB)
 
@@ -40,10 +40,10 @@
 
 | 测试方案 | 总耗时 (ms) | 每次均摊 (ns) | 内存分配总量 (MB) | 每次分配量 (Bytes) |
 | :--- | :---: | :---: | :---: | :---: |
-| Raw Array (new) | 996 | 9960.0 | 6252.289 | 65560 |
+| Raw Array (new) | 950 | 9500.0 | 6252.289 | 65560 |
 | ArrayPool (Shared) | 4 | 40.0 | 0.063 | 1 |
-| ReceiveContext (Non-Pooled) | 928 | 9280.0 | 6265.259 | 65696 |
-| ReceiveContext (Pooled) | 20 | 200.0 | 13.033 | 137 |
+| ReceiveContext (Non-Pooled) | 1601 | 16010.0 | 6266.022 | 65704 |
+| ReceiveContext (Pooled) | 34 | 340.0 | 22.250 | 233 |
 
 ## 结论分析与优势总结
 1. **零 GC 分配开销**: 从测试数据中可以看到，在高频或者大数据包的场景下，采用 `ArrayPool` 和 `ReceiveContext (Pooled)` 的方式其内存分配（GC Allocation）几乎接近于 **0 字节**。这可以极大减轻 .NET 垃圾回收器（GC）的压力，消除 GC 导致的线程暂停（STW），提升系统稳定性和整体吞吐量。

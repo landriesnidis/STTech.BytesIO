@@ -3,7 +3,8 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0;net10.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
-		<Version>3.2.0.0-beta0706</Version>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Version>3.3.0.0-alpha0730</Version>
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
@@ -38,7 +39,13 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>STTech.BytesIO.Core.Tests</_Parameter1>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
 			<_Parameter1>STTech.BytesIO.Tcp.Tests</_Parameter1>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>STTech.BytesIO.Ipc.Tests</_Parameter1>
 		</AssemblyAttribute>
 	</ItemGroup>
 
@@ -54,7 +61,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="STTech.CodePlus" Version="1.7.5.2" />
+		<PackageReference Include="STTech.CodePlus" Version="1.7.5.3" />
 		<PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
 		<PackageReference Include="System.IO.Ports" Version="8.0.0" />
 	</ItemGroup>

@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="STTech.CodePlus" Version="1.7.5.2" />
+    <PackageReference Include="STTech.CodePlus" Version="1.7.5.3" />
   </ItemGroup>
 
   <ItemGroup>
