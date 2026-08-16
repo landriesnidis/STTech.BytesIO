@@ -169,7 +169,7 @@ namespace STTech.BytesIO.Core
     /// <summary>
     /// 单次发送数据的远端响应（字节数组）
     /// </summary>
-    public class ReplyBytes : BaseReply<ReceiveContext>
+    public class ReplyBytes : BaseReply<ReceiveContext>, IDisposable
     {
         /// <summary>
         /// 构造失败的响应
@@ -184,13 +184,24 @@ namespace STTech.BytesIO.Core
         /// </summary>
         /// <param name="client">客户端对象</param>
         /// <param name="data">响应数据</param>
-        public ReplyBytes(IBytesClient client, ReceiveContext data) : base(client, data) { }
+        public ReplyBytes(IBytesClient client, ReceiveContext data) : base(client, data)
+        {
+            data?.IncrRef();
+        }
 
         /// <summary>
         /// 获取响应数据的只读内存视图
         /// </summary>
         /// <returns></returns>
-        public ReadOnlyMemory<byte> GetBytes() => GetData().Memory;
+        public ReadOnlyMemory<byte> GetBytes() => GetData()?.Memory ?? ReadOnlyMemory<byte>.Empty;
+
+        /// <summary>
+        /// 释放响应数据持有的接收上下文引用
+        /// </summary>
+        public void Dispose()
+        {
+            GetData()?.Dispose();
+        }
     }
 
 
