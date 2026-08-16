@@ -18,6 +18,14 @@ namespace STTech.BytesIO.Ipc
         /// </summary>
         protected PipeStream InnerClient => innerClient;
 
+        /// <summary>
+        /// 连接建立后（生成连接标识之后、启动接收任务之前）的扩展钩子。
+        /// 供子类初始化传输层资源（如打开共享内存映射）。
+        /// </summary>
+        protected virtual void OnConnectionEstablished()
+        {
+        }
+
         /// <inheritdoc/>
         public string PipeName { get; set; } = "STTech.BytesIO.Ipc.Default";
 
@@ -41,17 +49,18 @@ namespace STTech.BytesIO.Ipc
         public IpcClient(PipeStream pipeStream)
         {
             innerClient = pipeStream;
-            if (innerClient.IsConnected)
-            {
-                GenerateNewConnectionId();
-
-                if (pipeStream is NamedPipeServerStream serverStream)
+                if (innerClient.IsConnected)
                 {
-                    // 无法直接从流中获取管道名称，通常由服务端在创建后赋值，或者保持默认
-                }
+                    GenerateNewConnectionId();
+                    OnConnectionEstablished();
 
-                StartReceiveDataTask();
-            }
+                    if (pipeStream is NamedPipeServerStream serverStream)
+                    {
+                        // 无法直接从流中获取管道名称，通常由服务端在创建后赋值，或者保持默认
+                    }
+
+                    StartReceiveDataTask();
+                }
         }
 
         /// <inheritdoc/>
@@ -87,6 +96,7 @@ namespace STTech.BytesIO.Ipc
                 innerClient = client;
 
                 GenerateNewConnectionId();
+                OnConnectionEstablished();
                 sw.Stop();
                 RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs() { CostTime = sw.Elapsed, State = argument.State });
 
@@ -128,6 +138,7 @@ namespace STTech.BytesIO.Ipc
                 innerClient = client;
 
                 GenerateNewConnectionId();
+                OnConnectionEstablished();
                 sw.Stop();
                 RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs() { CostTime = sw.Elapsed, State = argument.State });
 
