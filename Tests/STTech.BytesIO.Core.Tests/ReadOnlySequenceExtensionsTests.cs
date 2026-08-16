@@ -5,7 +5,7 @@ using Xunit;
 using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
 
-namespace STTech.BytesIO.Tcp.Tests
+namespace STTech.BytesIO.Core.Tests
 {
     public class ReadOnlySequenceExtensionsTests
     {

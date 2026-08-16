@@ -8,7 +8,7 @@ using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace STTech.BytesIO.Tcp.Tests
+namespace STTech.BytesIO.Core.Tests
 {
     public class PoolPerformanceTests
     {

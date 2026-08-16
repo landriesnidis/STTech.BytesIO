@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
-namespace STTech.BytesIO.Tcp.Tests
+namespace STTech.BytesIO.Core.Tests
 {
     public class ReceiveContextTests
     {
@@ -175,8 +175,8 @@ namespace STTech.BytesIO.Tcp.Tests
         {
             var ctx = Create(0x01, 0x02, 0x03);
 
-            Assert.True(ctx.Any(b => b == 0x02));
-            Assert.False(ctx.Any(b => b == 0xFF));
+            Assert.Contains((byte)0x02, ctx);
+            Assert.DoesNotContain((byte)0xFF, ctx);
             Assert.True(ctx.All(b => b > 0x00));
             Assert.False(ctx.All(b => b > 0x01));
         }
@@ -198,7 +198,6 @@ namespace STTech.BytesIO.Tcp.Tests
             var ctx = Create(Array.Empty<byte>());
 
             Assert.Empty(ctx);
-            Assert.Equal(0, ctx.Count());
             Assert.False(ctx.Any());
         }
 

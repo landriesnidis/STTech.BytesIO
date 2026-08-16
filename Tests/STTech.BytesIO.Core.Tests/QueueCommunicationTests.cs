@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace STTech.BytesIO.Tcp.Tests
+namespace STTech.BytesIO.Core.Tests
 {
     public class MockBytesClient : BytesClient
     {
@@ -14,12 +14,12 @@ namespace STTech.BytesIO.Tcp.Tests
         public int DelayMs { get; set; } = 1000;
         public int SendCount { get; private set; }
 
-        public override ConnectResult Connect(ConnectArgument argument = null)
+        public override ConnectResult Connect(ConnectArgument? argument = null)
         {
             return new ConnectResult();
         }
 
-        public override DisconnectResult Disconnect(DisconnectArgument argument = null)
+        public override DisconnectResult Disconnect(DisconnectArgument? argument = null)
         {
             return new DisconnectResult();
         }
