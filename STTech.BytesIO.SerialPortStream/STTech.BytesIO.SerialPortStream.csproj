@@ -9,7 +9,7 @@
 		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<Description>STTech.BytesIO 串口扩展库，基于 SerialPortStream 实现，提供比原生 SerialPort 更稳定、更高性能的串口通信支持。</Description>
 		<PackageTags>STTech;BytesIO;Serial;SerialPort;SerialPortStream;Communication;Industrial</PackageTags>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>

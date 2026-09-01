@@ -1,43 +1,52 @@
-# STTech.BytesIO.Quic
+﻿# STTech.BytesIO.Quic
 
-这是一基于 QUIC 协议的高性能 .NET 字节流通信库，作为 [STTech.BytesIO](https://github.com/landriesnidis/STTech.BytesIO) 的扩展库，提供了统一的编程模型。
+[![NuGet](https://img.shields.io/nuget/v/STTech.BytesIO.Quic.svg?style=flat-square)](https://www.nuget.org/packages/STTech.BytesIO.Quic)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-## 特性
+**STTech.BytesIO.Quic** 是基于原生 QUIC 协议（`System.Net.Quic`）的高性能 .NET 字节流通信库。作为 `STTech.BytesIO` 的扩展模块，它提供了统一的客户端/服务端抽象以及现代传输层的极速体验。
 
-- **统一架构**：继承自 `BytesClient` 和 `BytesServer`，与 TCP/串口/IPC 具有一致的 API 调用体验。
-- **.NET 原生支持**：基于 `System.Net.Quic` 实现，充分利用 .NET 8+ 的性能优化。
-- **自动证书管理**：内置自签名证书生成器，支持开发环境下的零配置启动。
-- **高性能**：QUIC 协议原生支持加密（TLS 1.3）和多流并发，减少握手延迟并避免队头阻塞。
+---
 
-## 安装
+## 🌟 核心特性
 
-```shell
+- ⚡ **现代传输层协议**：基于 UDP 的 QUIC 协议原生具备 TLS 1.3 加密、0-RTT/1-RTT 极速建连、无队头阻塞及连接迁移能力。
+- 🎯 **统一 API 设计**：提供 `QuicClient` 与 `QuicServer`，与 TCP/串口/IPC 保持完全一致的调用方式。
+- 🔐 **自动证书管理**：内置自签名证书生成器，开发与测试环境下实现开箱即用、零配置启动。
+
+---
+
+## 📦 安装
+
+```bash
 dotnet add package STTech.BytesIO.Quic
 ```
 
-## 快速开始
+---
 
-### QuicClient (客户端)
+## 🚀 快速上手
 
 ```csharp
 using STTech.BytesIO.Quic;
 
-var client = new QuicClient { Host = "127.0.0.1", Port = 443 };
-client.OnDataReceived += (s, e) => Console.WriteLine($"收到数据: {e.Data.ToHexString()}");
+// 1. 创建 QUIC 客户端
+var client = new QuicClient
+{
+    Host = "127.0.0.1",
+    Port = 443
+};
+
+client.OnDataReceived += (s, e) =>
+{
+    Console.WriteLine($"收到 QUIC 数据: {e.Data.ToHexString()}");
+};
+
+// 2. 连接并发送
 await client.ConnectAsync();
-await client.SendAsync("Hello QUIC".GetBytes());
+await client.SendAsync(new byte[] { 0x11, 0x22 });
 ```
 
-### QuicServer (服务端)
+---
 
-```csharp
-using STTech.BytesIO.Quic;
+## 📄 开源许可证
 
-var server = new QuicServer { Port = 443 };
-server.ClientConnected += (s, e) => Console.WriteLine($"客户端已连接: {e.Client.ConnectionId}");
-await server.StartAsync();
-```
-
-## 项目地址
-
-GitHub: [https://github.com/landriesnidis/STTech.BytesIO](https://github.com/landriesnidis/STTech.BytesIO)
+本项目基于 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) 协议开源。

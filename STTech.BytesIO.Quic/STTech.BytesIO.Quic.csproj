@@ -9,7 +9,7 @@
 		<LangVersion>latest</LangVersion>
 		<Version>3.3.0.0-alpha0730</Version>
 
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
 		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>

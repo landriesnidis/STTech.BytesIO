@@ -10,7 +10,7 @@
 		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<Description>BytesIO Modbus 通信库，提供 Modbus-SerialPort / Modbus-TCP 通信客户端，支持 ASCII、RTU 协议及多种标准寄存器操作命令。</Description>
 		<PackageTags>STTech;BytesIO;Modbus;TCP;RTU;ASCII;Industrial;Protocol;Automation</PackageTags>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0;net10.0</TargetFrameworks>
@@ -6,12 +6,11 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Version>3.3.0.0-alpha0730</Version>
 
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
 		<Authors>Guijie Lee</Authors>
 		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
 		<PackageIcon>stdiag.png</PackageIcon>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<Description>
 			这是一个高性能、轻量级的 .NET 字节流通信框架，集成了 TCP (Socket/SSL)、串口 (SerialPort) 和进程间通信 (IPC/NamedPipe) 等多种基础通信方式。
 			核心特性：
@@ -38,6 +37,10 @@
 		<UserSecretsId>3434f4a9-8e31-4feb-8f53-840cb292a3fb</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
 			<_Parameter1>STTech.BytesIO.Core.Tests</_Parameter1>
 		</AssemblyAttribute>
@@ -50,6 +53,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 		<None Include="..\README.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
@@ -61,6 +68,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 		<PackageReference Include="STTech.CodePlus" Version="1.7.5.3" />
 		<PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
 		<PackageReference Include="System.IO.Ports" Version="8.0.0" />
