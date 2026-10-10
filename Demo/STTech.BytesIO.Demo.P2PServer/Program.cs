@@ -149,6 +149,40 @@ namespace STTech.BytesIO.Demo.P2PServer
                 }
             }
 
+            // 身份种子 / PeerId 密钥
+            const string defaultSeedHex = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
+            Console.Write($"  * 身份种子/PeerId密钥 (64位十六进制字符，输入 'r' 随机生成)\n    [默认: {defaultSeedHex}]: ");
+            var seedInput = Console.ReadLine()?.Trim();
+            byte[]? identitySeed = null;
+
+            if (string.IsNullOrWhiteSpace(seedInput))
+            {
+                identitySeed = Convert.FromHexString(defaultSeedHex);
+            }
+            else if (seedInput.Equals("r", StringComparison.OrdinalIgnoreCase) || seedInput.Equals("random", StringComparison.OrdinalIgnoreCase))
+            {
+                identitySeed = null;
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine("    [提示] 将在启动时随机生成 PeerId。");
+                Console.ResetColor();
+            }
+            else
+            {
+                var cleanSeed = new string(seedInput.Where(c => Uri.IsHexDigit(c)).ToArray());
+                if (cleanSeed.Length == 64)
+                {
+                    identitySeed = Convert.FromHexString(cleanSeed);
+                }
+                else
+                {
+                    // 若用户输入普通文本，则通过 SHA256 自动派生 32 字节私钥种子
+                    identitySeed = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(seedInput));
+                    Console.ForegroundColor = ConsoleColor.DarkYellow;
+                    Console.WriteLine("    [提示] 输入非64位十六进制，已通过 SHA-256 自动派生为 32 字节私钥种子。");
+                    Console.ResetColor();
+                }
+            }
+
             // 是否配置高级参数
             Console.Write("  * 是否需要配置高级网络参数 (QUIC/Relay/PubSub)？(y/N) [默认: N]: ");
             var advInput = Console.ReadLine()?.Trim().ToLowerInvariant();
@@ -193,7 +227,8 @@ namespace STTech.BytesIO.Demo.P2PServer
                 EnableQuic = enableQuic,
                 QuicPort = quicPort,
                 EnableRelay = enableRelay,
-                EnablePubSub = enablePubSub
+                EnablePubSub = enablePubSub,
+                IdentitySeed = identitySeed
             };
 
             Console.WriteLine();
@@ -201,7 +236,8 @@ namespace STTech.BytesIO.Demo.P2PServer
             Console.WriteLine($"[配置完成] 监听地址: {options.ListenAddress}:{options.TcpPort} (TCP)" +
                               (enableQuic ? $", {options.ListenAddress}:{options.QuicPort} (QUIC)" : "") +
                               (enableRelay ? ", 已启用 Relay" : "") +
-                              (enablePubSub ? ", 已启用 PubSub" : ""));
+                              (enablePubSub ? ", 已启用 PubSub" : "") +
+                              (identitySeed != null ? $", 已配置固定身份种子 ({Convert.ToHexString(identitySeed)[..8]}...)" : ", 随机身份"));
             Console.ResetColor();
 
             return options;
@@ -276,6 +312,14 @@ namespace STTech.BytesIO.Demo.P2PServer
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("------------------------------------------------------------------");
             Console.WriteLine($"本地节点 PeerId : {server.LocalPeerId}");
+            if (server.Options.IdentitySeed != null)
+            {
+                Console.WriteLine($"身份私钥种子   : {Convert.ToHexString(server.Options.IdentitySeed)} (已固定)");
+            }
+            else
+            {
+                Console.WriteLine($"身份私钥种子   : (随机生成)");
+            }
             Console.WriteLine("可供客户端连接的 Multiaddr 地址列表：");
             Console.ForegroundColor = ConsoleColor.Yellow;
             foreach (var addr in server.ListenAddresses)
