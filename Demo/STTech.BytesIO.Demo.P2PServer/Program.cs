@@ -1,6 +1,8 @@
 using STTech.BytesIO.Core;
 using STTech.BytesIO.P2P;
+using System.IO;
 using System.Text;
+using System.Text.Json;
 
 namespace STTech.BytesIO.Demo.P2PServer
 {
@@ -13,8 +15,8 @@ namespace STTech.BytesIO.Demo.P2PServer
 
             PrintBanner();
 
-            // 1. 引导用户输入参数
-            var options = PromptConfiguration();
+            // 1. 引导用户输入参数 (支持从 settings.json 加载/保存)
+            var (options, settings) = PromptConfiguration();
 
             // 2. 创建 BootstrapServer 实例
             var server = new BootstrapServer();
@@ -40,6 +42,10 @@ namespace STTech.BytesIO.Demo.P2PServer
             try
             {
                 await server.StartAsync();
+
+                // 启动成功后，将生成的 PeerId 也持久化记录到 settings.json 中
+                settings.CachedPeerId = server.LocalPeerId;
+                settings.Save();
             }
             catch (Exception ex)
             {
@@ -99,24 +105,32 @@ namespace STTech.BytesIO.Demo.P2PServer
         }
 
         /// <summary>
-        /// 交互式收集节点配置参数
+        /// 交互式收集节点配置参数（支持 settings.json 缓存与加载）
         /// </summary>
-        private static P2PNodeOptions PromptConfiguration()
+        private static (P2PNodeOptions options, ServerSettings settings) PromptConfiguration()
         {
+            var settings = ServerSettings.Load();
+            bool hasCache = File.Exists(ServerSettings.SettingsFilePath);
+
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("【步骤 1】请配置 P2P 引导节点网络参数 (直接回车使用默认值)：");
+            if (hasCache)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"  [提示: 已从当前目录 settings.json 加载上次配置]");
+            }
             Console.ResetColor();
 
             // 监听 IP 地址
-            Console.Write("  * 监听 IP 地址 [默认: 0.0.0.0]: ");
+            Console.Write($"  * 监听 IP 地址 [默认: {settings.ListenAddress}]: ");
             var ipInput = Console.ReadLine()?.Trim();
-            string listenIp = "0.0.0.0";
+            string listenIp = settings.ListenAddress;
             if (!string.IsNullOrWhiteSpace(ipInput))
             {
                 var cleanIp = new string(ipInput.Where(c => !char.IsControl(c) && c <= 127).ToArray()).Trim();
                 if (string.IsNullOrWhiteSpace(cleanIp))
                 {
-                    listenIp = "0.0.0.0";
+                    listenIp = settings.ListenAddress;
                 }
                 else if (System.Net.IPAddress.TryParse(cleanIp, out _))
                 {
@@ -125,15 +139,15 @@ namespace STTech.BytesIO.Demo.P2PServer
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
-                    Console.WriteLine($"    [提示] 输入的 IP '{ipInput}' 无效，将使用默认值 0.0.0.0");
+                    Console.WriteLine($"    [提示] 输入的 IP '{ipInput}' 无效，将使用默认值 {settings.ListenAddress}");
                     Console.ResetColor();
                 }
             }
 
             // TCP 监听端口
-            Console.Write("  * TCP 监听端口号 [默认: 9831]: ");
+            Console.Write($"  * TCP 监听端口号 [默认: {settings.TcpPort}]: ");
             var tcpPortInput = Console.ReadLine()?.Trim();
-            int tcpPort = 9831;
+            int tcpPort = settings.TcpPort;
             if (!string.IsNullOrWhiteSpace(tcpPortInput))
             {
                 var cleanPort = new string(tcpPortInput.Where(char.IsDigit).ToArray());
@@ -144,24 +158,26 @@ namespace STTech.BytesIO.Demo.P2PServer
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
-                    Console.WriteLine($"    [提示] 输入的端口无效，将使用默认端口 9831");
+                    Console.WriteLine($"    [提示] 输入的端口无效，将使用默认端口 {settings.TcpPort}");
                     Console.ResetColor();
                 }
             }
 
             // 身份种子 / PeerId 密钥
-            const string defaultSeedHex = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
-            Console.Write($"  * 身份种子/PeerId密钥 (64位十六进制字符，输入 'r' 随机生成)\n    [默认: {defaultSeedHex}]: ");
+            string currentSeedHex = settings.IdentitySeedHex;
+            Console.Write($"  * 身份种子/PeerId密钥 (64位十六进制字符，输入 'r' 随机生成)\n    [默认: {currentSeedHex}]: ");
             var seedInput = Console.ReadLine()?.Trim();
             byte[]? identitySeed = null;
+            string identitySeedHex = currentSeedHex;
 
             if (string.IsNullOrWhiteSpace(seedInput))
             {
-                identitySeed = Convert.FromHexString(defaultSeedHex);
+                identitySeed = !string.IsNullOrWhiteSpace(currentSeedHex) ? Convert.FromHexString(currentSeedHex) : null;
             }
             else if (seedInput.Equals("r", StringComparison.OrdinalIgnoreCase) || seedInput.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
                 identitySeed = null;
+                identitySeedHex = string.Empty;
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
                 Console.WriteLine("    [提示] 将在启动时随机生成 PeerId。");
                 Console.ResetColor();
@@ -172,11 +188,13 @@ namespace STTech.BytesIO.Demo.P2PServer
                 if (cleanSeed.Length == 64)
                 {
                     identitySeed = Convert.FromHexString(cleanSeed);
+                    identitySeedHex = cleanSeed.ToUpperInvariant();
                 }
                 else
                 {
                     // 若用户输入普通文本，则通过 SHA256 自动派生 32 字节私钥种子
                     identitySeed = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(seedInput));
+                    identitySeedHex = Convert.ToHexString(identitySeed);
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
                     Console.WriteLine("    [提示] 输入非64位十六进制，已通过 SHA-256 自动派生为 32 字节私钥种子。");
                     Console.ResetColor();
@@ -184,21 +202,22 @@ namespace STTech.BytesIO.Demo.P2PServer
             }
 
             // 是否配置高级参数
-            Console.Write("  * 是否需要配置高级网络参数 (QUIC/Relay/PubSub)？(y/N) [默认: N]: ");
+            bool hadAdvConfig = settings.EnableQuic || settings.EnableRelay || settings.EnablePubSub;
+            Console.Write($"  * 是否需要配置高级网络参数 (QUIC/Relay/PubSub)？(y/N) [默认: {(hadAdvConfig ? "y" : "N")}]: ");
             var advInput = Console.ReadLine()?.Trim().ToLowerInvariant();
-            bool enableQuic = false;
-            int quicPort = 9832;
-            bool enableRelay = false;
-            bool enablePubSub = false;
+            bool enableQuic = settings.EnableQuic;
+            int quicPort = settings.QuicPort;
+            bool enableRelay = settings.EnableRelay;
+            bool enablePubSub = settings.EnablePubSub;
 
-            if (advInput == "y" || advInput == "yes")
+            if (advInput == "y" || advInput == "yes" || (string.IsNullOrWhiteSpace(advInput) && hadAdvConfig))
             {
-                Console.Write("    - 是否启用 QUIC 传输？(y/N) [默认: N]: ");
+                Console.Write($"    - 是否启用 QUIC 传输？(y/N) [默认: {(enableQuic ? "y" : "N")}]: ");
                 var quicInput = Console.ReadLine()?.Trim().ToLowerInvariant();
-                enableQuic = quicInput == "y" || quicInput == "yes";
+                if (!string.IsNullOrWhiteSpace(quicInput)) enableQuic = quicInput == "y" || quicInput == "yes";
                 if (enableQuic)
                 {
-                    Console.Write("    - QUIC 监听端口号 [默认: 9832]: ");
+                    Console.Write($"    - QUIC 监听端口号 [默认: {quicPort}]: ");
                     var quicPortInput = Console.ReadLine()?.Trim();
                     if (!string.IsNullOrWhiteSpace(quicPortInput))
                     {
@@ -210,14 +229,24 @@ namespace STTech.BytesIO.Demo.P2PServer
                     }
                 }
 
-                Console.Write("    - 是否启用 Relay 中继穿透？(y/N) [默认: N]: ");
+                Console.Write($"    - 是否启用 Relay 中继穿透？(y/N) [默认: {(enableRelay ? "y" : "N")}]: ");
                 var relayInput = Console.ReadLine()?.Trim().ToLowerInvariant();
-                enableRelay = relayInput == "y" || relayInput == "yes";
+                if (!string.IsNullOrWhiteSpace(relayInput)) enableRelay = relayInput == "y" || relayInput == "yes";
 
-                Console.Write("    - 是否启用 PubSub (发布/订阅)？(y/N) [默认: N]: ");
+                Console.Write($"    - 是否启用 PubSub (发布/订阅)？(y/N) [默认: {(enablePubSub ? "y" : "N")}]: ");
                 var pubsubInput = Console.ReadLine()?.Trim().ToLowerInvariant();
-                enablePubSub = pubsubInput == "y" || pubsubInput == "yes";
+                if (!string.IsNullOrWhiteSpace(pubsubInput)) enablePubSub = pubsubInput == "y" || pubsubInput == "yes";
             }
+
+            // 更新并保存配置缓存
+            settings.ListenAddress = listenIp;
+            settings.TcpPort = tcpPort;
+            settings.IdentitySeedHex = identitySeedHex;
+            settings.EnableQuic = enableQuic;
+            settings.QuicPort = quicPort;
+            settings.EnableRelay = enableRelay;
+            settings.EnablePubSub = enablePubSub;
+            settings.Save();
 
             var options = new P2PNodeOptions
             {
@@ -238,9 +267,10 @@ namespace STTech.BytesIO.Demo.P2PServer
                               (enableRelay ? ", 已启用 Relay" : "") +
                               (enablePubSub ? ", 已启用 PubSub" : "") +
                               (identitySeed != null ? $", 已配置固定身份种子 ({Convert.ToHexString(identitySeed)[..8]}...)" : ", 随机身份"));
+            Console.WriteLine($"[配置已保存至 settings.json]");
             Console.ResetColor();
 
-            return options;
+            return (options, settings);
         }
 
         /// <summary>
@@ -504,6 +534,54 @@ namespace STTech.BytesIO.Demo.P2PServer
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"[广播完成] 成功发送给 {successCount}/{clients.Length} 个客户端。");
             Console.ResetColor();
+        }
+    }
+
+    /// <summary>
+    /// 引导节点启动配置持久化模型
+    /// </summary>
+    internal class ServerSettings
+    {
+        public string ListenAddress { get; set; } = "0.0.0.0";
+        public int TcpPort { get; set; } = 9831;
+        public string IdentitySeedHex { get; set; } = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
+        public string? CachedPeerId { get; set; }
+        public bool EnableQuic { get; set; } = false;
+        public int QuicPort { get; set; } = 9832;
+        public bool EnableRelay { get; set; } = false;
+        public bool EnablePubSub { get; set; } = false;
+
+        public static string SettingsFilePath => Path.Combine(AppContext.BaseDirectory, "settings.json");
+
+        public static ServerSettings Load()
+        {
+            try
+            {
+                if (File.Exists(SettingsFilePath))
+                {
+                    var json = File.ReadAllText(SettingsFilePath, Encoding.UTF8);
+                    var settings = JsonSerializer.Deserialize<ServerSettings>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    if (settings != null) return settings;
+                }
+            }
+            catch { }
+            return new ServerSettings();
+        }
+
+        public void Save()
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(this, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
+            }
+            catch { }
         }
     }
 }
