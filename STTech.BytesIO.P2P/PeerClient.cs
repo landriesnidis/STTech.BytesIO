@@ -30,7 +30,7 @@ namespace STTech.BytesIO.P2P
         private readonly object _statusLocker = new();
 
         /// <inheritdoc/>
-        public override bool IsConnected => _channel != null && _remoteSession != null;
+        public override bool IsConnected => _channel != null && !_channel.CancellationToken.IsCancellationRequested;
 
         /// <inheritdoc/>
         public override int SendBufferSize { get; set; } = 65536;
@@ -43,10 +43,9 @@ namespace STTech.BytesIO.P2P
         }
 
         /// <summary>
-        /// 通过已有的 Channel 和 Session 构造 P2P 客户端（用于 BootstrapServer 接入场景）
+        /// 通过已有的 Channel 和 Context 构造 P2P 客户端（用于 BootstrapServer 接入场景）
         /// </summary>
         /// <param name="channel">已建立的 Libp2p 通道</param>
-        /// <param name="session">已建立的远端会话</param>
         /// <param name="context">会话上下文</param>
         internal PeerClient(IChannel channel, ISessionContext context)
         {
@@ -137,11 +136,29 @@ namespace STTech.BytesIO.P2P
 
                 _remoteSession = await dialTask.ConfigureAwait(false);
 
-                // 在远端会话上协商 BytesIO 协议
-                await _remoteSession.DialAsync<BytesIOProtocol>(argument.CancellationToken).ConfigureAwait(false);
+                // 在远端会话上异步协商 BytesIO 协议（不要阻塞在此处，因其生命周期延续至通道关闭）
+                var protocolDialTask = _remoteSession.DialAsync<BytesIOProtocol>(argument.CancellationToken);
 
                 // 等待通道就绪
-                var channelResult = await channelTcs.Task.WaitAsync(TimeSpan.FromMilliseconds(argument.Timeout), argument.CancellationToken).ConfigureAwait(false);
+                var completedChannelTask = await Task.WhenAny(channelTcs.Task, protocolDialTask, Task.Delay(argument.Timeout, argument.CancellationToken)).ConfigureAwait(false);
+
+                if (completedChannelTask == protocolDialTask && protocolDialTask.IsFaulted)
+                {
+                    throw protocolDialTask.Exception!.InnerException ?? protocolDialTask.Exception!;
+                }
+
+                if (completedChannelTask != channelTcs.Task)
+                {
+                    // 超时
+                    ResetInternalState();
+                    _innerStatus = InnerStatus.Free;
+                    sw.Stop();
+                    var failedArgs = new ConnectionFailedEventArgs(ConnectErrorCode.Timeout) { CostTime = sw.Elapsed, State = argument.State };
+                    RaiseConnectionFailed(this, failedArgs);
+                    return new ConnectResult(ConnectErrorCode.Timeout) { CostTime = sw.Elapsed };
+                }
+
+                var channelResult = await channelTcs.Task.ConfigureAwait(false);
                 _channel = channelResult.channel;
 
                 // 提取远端 PeerId
