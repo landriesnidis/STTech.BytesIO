@@ -72,19 +72,33 @@ namespace STTech.BytesIO.Core
         /// <param name="timeout">超时时间（毫秒），0 或负数表示禁用</param>
         public void ConfigureTimeout(int timeout = 5000)
         {
-            StopTimeoutTimer();
             HeartbeatTimeout = timeout;
 
             if (timeout <= 0)
             {
+                DestroyTimeoutTimer();
                 return;
             }
 
-            _timeoutTimer = new TimeoutTimer(timeout, () =>
+            if (_timeoutTimer == null)
             {
-                Client?.Disconnect(new DisconnectArgument(DisconnectionReasonCode.Timeout));
-                StopTimeoutTimer();
-            });
+                _timeoutTimer = new TimeoutTimer(timeout, OnHeartbeatTimeout);
+            }
+            else
+            {
+                _timeoutTimer.Interval = timeout;
+            }
+
+            if (Client != null && Client.IsConnected)
+            {
+                StartTimeoutTimer();
+            }
+        }
+
+        private void OnHeartbeatTimeout()
+        {
+            Client?.Disconnect(new DisconnectArgument(DisconnectionReasonCode.Timeout));
+            PauseTimeoutTimer();
         }
 
         /// <summary>
@@ -92,16 +106,29 @@ namespace STTech.BytesIO.Core
         /// </summary>
         private void StartTimeoutTimer()
         {
-            if (_timeoutTimer != null)
+            if (HeartbeatTimeout > 0)
             {
-                _timeoutTimer.Enabled = true;
+                if (_timeoutTimer == null)
+                {
+                    _timeoutTimer = new TimeoutTimer(HeartbeatTimeout, OnHeartbeatTimeout);
+                }
+                _timeoutTimer.Interval = HeartbeatTimeout;
+                _timeoutTimer.Start();
             }
         }
 
         /// <summary>
-        /// 停止超时检测
+        /// 暂停超时检测
         /// </summary>
-        private void StopTimeoutTimer()
+        private void PauseTimeoutTimer()
+        {
+            _timeoutTimer?.Stop();
+        }
+
+        /// <summary>
+        /// 销毁超时检测定时器
+        /// </summary>
+        private void DestroyTimeoutTimer()
         {
             if (_timeoutTimer != null)
             {
@@ -123,26 +150,21 @@ namespace STTech.BytesIO.Core
         /// <inheritdoc/>
         protected internal override void OnDisconnected(DisconnectedEventArgs e)
         {
-            // 断开连接后停止超时检测
-            StopTimeoutTimer();
+            // 断开连接后暂停超时检测（保留计时器实例，重连后可再次复用）
+            PauseTimeoutTimer();
         }
 
         /// <inheritdoc/>
         protected internal override void OnDataReceived(DataReceivedEventArgs e)
         {
             // 收到数据时重置超时计时器
-            if (_timeoutTimer != null && Client != null)
+            if (HeartbeatTimeout > 0 && Client != null)
             {
-                var nowTimestamp = DateTime.Now;
-                var intervalTime = (nowTimestamp - Client.LastMessageReceivedTime).TotalMilliseconds;
-                if (intervalTime > HeartbeatTimeout)
+                if (_timeoutTimer == null)
                 {
-                    // 已超时，超时回调会在 TimeoutTimer 内部处理
+                    StartTimeoutTimer();
                 }
-                else
-                {
-                    _timeoutTimer.Reset(HeartbeatTimeout - intervalTime);
-                }
+                _timeoutTimer?.Reset(HeartbeatTimeout);
             }
         }
 
@@ -150,7 +172,7 @@ namespace STTech.BytesIO.Core
         public override void Dispose()
         {
             StopHeartbeatTimer();
-            StopTimeoutTimer();
+            DestroyTimeoutTimer();
             _sendHeartbeatHandler = null;
         }
     }
@@ -253,7 +275,7 @@ namespace STTech.BytesIO.Core
         public void Reset(double interval)
         {
             Stop();
-            Interval = interval > 1000 ? interval : 1000;
+            Interval = interval > 0 ? interval : (_timeout > 0 ? _timeout : 1);
             Start();
         }
     }

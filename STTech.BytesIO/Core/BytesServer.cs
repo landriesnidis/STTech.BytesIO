@@ -124,14 +124,28 @@ namespace STTech.BytesIO.Core
         {
             InternalClients.TryAdd(client, 0);
             client.OnDisconnected += InternalClient_OnDisconnected;
-            Task.Run(() => ClientConnected?.Invoke(this, new ServerClientConnectedEventArgs<TClient>(client)));
+            try
+            {
+                ClientConnected?.Invoke(this, new ServerClientConnectedEventArgs<TClient>(client));
+            }
+            catch (Exception ex)
+            {
+                RaiseExceptionOccurs(ex);
+            }
         }
 
         protected virtual void OnClientDisconnected(TClient client, DisconnectedEventArgs e)
         {
             InternalClients.TryRemove(client, out _);
             client.OnDisconnected -= InternalClient_OnDisconnected;
-            Task.Run(() => ClientDisconnected?.Invoke(this, new ServerClientDisconnectedEventArgs<TClient>(client, e)));
+            try
+            {
+                ClientDisconnected?.Invoke(this, new ServerClientDisconnectedEventArgs<TClient>(client, e));
+            }
+            catch (Exception ex)
+            {
+                RaiseExceptionOccurs(ex);
+            }
         }
 
         private void InternalClient_OnDisconnected(object sender, DisconnectedEventArgs e)

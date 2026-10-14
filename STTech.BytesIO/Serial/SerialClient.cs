@@ -88,6 +88,8 @@ namespace STTech.BytesIO.Serial
             }
         }
 
+        private readonly object lockerStatus = new object();
+
         /// <summary>
         /// 关闭串口通信
         /// </summary>
@@ -97,26 +99,29 @@ namespace STTech.BytesIO.Serial
 
             if (argument.GracefulShutdown) WaitAndDrainSendQueue(3000);
 
-            if (argument.ReasonCode == DisconnectionReasonCode.Active && !InnerClient.IsOpen)
+            lock (lockerStatus)
             {
-                return new DisconnectResult(DisconnectErrorCode.NoConnection);
-            }
+                if (!IsConnected)
+                {
+                    return new DisconnectResult(DisconnectErrorCode.NoConnection);
+                }
 
-            try
-            {
-                CancelReceiveDataTask();
+                try
+                {
+                    CancelReceiveDataTask();
 
-                // 关闭串口
-                InnerClient.Close();
+                    // 关闭串口
+                    InnerClient.Close();
 
-                // 执行通信已断开的回调事件 
-                RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
+                    // 执行通信已断开的回调事件 
+                    RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
 
-                return new DisconnectResult();
-            }
-            catch (Exception ex)
-            {
-                return new DisconnectResult(DisconnectErrorCode.Error, ex);
+                    return new DisconnectResult();
+                }
+                catch (Exception ex)
+                {
+                    return new DisconnectResult(DisconnectErrorCode.Error, ex);
+                }
             }
         }
 
@@ -125,6 +130,11 @@ namespace STTech.BytesIO.Serial
         {
             try
             {
+                if (!IsConnected)
+                {
+                    throw new InvalidOperationException("串口未打开，无法发送数据。");
+                }
+
                 var data = args.Data;
 
                 // 异步发送数据
@@ -144,6 +154,7 @@ namespace STTech.BytesIO.Serial
             {
                 // 通信异常
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                throw;
             }
         }
 

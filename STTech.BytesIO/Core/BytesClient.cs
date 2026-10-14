@@ -64,7 +64,7 @@ namespace STTech.BytesIO.Core
         /// 更新最后一次通信的时间戳
         /// </summary>
         /// <param name="time">手动设置时间戳</param>
-        private void UpdateLastMessageTimestamp(DateTime? time = null) => LastMessageReceivedTime = time ?? DateTime.Now;
+        protected void UpdateLastMessageTimestamp(DateTime? time = null) => LastMessageReceivedTime = time ?? DateTime.Now;
 
         /// <summary>
         /// 从 ArrayPool 租借一个缓冲区

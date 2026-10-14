@@ -122,6 +122,7 @@ namespace STTech.BytesIO.Core
             {
                 // 通信异常
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                throw;
             }
         }
 

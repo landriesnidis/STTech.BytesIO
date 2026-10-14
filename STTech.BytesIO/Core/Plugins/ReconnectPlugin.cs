@@ -37,26 +37,34 @@ namespace STTech.BytesIO.Core
             _maxTimes = times;
             _reconnectFailedHandler = reconnectFailedHandler;
 
-            StopTimer();
+            PauseTimer();
 
             if (delay <= 0)
             {
                 IsEnabled = false;
+                DestroyTimer();
                 return;
             }
 
             IsEnabled = true;
             _remainingTimes = times;
 
-            _timer = new Timer(delay);
-            _timer.Elapsed += OnTimerElapsed;
+            if (_timer == null)
+            {
+                _timer = new Timer(delay);
+                _timer.Elapsed += OnTimerElapsed;
+            }
+            else
+            {
+                _timer.Interval = delay;
+            }
         }
 
         private void OnTimerElapsed(object sender, ElapsedEventArgs e)
         {
             if (Client == null || Client.IsConnected)
             {
-                StopTimer();
+                PauseTimer();
                 return;
             }
 
@@ -69,7 +77,7 @@ namespace STTech.BytesIO.Core
                 }
                 else
                 {
-                    StopTimer();
+                    PauseTimer();
                     _reconnectFailedHandler?.Invoke(Client);
                 }
             }
@@ -83,21 +91,38 @@ namespace STTech.BytesIO.Core
         protected internal override void OnDisconnected(DisconnectedEventArgs e)
         {
             // 非主动断开时启动重连
-            if (!e.IsActively && IsEnabled && _timer != null)
+            if (!e.IsActively && IsEnabled)
             {
-                _remainingTimes = _maxTimes;
-                _timer.Enabled = true;
+                if (_timer == null && _delay > 0)
+                {
+                    _timer = new Timer(_delay);
+                    _timer.Elapsed += OnTimerElapsed;
+                }
+
+                if (_timer != null)
+                {
+                    _remainingTimes = _maxTimes;
+                    _timer.Enabled = true;
+                }
             }
         }
 
         /// <inheritdoc/>
         protected internal override void OnConnectedSuccessfully(ConnectedSuccessfullyEventArgs e)
         {
-            StopTimer();
+            PauseTimer();
             _remainingTimes = _maxTimes;
         }
 
-        private void StopTimer()
+        private void PauseTimer()
+        {
+            if (_timer != null)
+            {
+                _timer.Enabled = false;
+            }
+        }
+
+        private void DestroyTimer()
         {
             if (_timer != null)
             {
@@ -111,7 +136,7 @@ namespace STTech.BytesIO.Core
         /// <inheritdoc/>
         public override void Dispose()
         {
-            StopTimer();
+            DestroyTimer();
             _reconnectFailedHandler = null;
         }
     }
