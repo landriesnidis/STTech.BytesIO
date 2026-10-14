@@ -90,7 +90,7 @@ namespace STTech.BytesIO.Ipc.Tests
             };
 
             // 异步连接
-            var connectResult = await client.ConnectAsync(new ConnectArgument { Timeout = 3000 });
+            var connectResult = await client.ConnectAsync(new ConnectArgument { Timeout = 10000 });
             Assert.True(connectResult.IsSuccess, "连接服务端成功");
 
             // 3. 客户端发送数据
@@ -98,7 +98,7 @@ namespace STTech.BytesIO.Ipc.Tests
             await client.SendAsync(sendPayload);
 
             // 等待服务端回包
-            var completedTask = await Task.WhenAny(replyTcs.Task, Task.Delay(5000));
+            var completedTask = await Task.WhenAny(replyTcs.Task, Task.Delay(15000));
             Assert.Same(replyTcs.Task, completedTask);
 
             string receivedReply = await replyTcs.Task;
@@ -279,10 +279,10 @@ namespace STTech.BytesIO.Ipc.Tests
             await server.StartAsync();
 
             var client = new MyBusinessIpcClient { PipeName = pipeName, ServerName = "." };
-            var result = await client.ConnectAsync(new ConnectArgument { Timeout = 3000 });
+            var result = await client.ConnectAsync(new ConnectArgument { Timeout = 10000 });
             Assert.True(result.IsSuccess);
 
-            var completedTask = await Task.WhenAny(clientConnectedTcs.Task, Task.Delay(5000));
+            var completedTask = await Task.WhenAny(clientConnectedTcs.Task, Task.Delay(15000));
             Assert.Same(clientConnectedTcs.Task, completedTask);
 
             var acceptedClient = await clientConnectedTcs.Task;

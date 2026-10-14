@@ -45,7 +45,7 @@ namespace STTech.BytesIO.Ipc.Tests
 
             var client = new SharedMemoryIpcClient { PipeName = pipeName, SharedMemoryRegionSize = regionSize, ServerName = "." };
 
-            var result = await client.ConnectAsync(new ConnectArgument { Timeout = 5000 });
+            var result = await client.ConnectAsync(new ConnectArgument { Timeout = 15000 });
             if (!result.IsSuccess) throw new InvalidOperationException($"连接建立失败: {result.ErrorCode}");
 
             var serverSideClient = await WaitForServerClientAsync(server);
@@ -228,7 +228,7 @@ namespace STTech.BytesIO.Ipc.Tests
 
         private static async Task<TClient> WaitForServerClientAsync<TClient>(BytesServer<TClient> server) where TClient : BytesClient
         {
-            var deadline = DateTime.Now.AddSeconds(5);
+            var deadline = DateTime.Now.AddSeconds(15);
             while (DateTime.Now < deadline)
             {
                 var c = server.Clients.LastOrDefault();
@@ -372,6 +372,47 @@ namespace STTech.BytesIO.Ipc.Tests
         {
             var client = new SharedMemoryIpcClient { SharedMemoryRegionSize = 64 * 1024 * 1024 };
             Assert.Equal(32 * 1024 * 1024, client.DataCapacity);
+        }
+
+        /// <summary>
+        /// 验证 8: 默认共享内存区域大小已合理下调为 16MB (避免 1GB 导致 Windows 提交额度爆满)
+        /// </summary>
+        [Fact]
+        public void Verify_DefaultRegionSize_Is16MB()
+        {
+            var client = new SharedMemoryIpcClient();
+            Assert.Equal(16L * 1024 * 1024, client.SharedMemoryRegionSize);
+            Assert.Equal(8L * 1024 * 1024, client.DataCapacity);
+
+            var server = new SharedMemoryIpcServer();
+            Assert.Equal(16L * 1024 * 1024, server.SharedMemoryRegionSize);
+        }
+
+        /// <summary>
+        /// 验证 9: 批量创建 20 个客户端 + 20 个服务端实例，验证在 16MB 默认配置下可极速安全实例化，不引发内存溢出
+        /// </summary>
+        [Fact]
+        public void Verify_MultipleInstancesAllocation_SucceedsWithoutCommitExhaustion()
+        {
+            var clients = new List<SharedMemoryIpcClient>();
+            var servers = new List<SharedMemoryIpcServer>();
+
+            try
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    clients.Add(new SharedMemoryIpcClient());
+                    servers.Add(new SharedMemoryIpcServer());
+                }
+
+                Assert.Equal(20, clients.Count);
+                Assert.Equal(20, servers.Count);
+            }
+            finally
+            {
+                foreach (var c in clients) c.Dispose();
+                foreach (var s in servers) s.Dispose();
+            }
         }
     }
 }

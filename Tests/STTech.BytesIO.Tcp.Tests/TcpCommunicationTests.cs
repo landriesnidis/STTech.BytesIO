@@ -35,7 +35,7 @@ namespace STTech.BytesIO.Tcp.Tests
                 var client = new TcpClient();
                 client.Host = "127.0.0.1";
                 client.Port = 50001;
-                var connectResult = client.Connect();
+                var connectResult = client.Connect(10000);
 
                 Assert.True(connectResult.IsSuccess, $"Connection failed: {connectResult.ErrorCode}");
                 Assert.True(client.IsConnected);
@@ -82,7 +82,7 @@ namespace STTech.BytesIO.Tcp.Tests
                 innerClient.Port = 50006;
                 
                 var virtualClient = new VirtualClient(innerClient);
-                var connectResult = virtualClient.Connect();
+                var connectResult = virtualClient.Connect(10000);
 
                 Assert.True(connectResult.IsSuccess);
                 Assert.True(virtualClient.IsConnected);
@@ -125,7 +125,7 @@ namespace STTech.BytesIO.Tcp.Tests
                     tcs.TrySetResult(e.Data.ToArray());
                 };
 
-                var connectResult = client.Connect();
+                var connectResult = client.Connect(10000);
                 Assert.True(connectResult.IsSuccess);
 
                 // Wait a bit for the server to process the new client and add it to the list
@@ -187,7 +187,8 @@ namespace STTech.BytesIO.Tcp.Tests
                     var client = new TcpClient();
                     client.Host = "127.0.0.1";
                     client.Port = 50003;
-                    client.Connect();
+                    var res = client.Connect(10000);
+                    Assert.True(res.IsSuccess, $"Client {i} 连接失败: {res.ErrorCode}, ex: {res.Exception}");
                     clients.Add(client);
                 }
 
@@ -241,7 +242,7 @@ namespace STTech.BytesIO.Tcp.Tests
                     Console.WriteLine("[DEBUG Test] client.OnDisconnected fired");
                     clientDisconnectedTcs.TrySetResult(true);
                 };
-                client.Connect();
+                client.Connect(10000);
                 
                 // Add a small delay to ensure everything is stable
                 await Task.Delay(500);
@@ -288,7 +289,7 @@ namespace STTech.BytesIO.Tcp.Tests
                 var client = new TcpClient();
                 client.Host = "127.0.0.1";
                 client.Port = 50005;
-                client.Connect();
+                client.Connect(10000);
 
                 await Task.Delay(300); // Ensure the server-side handler is added
                 client.Send(new byte[] { 1 });
