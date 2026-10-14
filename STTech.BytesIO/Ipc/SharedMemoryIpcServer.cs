@@ -37,7 +37,7 @@ namespace STTech.BytesIO.Ipc
                 _sharedMemoryRegionSize = value;
             }
         }
-        private long _sharedMemoryRegionSize = 1L * 1024 * 1024 * 1024;
+        private long _sharedMemoryRegionSize = 16L * 1024 * 1024;
 
         /// <summary>
         /// 构造共享内存IPC服务端

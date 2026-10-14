@@ -47,7 +47,7 @@ namespace STTech.BytesIO.Ipc
                 _sharedMemoryRegionSize = value;
             }
         }
-        private long _sharedMemoryRegionSize = 1L * 1024 * 1024 * 1024;
+        private long _sharedMemoryRegionSize = 16L * 1024 * 1024;
 
         /// <summary>
         /// 等待对端 ACK (共享内存槽位释放) 的超时时间 (毫秒)

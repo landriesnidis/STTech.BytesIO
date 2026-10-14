@@ -12,6 +12,7 @@ namespace STTech.BytesIO.Ipc
     public class IpcClient : BytesClient, IIpcClient
     {
         private PipeStream innerClient;
+        private readonly object lockerStatus = new object();
 
         /// <summary>
         /// 内部管道客户端
@@ -166,10 +167,12 @@ namespace STTech.BytesIO.Ipc
         public override DisconnectResult Disconnect(DisconnectArgument argument = null)
         {
             argument ??= new DisconnectArgument();
+            lock (lockerStatus)
             if (IsConnected)
             {
                 try
                 {
+                    CancelReceiveDataTask();
                     innerClient?.Close();
                 }
                 catch (Exception ex)
@@ -193,7 +196,10 @@ namespace STTech.BytesIO.Ipc
         {
             try
             {
-                if (IsConnected)
+                if (!IsConnected)
+                {
+                    throw new InvalidOperationException("IPC客户端未连接，无法发送数据。");
+                }
                 {
                     await innerClient.WriteAsync(args.Data, 0, args.Data.Length).ConfigureAwait(false);
                     if (args.Options.FlushImmediately)
@@ -212,6 +218,7 @@ namespace STTech.BytesIO.Ipc
             catch (Exception ex)
             {
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                throw;
             }
         }
 
