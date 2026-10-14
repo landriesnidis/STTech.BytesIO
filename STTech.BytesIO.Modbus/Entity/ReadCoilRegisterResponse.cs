@@ -72,7 +72,7 @@ namespace STTech.BytesIO.Modbus
             if (IsSuccess && Payload != null && Payload.Length > 0)
             {
                 Length = Payload.ElementAt(0);
-                Values = Payload.Skip(1).Select(x => Convert.ToString(x, 2).PadLeft(8, '0').Reverse()).SelectMany(x => x).Select(x => x != '0').ToArray();
+                Values = ParseBits(Payload, Length);
             }
         }
 
@@ -85,8 +85,24 @@ namespace STTech.BytesIO.Modbus
             if (IsSuccess && Payload != null && Payload.Length > 0)
             {
                 Length = Payload.ElementAt(0);
-                Values = Payload.Skip(1).Select(x => Convert.ToString(x, 2).PadLeft(8, '0').Reverse()).SelectMany(x => x).Select(x => x != '0').ToArray();
+                Values = ParseBits(Payload, Length);
             }
+        }
+
+        private static bool[] ParseBits(byte[] payload, int byteCount)
+        {
+            if (payload == null || payload.Length < 1 + byteCount) return Array.Empty<bool>();
+            var values = new bool[byteCount * 8];
+            for (int i = 0; i < byteCount; i++)
+            {
+                byte b = payload[1 + i];
+                int offset = i * 8;
+                for (int j = 0; j < 8; j++)
+                {
+                    values[offset + j] = (b & (1 << j)) != 0;
+                }
+            }
+            return values;
         }
     }
 

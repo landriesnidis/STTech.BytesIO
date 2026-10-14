@@ -64,7 +64,7 @@ namespace STTech.BytesIO.Modbus
             if (IsSuccess && Payload != null && Payload.Length > 0) 
             {
                 Length = Payload.ElementAt(0);
-                Values = Payload.Skip(1).ToArray();
+                Values = Payload.Skip(1).Take(Length).ToArray();
             }
            
         }
@@ -74,7 +74,7 @@ namespace STTech.BytesIO.Modbus
             if (IsSuccess && Payload != null && Payload.Length > 0) 
             {
                 Length = Payload.ElementAt(0);
-                Values = Payload.Skip(1).ToArray();
+                Values = Payload.Skip(1).Take(Length).ToArray();
             }
         }
     }

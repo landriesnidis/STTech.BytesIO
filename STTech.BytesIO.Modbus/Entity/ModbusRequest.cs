@@ -43,7 +43,7 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// 协议格式
         /// </summary>
-        public ModbusProtocolFormat ProtocolFormat { get; internal set; }
+        public ModbusProtocolFormat ProtocolFormat { get; set; }
 
         /// <summary>
         /// 有效荷载
@@ -87,7 +87,7 @@ namespace STTech.BytesIO.Modbus
                 var arr = bytes.Skip(2);
                 var payloadLen = arr.Count() - 2;
                 Payload = arr.Take(payloadLen).ToArray();
-                Checksum = BitConverter.ToUInt16(bytes.Skip(payloadLen).ToArray(), 0);
+                Checksum = (ushort)(bytes[bytes.Length - 2] | (bytes[bytes.Length - 1] << 8));
             }
         }
 
@@ -153,7 +153,7 @@ namespace STTech.BytesIO.Modbus
                 case ModbusProtocolFormat.ASCII:
                     {
                         SerializePayloadHandle();
-                        var line = $":{SlaveId:00}{(byte)FunctionCode:X2}{Payload?.ToHexString() ?? ""}";
+                        var line = $":{SlaveId:X2}{(byte)FunctionCode:X2}{Payload?.ToHexString() ?? ""}";
                         line = line + LRC(line) + "\r\n";
                         return line.GetBytes();
                     }
@@ -180,19 +180,14 @@ namespace STTech.BytesIO.Modbus
         public static string LRC(string message)
         {
             int sum = 0;
-            string hex = "";
             int strLen = message.Length;
-            for (int i = 1; i < strLen - 1; i = i + 2)
+            for (int i = 1; i < strLen - 1; i += 2)
             {
                 string temp = message.Substring(i, 2);
-                sum = sum + Convert.ToInt32(temp, 16);
+                sum += Convert.ToByte(temp, 16);
             }
-            if (sum >= 256)
-                sum = sum % 256;
-            hex = Convert.ToInt32(~sum + 1).ToString("X");
-            if (hex.Length > 2)
-                hex = hex.Substring(hex.Length - 2, 2);
-            return hex;
+            byte lrc = (byte)(-(byte)sum);
+            return lrc.ToString("X2");
         }
 
 

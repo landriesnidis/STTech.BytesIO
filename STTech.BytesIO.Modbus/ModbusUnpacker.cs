@@ -165,8 +165,8 @@ namespace STTech.BytesIO.Modbus
                 seq.Slice(0, 5).CopyTo(asciiTemp);
                 // ASCII decode: characters 3 and 4 
                 var codeStr = System.Text.Encoding.ASCII.GetString(asciiTemp.Slice(3, 2).ToArray());
-                var codeVal = ushort.Parse(codeStr);
-                functionCode = codeVal >= 80 ? (FunctionCode)(codeVal - 0x80) : (FunctionCode)codeVal;
+                byte codeVal = Convert.ToByte(codeStr, 16);
+                functionCode = codeVal >= 0x80 ? (FunctionCode)(codeVal - 0x80) : (FunctionCode)codeVal;
             }
             else
             {

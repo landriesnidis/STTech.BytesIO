@@ -103,16 +103,26 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public void Start()
         {
-            InnerServer.StartAsync();
+            InnerServer.StartAsync().GetAwaiter().GetResult();
         }
+
+        /// <summary>
+        /// 异步启动服务端
+        /// </summary>
+        public System.Threading.Tasks.Task StartAsync() => InnerServer.StartAsync();
 
         /// <summary>
         /// 停止服务端
         /// </summary>
         public void Stop()
         {
-            InnerServer.StopAsync();
+            InnerServer.CloseAsync().GetAwaiter().GetResult();
         }
+
+        /// <summary>
+        /// 异步停止服务端
+        /// </summary>
+        public System.Threading.Tasks.Task StopAsync() => InnerServer.CloseAsync();
 
         /// <summary>
         /// 释放资源

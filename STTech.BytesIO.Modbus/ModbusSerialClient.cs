@@ -26,7 +26,7 @@ namespace STTech.BytesIO.Modbus
         public Handshake Handshake { get => InnerClient.Handshake; set => InnerClient.Handshake = value; }
 
         /// <inheritdoc/>
-        public bool DtrEnable { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }
+        public bool DtrEnable { get => InnerClient.DtrEnable; set => InnerClient.DtrEnable = value; }
 
         /// <inheritdoc/>
         public bool DiscardNull { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }

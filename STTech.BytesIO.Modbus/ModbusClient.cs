@@ -46,7 +46,11 @@ namespace STTech.BytesIO.Modbus
             set
             {
                 protocolFormat = value;
-                (Unpacker as ModbusUnpacker).Format = value;
+                if (Unpacker is ModbusUnpacker unpacker)
+                {
+                    unpacker.Format = value;
+                    unpacker.StartMark = value == ModbusProtocolFormat.ASCII ? new byte[] { (byte)':' } : null;
+                }
             }
         }
 
@@ -395,9 +399,14 @@ namespace STTech.BytesIO.Modbus
                         switch (req.FunctionCode)
                         {
                             case FunctionCode.ReadCoilRegister:
+                                {
+                                    if (resp is ReadCoilRegisterResponse rd) return (sd.Length + 7) / 8 == rd.Length;
+                                    break;
+                                }
                             case FunctionCode.ReadDiscreteInputRegister:
                                 {
-                                    return true;
+                                    if (resp is ReadDiscreteInputRegisterResponse rd) return (sd.Length + 7) / 8 == rd.Length;
+                                    break;
                                 }
                             case FunctionCode.ReadHoldingRegister:
                                 {
@@ -417,22 +426,23 @@ namespace STTech.BytesIO.Modbus
                 {
                     if (req is WriteMultipleHoldingRegistersRequest sd1 && resp is WriteRegisterResponse rd1)
                     {
-                        return sd1.WriteAddress == rd1.WriteAddress && sd1.Data.Length / 2 == rd1.GetUInt16();
+                        return sd1.WriteAddress == rd1.WriteAddress && sd1.Data != null && rd1.Values != null && rd1.Values.Length >= 2 && (sd1.Data.Length / 2) == rd1.GetUInt16();
                     }
 
                     if (req is WriteMultipleCoilRegistersRequest sd2 && resp is WriteRegisterResponse rd2)
                     {
-                        return sd2.WriteAddress == rd2.WriteAddress && sd2.Data.Length / 2 == rd2.GetUInt16();
+                        return sd2.WriteAddress == rd2.WriteAddress && sd2.Data != null && rd2.Values != null && rd2.Values.Length >= 2 && sd2.Data.Length == rd2.GetUInt16();
                     }
 
                     if (req is WriteSingleHoldingRegisterRequest sd3 && resp is WriteRegisterResponse rd3)
                     {
-                        return sd3.WriteAddress == rd3.WriteAddress && rd3.Values.SequenceEqual(sd3.Data);
+                        return sd3.WriteAddress == rd3.WriteAddress && rd3.Values != null && rd3.Values.SequenceEqual(sd3.Data);
                     }
 
                     if (req is WriteSingleCoilRegisterRequest sd4 && resp is WriteRegisterResponse rd4)
                     {
-                        return sd4.WriteAddress == rd4.WriteAddress && rd4.GetUInt16() == (sd4.Data ? 1 : 0);
+                        byte[] expectedBytes = sd4.Data ? new byte[] { 0xFF, 0x00 } : new byte[] { 0x00, 0x00 };
+                        return sd4.WriteAddress == rd4.WriteAddress && rd4.Values != null && rd4.Values.SequenceEqual(expectedBytes);
                     }
                 }
             }

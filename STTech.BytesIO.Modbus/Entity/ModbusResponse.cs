@@ -150,7 +150,7 @@ namespace STTech.BytesIO.Modbus
                 var arr = bytes.Skip(2);
                 var payloadLen = arr.Count() - 2;
                 payload = arr.Take(payloadLen).ToArray();
-                Checksum = BitConverter.ToUInt16(bytes.Skip(payloadLen).ToArray(), 0);
+                Checksum = (ushort)(bytes[bytes.Length - 2] | (bytes[bytes.Length - 1] << 8));
             }
         }
 

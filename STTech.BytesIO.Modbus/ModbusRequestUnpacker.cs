@@ -59,7 +59,7 @@ namespace STTech.BytesIO.Modbus
             buffer.Slice(0, 17).CopyTo(head);
 
             string codeStr = System.Text.Encoding.ASCII.GetString(head.Slice(3, 2).ToArray());
-            var code = (FunctionCode)ushort.Parse(codeStr);
+            var code = (FunctionCode)Convert.ToByte(codeStr, 16);
 
             switch (code)
             {
@@ -77,7 +77,7 @@ namespace STTech.BytesIO.Modbus
                     Span<byte> head17 = stackalloc byte[17];
                     buffer.Slice(0, 17).CopyTo(head17);
                     string byteCountStr = System.Text.Encoding.ASCII.GetString(head17.Slice(13, 2).ToArray());
-                    var byteCount = ushort.Parse(byteCountStr);
+                    var byteCount = Convert.ToByte(byteCountStr, 16);
                     return 15 + (byteCount * 2) + 2 + 2; // fixed(15) + Data(N*2) + LRC(2) + CRLF(2)
 
                 default:
@@ -150,10 +150,10 @@ namespace STTech.BytesIO.Modbus
                 Span<byte> asciiTemp = stackalloc byte[5];
                 seq.Slice(0, 5).CopyTo(asciiTemp);
                 var codeStr = System.Text.Encoding.ASCII.GetString(asciiTemp.Slice(3, 2).ToArray());
-                functionCode = (FunctionCode)ushort.Parse(codeStr);
+                functionCode = (FunctionCode)Convert.ToByte(codeStr, 16);
                 
                 var slaveIdStr = System.Text.Encoding.ASCII.GetString(asciiTemp.Slice(1, 2).ToArray());
-                slaveId = byte.Parse(slaveIdStr);
+                slaveId = Convert.ToByte(slaveIdStr, 16);
             }
             else
             {

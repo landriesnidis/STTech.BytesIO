@@ -27,7 +27,7 @@ namespace STTech.BytesIO.Modbus.Entity
             {
                 if (RawBytes.Length >= 3)
                 {
-                    SlaveId = byte.Parse(System.Text.Encoding.ASCII.GetString(RawBytes, 1, 2));
+                    SlaveId = Convert.ToByte(System.Text.Encoding.ASCII.GetString(RawBytes, 1, 2), 16);
                 }
             }
             else
