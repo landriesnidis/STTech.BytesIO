@@ -118,7 +118,7 @@ namespace STTech.BytesIO.Tcp
         /// <summary>
         /// 挂起连接队列的最大长度
         /// </summary>
-        public int Backlog { get; set; } = 10;
+        public int Backlog { get; set; } = 100;
 
         /// <summary>
         /// <inheritdoc/>

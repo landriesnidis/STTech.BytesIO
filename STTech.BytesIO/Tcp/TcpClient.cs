@@ -101,6 +101,8 @@ namespace STTech.BytesIO.Tcp
                 IPEndPoint point = (IPEndPoint)socket.RemoteEndPoint;
                 Host = point.Address.ToString();
                 Port = point.Port;
+
+                GenerateNewConnectionId();
             }
         }
 
@@ -288,27 +290,43 @@ namespace STTech.BytesIO.Tcp
                 // 如果TcpClient没有关闭，则关闭连接
                 if (InnerClient != null && (IsConnected || innerStatus == InnerStatus.Busy))
                 {
+                    // 立即将内部状态标记为空闲，避免断开过程中的异常回调引发无限递归重入
+                    innerStatus = InnerStatus.Free;
+
                     try
                     {
-                        // 停止收发
-                        InnerClient.Shutdown(SocketShutdown.Both);
+                        // 停止收发（安全关闭，忽略对端已断开导致的异常）
+                        try
+                        {
+                            if (InnerClient.Connected)
+                            {
+                                InnerClient.Shutdown(SocketShutdown.Both);
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // 忽略 Shutdown 异常
+                        }
 
                         // 关闭异步任务
                         CancelReceiveDataTask();
 
                         // 关闭内部Socket客户端
-                        InnerClient.Close();
+                        try
+                        {
+                            InnerClient.Close();
+                        }
+                        catch (Exception) { }
                     }
                     catch (Exception ex)
                     {
                         RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
                     }
-
-                    // 重置TCP客户端
-                    ResetInnerClient();
-
-                    // 重置内部状态为空闲
-                    innerStatus = InnerStatus.Free;
+                    finally
+                    {
+                        // 重置TCP客户端
+                        ResetInnerClient();
+                    }
 
                     // 执行通信已断开的回调事件 
                     RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
@@ -328,6 +346,11 @@ namespace STTech.BytesIO.Tcp
         {
             try
             {
+                if (!IsConnected)
+                {
+                    throw new InvalidOperationException("TCP客户端未连接，无法发送数据。");
+                }
+
                 if (UseSsl)
                 {
                     await SslStream.WriteAsync(sendArgs.Data, 0, sendArgs.Data.Length).ConfigureAwait(false);
@@ -357,6 +380,7 @@ namespace STTech.BytesIO.Tcp
             {
                 // 通信异常
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
+                throw;
             }
         }
 
@@ -441,7 +465,7 @@ namespace STTech.BytesIO.Tcp
                 RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
 
                 // 抛出异常信息将传递给框架的任务出错处理机制
-                throw ex;
+                throw;
             }
             finally
             {
