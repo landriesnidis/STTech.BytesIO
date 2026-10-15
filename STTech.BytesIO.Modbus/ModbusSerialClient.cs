@@ -16,8 +16,8 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// 构造 Modbus Serial 客户端
         /// </summary>
-        /// <param name="format">协议格式</param>
-        public ModbusSerialClient(ModbusProtocolFormat format) : base(new SerialClient(), format) { }
+        /// <param name="format">协议格式，默认为 RTU 格式</param>
+        public ModbusSerialClient(ModbusProtocolFormat format = ModbusProtocolFormat.RTU) : base(new SerialClient(), format) { }
     }
 
     public partial class ModbusSerialClient : ISerialClient
