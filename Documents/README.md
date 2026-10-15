@@ -15,6 +15,8 @@ STTech.BytesIO 是一款专为高吞吐量、低延迟设计的现代化 .NET �
 - [SerialClient API 手册](./SerialClient.md) - 用于与硬件串口交互，支持断连保护与非阻塞读写。
 - [IPC API 手册 (进程间通信)](./IPC.md) - 基于 Named Pipes 的极速本地跨进程通信。
 - [Unpacker API (拆解包体系)](./Unpacker.md) - 通过 `UnpackContext` 处理复杂的粘包/拆包。
+- [Modbus 基础开发指南](./ModbusBasicTutorial.md) - 工业 Modbus 协议基础、TCP/串口客户端配置、8 大标准功能码读写实战与多字节数据转换。
+- [Modbus 进阶开发指南](./ModbusAdvancedTutorial.md) - Modbus 服务端从站仿真、虚拟设备与内存监视区、工业网关透明转发、解包匹配内核与私有功能码扩展。
 
 ## 全局安装与起步示例
 
