@@ -136,5 +136,31 @@ namespace STTech.BytesIO.Modbus.Tests
             client.DtrEnable = false;
             Assert.False(client.DtrEnable);
         }
+
+        [Fact]
+        public void HoldingRegisterValueMonitor_ValueChanged_ShouldFire()
+        {
+            var monitor = new STTech.BytesIO.Modbus.Monitors.HoldingRegisterValueMonitor(0, 10);
+            int eventFiredCount = 0;
+            int changedIndex = -1;
+            ushort oldVal = 0;
+            ushort newVal = 0;
+
+            monitor.ValueChanged += (s, e) =>
+            {
+                eventFiredCount++;
+                changedIndex = e.Index;
+                oldVal = e.OriginalValue;
+                newVal = e.NewValue;
+            };
+
+            monitor.Source[3] = 1234;
+            monitor.Notify();
+
+            Assert.Equal(1, eventFiredCount);
+            Assert.Equal(3, changedIndex);
+            Assert.Equal(0, oldVal);
+            Assert.Equal(1234, newVal);
+        }
     }
 }
