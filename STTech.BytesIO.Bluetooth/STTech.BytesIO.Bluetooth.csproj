@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+		<TargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0;net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+	</PropertyGroup>
+	<PropertyGroup Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+		<TargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</TargetFrameworks>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Version>3.3.1.0-alpha61015</Version>
+
+		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
+		<Authors>Guijie Lee</Authors>
+		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
+		<PackageIcon>stdiag.png</PackageIcon>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+		<Description>STTech.BytesIO 蓝牙扩展库，支持经典蓝牙 (Classic Bluetooth / RFCOMM / SPP) 与低功耗蓝牙 (BLE / GATT)，内置设备发现管理器 (BluetoothManager) 与统一的 BytesClient 通信模型。</Description>
+		<PackageTags>STTech;BytesIO;Bluetooth;BLE;RFCOMM;SPP;GATT;Wireless;Communication;Protocol;Async;Industrial</PackageTags>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\stdiag.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\STTech.BytesIO\STTech.BytesIO.csproj" />
+	</ItemGroup>
+
+</Project>
