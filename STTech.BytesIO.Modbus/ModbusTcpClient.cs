@@ -1,3 +1,4 @@
+﻿using System;
 using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
 using STTech.BytesIO.Tcp;
@@ -27,6 +28,7 @@ namespace STTech.BytesIO.Modbus
         public int Port { get => InnerClient.Port; set => InnerClient.Port = value; }
 
         /// <inheritdoc/>
+        [Obsolete("该属性已过时。请通过 LocalEndPoint 属性获取本地端口号。")]
         public int LocalPort => InnerClient.LocalPort;
 
         /// <inheritdoc/>
