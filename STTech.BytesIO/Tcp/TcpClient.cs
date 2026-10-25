@@ -1,4 +1,4 @@
-using STTech.BytesIO.Core;
+﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Tcp.Entity;
 using System;
 using System.Buffers;
@@ -259,7 +259,11 @@ namespace STTech.BytesIO.Tcp
             }
 
             // 创建SSL流
+#if NET7_0_OR_GREATER
+            SslStream = new SslStream(new NetworkStream(InnerClient), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback);
+#else
             SslStream = new SslStream(new NetworkStream(InnerClient), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
+#endif
             SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
 
             // 执行TLS通信验证通过的回调事件
