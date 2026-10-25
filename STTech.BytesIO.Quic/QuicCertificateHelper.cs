@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace STTech.BytesIO.Quic
@@ -24,7 +24,11 @@ namespace STTech.BytesIO.Quic
             var certificate = request.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
 
             // 注意：在 Windows 上，证书必须包含私钥，并且通常需要 Export 后重新 Import 才能被 msquic 正确识别
+#if NET9_0_OR_GREATER
+            return X509CertificateLoader.LoadPkcs12(certificate.Export(X509ContentType.Pfx), (string?)null, X509KeyStorageFlags.Exportable);
+#else
             return new X509Certificate2(certificate.Export(X509ContentType.Pfx), (string?)null, X509KeyStorageFlags.Exportable);
+#endif
         }
     }
 }
