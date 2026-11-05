@@ -38,6 +38,19 @@ namespace STTech.BytesIO.Mqtt
         /// </summary>
         public MqttProperties Properties { get; set; } = new MqttProperties();
 
+        /// <summary>
+        /// 响应主题 (MQTT v5 请求-响应模型)。快捷访问 <see cref="Properties"/>.ResponseTopic。
+        /// </summary>
+        public string ResponseTopic
+        {
+            get => Properties?.ResponseTopic;
+            set
+            {
+                if (Properties == null) Properties = new MqttProperties();
+                Properties.ResponseTopic = value;
+            }
+        }
+
         public MqttApplicationMessage() { }
 
         public MqttApplicationMessage(string topic, byte[] payload = null, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtMostOnce, bool retain = false)
