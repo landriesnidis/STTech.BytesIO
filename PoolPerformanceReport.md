@@ -1,6 +1,6 @@
 ﻿# STTech.BytesIO 内存池性能测试报告
 
-测试运行时间: 2026-10-15 04:07:48
+测试运行时间: 2026-11-05 17:28:24
 运行环境: .NET 10.0.8 (Microsoft Windows NT 10.0.20348.0)
 
 本报告通过对比四种不同的内存与上下文操作方式，在不同缓冲区大小下的耗时和 GC 内存分配开销，来评估 `ArrayPool` 和 `ReceiveContext` 的池化性能优势：
@@ -16,10 +16,10 @@
 
 | 测试方案 | 总耗时 (ms) | 每次均摊 (ns) | 内存分配总量 (MB) | 每次分配量 (Bytes) |
 | :--- | :---: | :---: | :---: | :---: |
-| Raw Array (new) | 37 | 37.0 | 144.959 | 152 |
-| ArrayPool (Shared) | 51 | 51.0 | 0.000 | 0 |
-| ReceiveContext (Non-Pooled) | 319 | 319.0 | 282.288 | 296 |
-| ReceiveContext (Pooled) | 298 | 298.0 | 221.253 | 232 |
+| Raw Array (new) | 154 | 154.0 | 144.959 | 152 |
+| ArrayPool (Shared) | 28 | 28.0 | 0.000 | 0 |
+| ReceiveContext (Non-Pooled) | 531 | 531.0 | 282.288 | 296 |
+| ReceiveContext (Pooled) | 408 | 408.0 | 221.253 | 232 |
 
 ## 中等缓冲区 (4 KB)
 
@@ -28,10 +28,10 @@
 
 | 测试方案 | 总耗时 (ms) | 每次均摊 (ns) | 内存分配总量 (MB) | 每次分配量 (Bytes) |
 | :--- | :---: | :---: | :---: | :---: |
-| Raw Array (new) | 260 | 520.0 | 1964.569 | 4120 |
-| ArrayPool (Shared) | 16 | 32.0 | 0.008 | 0 |
-| ReceiveContext (Non-Pooled) | 387 | 774.0 | 2033.234 | 4264 |
-| ReceiveContext (Pooled) | 135 | 270.0 | 110.630 | 232 |
+| Raw Array (new) | 1076 | 2152.0 | 1964.569 | 4120 |
+| ArrayPool (Shared) | 12 | 24.0 | 0.004 | 0 |
+| ReceiveContext (Non-Pooled) | 652 | 1304.0 | 2033.234 | 4264 |
+| ReceiveContext (Pooled) | 189 | 378.0 | 110.634 | 232 |
 
 ## 大缓冲区 (64 KB)
 
@@ -40,10 +40,10 @@
 
 | 测试方案 | 总耗时 (ms) | 每次均摊 (ns) | 内存分配总量 (MB) | 每次分配量 (Bytes) |
 | :--- | :---: | :---: | :---: | :---: |
-| Raw Array (new) | 811 | 8110.0 | 6252.289 | 65560 |
-| ArrayPool (Shared) | 3 | 30.0 | 0.125 | 1 |
-| ReceiveContext (Non-Pooled) | 816 | 8160.0 | 6266.022 | 65704 |
-| ReceiveContext (Pooled) | 27 | 270.0 | 22.188 | 233 |
+| Raw Array (new) | 1011 | 10110.0 | 6252.289 | 65560 |
+| ArrayPool (Shared) | 2 | 20.0 | 0.063 | 1 |
+| ReceiveContext (Non-Pooled) | 1131 | 11310.0 | 6266.022 | 65704 |
+| ReceiveContext (Pooled) | 24 | 240.0 | 22.188 | 233 |
 
 ## 结论分析与优势总结
 1. **零 GC 分配开销**: 从测试数据中可以看到，在高频或者大数据包的场景下，采用 `ArrayPool` 和 `ReceiveContext (Pooled)` 的方式其内存分配（GC Allocation）几乎接近于 **0 字节**。这可以极大减轻 .NET 垃圾回收器（GC）的压力，消除 GC 导致的线程暂停（STW），提升系统稳定性和整体吞吐量。
