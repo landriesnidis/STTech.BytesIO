@@ -14,7 +14,7 @@ using Xunit;
 namespace STTech.BytesIO.Mqtt.Tests
 {
     /// <summary>
-    /// 针对自查整改报告中确认的 6 项关键缺陷所编写的专项回归验证测试。
+    /// 针对自查整改报告中确认的各项关键缺陷所编写的专项回归验证测试。
     /// </summary>
     public class MqttDefectRectificationTests
     {
@@ -274,7 +274,8 @@ namespace STTech.BytesIO.Mqtt.Tests
 
         /// <summary>
         /// 验证缺陷 5：离线发布队列非阻塞异步排空。
-        /// 验证在离线期间推入队列的消息，在连接恢复后能被异步排空处理，且不发生工作线程阻塞死锁。
+        /// 服务端采用流式分包循环，正确应对 TCP 粘包/合并传输，
+        /// 验证在离线期间推入队列的消息，在连接恢复后能被异步连续排空处理。
         /// </summary>
         [Fact]
         public async Task Test_Defect5_MqttPublishQueuePlugin_DrainsAsynchronouslyWithoutDeadlock()
@@ -285,27 +286,63 @@ namespace STTech.BytesIO.Mqtt.Tests
 
             using var cts = new CancellationTokenSource(10000);
             int serverReceivedPublishCount = 0;
+            var allReceivedTcs = new TaskCompletionSource<bool>();
 
             var serverTask = Task.Run(async () =>
             {
                 using var socket = await listener.AcceptSocketAsync(cts.Token);
                 using var stream = new NetworkStream(socket);
 
-                byte[] buf = new byte[1024];
+                byte[] buf = new byte[2048];
                 int len = await stream.ReadAsync(buf, 0, buf.Length, cts.Token);
                 var connAck = new MqttConnAckPacket { ReasonCode = MqttConnectReasonCode.Success };
                 byte[] connAckBytes = connAck.Encode();
                 await stream.WriteAsync(connAckBytes, 0, connAckBytes.Length, cts.Token);
 
                 // 接收客户端排空队列发来的 3 条消息 (QoS 0)
+                // 基于 MQTT 长度编码进行流式分帧循环，杜绝假定 1 次 Read = 1 包引发的粘包丢失
+                var streamBuffer = new List<byte>();
                 while (serverReceivedPublishCount < 3 && !cts.Token.IsCancellationRequested)
                 {
                     len = await stream.ReadAsync(buf, 0, buf.Length, cts.Token);
                     if (len == 0) break;
-                    var packet = MqttPacketReader.ReadPacket(buf, 0, len);
-                    if (packet is MqttPublishPacket)
+                    for (int i = 0; i < len; i++) streamBuffer.Add(buf[i]);
+
+                    while (streamBuffer.Count >= 2)
                     {
-                        Interlocked.Increment(ref serverReceivedPublishCount);
+                        byte[] current = streamBuffer.ToArray();
+                        int multiplier = 1;
+                        int remainingLen = 0;
+                        int lenBytesCount = 0;
+                        bool lenParsed = false;
+
+                        for (int i = 1; i < Math.Min(current.Length, 5); i++)
+                        {
+                            byte b = current[i];
+                            lenBytesCount++;
+                            remainingLen += (b & 0x7F) * multiplier;
+                            multiplier *= 128;
+                            if ((b & 0x80) == 0)
+                            {
+                                lenParsed = true;
+                                break;
+                            }
+                        }
+
+                        if (!lenParsed) break;
+                        int totalLen = 1 + lenBytesCount + remainingLen;
+                        if (current.Length < totalLen) break;
+
+                        var packet = MqttPacketReader.ReadPacket(current, 0, totalLen);
+                        if (packet is MqttPublishPacket)
+                        {
+                            if (Interlocked.Increment(ref serverReceivedPublishCount) == 3)
+                            {
+                                allReceivedTcs.TrySetResult(true);
+                            }
+                        }
+
+                        streamBuffer.RemoveRange(0, totalLen);
                     }
                 }
             }, cts.Token);
@@ -328,6 +365,10 @@ namespace STTech.BytesIO.Mqtt.Tests
                 // 等待队列消息异步发布完成
                 await Task.WhenAll(t1, t2, t3);
 
+                // 等待服务端确已完整收到并解码出全部 3 条消息
+                var completed = await Task.WhenAny(allReceivedTcs.Task, Task.Delay(3000));
+                Assert.Equal(allReceivedTcs.Task, completed);
+
                 // 队列计数归零
                 Assert.Equal(0, managed.QueuedCount);
                 Assert.Equal(3, serverReceivedPublishCount);
@@ -337,6 +378,51 @@ namespace STTech.BytesIO.Mqtt.Tests
                 listener.Stop();
                 try { await serverTask; } catch { }
             }
+        }
+
+        /// <summary>
+        /// 验证缺陷 5 衍生项：QueueOverflowStrategy.Block 策略下的纯异步非阻塞与容量释放。
+        /// 验证队列满时 EnqueuePublishAsync 不阻塞调用线程；
+        /// 取消等待入队的消息时，容量信号量被准确补偿，后续入队依然通畅。
+        /// </summary>
+        [Fact]
+        public async Task Test_Defect5_MqttPublishQueuePlugin_BlockStrategy_NonBlockingAsyncAndCapacityAccounting()
+        {
+            var plugin = new MqttPublishQueuePlugin
+            {
+                MaxQueueSize = 2,
+                OverflowStrategy = QueueOverflowStrategy.Block,
+                BlockTimeout = TimeSpan.FromMilliseconds(500)
+            };
+
+            // 1. 入队 2 条消息填满容量
+            var t1 = plugin.EnqueuePublishAsync(new MqttApplicationMessage("test/1", "m1"));
+            var t2 = plugin.EnqueuePublishAsync(new MqttApplicationMessage("test/2", "m2"));
+            Assert.Equal(2, plugin.QueuedCount);
+
+            // 2. 尝试推入第 3 条消息，携带 100ms 取消令牌，验证其为非阻塞异步调用
+            using (var cancelCts = new CancellationTokenSource(100))
+            {
+                var sw = Stopwatch.StartNew();
+                var t3 = plugin.EnqueuePublishAsync(new MqttApplicationMessage("test/3", "m3"), cancelCts.Token);
+
+                // 验证 EnqueuePublishAsync 方法在微秒级立即返回 Task，绝对没有在此处同步卡死 100ms
+                Assert.True(sw.ElapsedMilliseconds < 50, "EnqueuePublishAsync 出现同步阻塞调用方线程！");
+
+                // 等待取消完成
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await t3);
+            }
+
+            // 3. 清空队列，验证容量信号量得到彻底补偿释放
+            plugin.Clear();
+            Assert.Equal(0, plugin.QueuedCount);
+
+            // 4. 清空后再次连续入队 2 条，验证信号量没有泄漏枯竭
+            var t4 = plugin.EnqueuePublishAsync(new MqttApplicationMessage("test/4", "m4"));
+            var t5 = plugin.EnqueuePublishAsync(new MqttApplicationMessage("test/5", "m5"));
+            Assert.Equal(2, plugin.QueuedCount);
+
+            plugin.Dispose();
         }
 
         /// <summary>

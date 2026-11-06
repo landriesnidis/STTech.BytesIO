@@ -1,6 +1,7 @@
 using STTech.BytesIO.Core.Component;
 using System;
 using System.Buffers;
+using System.Runtime.InteropServices;
 
 namespace STTech.BytesIO.Mqtt
 {
@@ -11,9 +12,19 @@ namespace STTech.BytesIO.Mqtt
     {
         /// <summary>
         /// 从 ReadOnlySequence 中解析 MQTT 报文。
+        /// 针对单段连续内存执行零拷贝零分配切片，跨段碎片回退聚合。
         /// </summary>
         public static MqttPacket ReadPacket(ReadOnlySequence<byte> sequence, MqttProtocolVersion version = MqttProtocolVersion.V5, UnpackContext context = null)
         {
+            if (sequence.IsSingleSegment)
+            {
+                ReadOnlyMemory<byte> memory = sequence.First;
+                if (MemoryMarshal.TryGetArray(memory, out ArraySegment<byte> segment))
+                {
+                    return ReadPacket(segment.Array, segment.Offset, segment.Count, version, context);
+                }
+            }
+
             byte[] buffer = sequence.ToArray();
             return ReadPacket(buffer, 0, buffer.Length, version, context);
         }

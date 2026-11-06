@@ -107,71 +107,85 @@ namespace STTech.BytesIO.Mqtt
                         if (_pendingQueue.Remove(item))
                         {
                             item.CompletionSource.TrySetCanceled(cancellationToken);
+                            if (OverflowStrategy == QueueOverflowStrategy.Block)
+                            {
+                                try { _capacitySignal.Release(); } catch { }
+                            }
                         }
                     }
                 });
             }
 
-            // 队列容量与溢出控制
-            if (!HandleCapacityAndEnqueue(item))
+            lock (_lock)
             {
-                return tcs.Task;
+                if (MaxQueueSize <= 0 || _pendingQueue.Count < MaxQueueSize)
+                {
+                    _pendingQueue.AddLast(item);
+                    if (Client != null && Client.IsConnected)
+                    {
+                        TriggerDrain();
+                    }
+                    return tcs.Task;
+                }
+
+                // 队列已满，按策略快速分支
+                switch (OverflowStrategy)
+                {
+                    case QueueOverflowStrategy.DropOldest:
+                        var oldest = _pendingQueue.First.Value;
+                        _pendingQueue.RemoveFirst();
+                        oldest.CompletionSource.TrySetException(new MqttCommunicationException("由于队列已满且采用 DropOldest 策略，该消息已被丢弃。"));
+                        OnQueueOverflow?.Invoke(this, new MqttQueueOverflowEventArgs(oldest.Message, OverflowStrategy));
+                        _pendingQueue.AddLast(item);
+                        if (Client != null && Client.IsConnected)
+                        {
+                            TriggerDrain();
+                        }
+                        return tcs.Task;
+
+                    case QueueOverflowStrategy.DropNewest:
+                        item.CompletionSource.TrySetException(new MqttCommunicationException("由于队列已满且采用 DropNewest 策略，该消息已被拒绝。"));
+                        OnQueueOverflow?.Invoke(this, new MqttQueueOverflowEventArgs(item.Message, OverflowStrategy));
+                        return tcs.Task;
+
+                    case QueueOverflowStrategy.ThrowException:
+                        throw new InvalidOperationException($"MQTT 发布队列已达上限 ({MaxQueueSize})，无法入队。");
+
+                    case QueueOverflowStrategy.Block:
+                        break;
+                }
             }
 
-            // 若当前客户端在线，调度队列消费
-            if (Client != null && Client.IsConnected)
-            {
-                TriggerDrain();
-            }
-
-            return tcs.Task;
+            // 仅在 Block 策略且队列已满时进入异步等待槽位，避免同步阻塞调用方线程
+            return EnqueueWithBlockAsync(item);
         }
 
-        private bool HandleCapacityAndEnqueue(QueuedPublishItem item)
+        private async Task<MqttPublishResult> EnqueueWithBlockAsync(QueuedPublishItem item)
         {
             while (true)
             {
+                bool waitSuccess = await _capacitySignal.WaitAsync(BlockTimeout, item.CancellationToken).ConfigureAwait(false);
+                if (!waitSuccess)
+                {
+                    item.CompletionSource.TrySetException(new TimeoutException("入队等待超时。"));
+                    return await item.CompletionSource.Task.ConfigureAwait(false);
+                }
+
                 lock (_lock)
                 {
                     if (MaxQueueSize <= 0 || _pendingQueue.Count < MaxQueueSize)
                     {
                         _pendingQueue.AddLast(item);
-                        return true;
+                        if (Client != null && Client.IsConnected)
+                        {
+                            TriggerDrain();
+                        }
+                        break;
                     }
-
-                    // 队列已满，按策略处理
-                    switch (OverflowStrategy)
-                    {
-                        case QueueOverflowStrategy.DropOldest:
-                            var oldest = _pendingQueue.First.Value;
-                            _pendingQueue.RemoveFirst();
-                            oldest.CompletionSource.TrySetException(new MqttCommunicationException("由于队列已满且采用 DropOldest 策略，该消息已被丢弃。"));
-                            OnQueueOverflow?.Invoke(this, new MqttQueueOverflowEventArgs(oldest.Message, OverflowStrategy));
-                            _pendingQueue.AddLast(item);
-                            return true;
-
-                        case QueueOverflowStrategy.DropNewest:
-                            item.CompletionSource.TrySetException(new MqttCommunicationException("由于队列已满且采用 DropNewest 策略，该消息已被拒绝。"));
-                            OnQueueOverflow?.Invoke(this, new MqttQueueOverflowEventArgs(item.Message, OverflowStrategy));
-                            return false;
-
-                        case QueueOverflowStrategy.ThrowException:
-                            throw new InvalidOperationException($"MQTT 发布队列已达上限 ({MaxQueueSize})，无法入队。");
-
-                        case QueueOverflowStrategy.Block:
-                            // 离开锁并在下面等待信号
-                            break;
-                    }
-                }
-
-                // 阻塞模式
-                bool waitSuccess = _capacitySignal.Wait(BlockTimeout, item.CancellationToken);
-                if (!waitSuccess)
-                {
-                    item.CompletionSource.TrySetException(new TimeoutException("入队等待超时。"));
-                    return false;
                 }
             }
+
+            return await item.CompletionSource.Task.ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -224,10 +238,6 @@ namespace STTech.BytesIO.Mqtt
                     {
                         currentItem = _pendingQueue.First.Value;
                         _pendingQueue.RemoveFirst();
-                        if (OverflowStrategy == QueueOverflowStrategy.Block)
-                        {
-                            try { _capacitySignal.Release(); } catch { }
-                        }
                     }
                 }
 
@@ -238,6 +248,10 @@ namespace STTech.BytesIO.Mqtt
 
                 if (currentItem.CancellationToken.IsCancellationRequested)
                 {
+                    if (OverflowStrategy == QueueOverflowStrategy.Block)
+                    {
+                        try { _capacitySignal.Release(); } catch { }
+                    }
                     currentItem.CompletionSource.TrySetCanceled(currentItem.CancellationToken);
                     continue;
                 }
@@ -245,10 +259,37 @@ namespace STTech.BytesIO.Mqtt
                 try
                 {
                     var result = await Client.PublishAsync(currentItem.Message, currentItem.CancellationToken).ConfigureAwait(false);
+                    if (!result.IsSuccess && (Client == null || !Client.IsConnected))
+                    {
+                        // 若由于通信物理中断导致本次发布未决，重新插回队列头部保护，等待下一次重连恢复后再补发
+                        lock (_lock)
+                        {
+                            _pendingQueue.AddFirst(currentItem);
+                        }
+                        break;
+                    }
+
+                    if (OverflowStrategy == QueueOverflowStrategy.Block)
+                    {
+                        try { _capacitySignal.Release(); } catch { }
+                    }
                     currentItem.CompletionSource.TrySetResult(result);
                 }
                 catch (Exception ex)
                 {
+                    if (Client == null || !Client.IsConnected)
+                    {
+                        lock (_lock)
+                        {
+                            _pendingQueue.AddFirst(currentItem);
+                        }
+                        break;
+                    }
+
+                    if (OverflowStrategy == QueueOverflowStrategy.Block)
+                    {
+                        try { _capacitySignal.Release(); } catch { }
+                    }
                     currentItem.CompletionSource.TrySetException(ex);
                 }
             }
@@ -261,11 +302,16 @@ namespace STTech.BytesIO.Mqtt
         {
             lock (_lock)
             {
+                int count = _pendingQueue.Count;
                 foreach (var item in _pendingQueue)
                 {
                     item.CompletionSource.TrySetCanceled();
                 }
                 _pendingQueue.Clear();
+                if (OverflowStrategy == QueueOverflowStrategy.Block && count > 0)
+                {
+                    try { _capacitySignal.Release(count); } catch { }
+                }
             }
         }
 
