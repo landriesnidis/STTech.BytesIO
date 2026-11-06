@@ -1,3 +1,6 @@
+using STTech.BytesIO.Core;
+using System.Threading.Tasks;
+
 namespace STTech.BytesIO.P2P
 {
     /// <summary>
@@ -25,5 +28,12 @@ namespace STTech.BytesIO.P2P
         /// P2P 节点配置选项
         /// </summary>
         P2PNodeOptions Options { get; set; }
+
+        /// <summary>
+        /// 通过 Multiaddr 地址异步连接目标对等节点
+        /// </summary>
+        /// <param name="remoteAddress">目标节点的 Multiaddr 字符串</param>
+        /// <param name="timeout">连接超时时间（毫秒），默认 5000ms</param>
+        Task<ConnectResult> ConnectAsync(string remoteAddress, int timeout = 5000);
     }
 }

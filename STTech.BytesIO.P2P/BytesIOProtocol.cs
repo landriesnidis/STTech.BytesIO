@@ -30,7 +30,14 @@ namespace STTech.BytesIO.P2P
             OnChannelEstablished?.Invoke(downChannel, context, true);
 
             // 保持 channel 活跃，等到 channel 关闭
-            await tcs.Task.WaitAsync(downChannel.CancellationToken).ConfigureAwait(false);
+            try
+            {
+                await tcs.Task.WaitAsync(downChannel.CancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // 通道被正常取消/关闭，安全退出
+            }
         }
 
         /// <summary>
@@ -44,7 +51,14 @@ namespace STTech.BytesIO.P2P
             OnChannelEstablished?.Invoke(downChannel, context, false);
 
             // 保持 channel 活跃，等到 channel 关闭
-            await tcs.Task.WaitAsync(downChannel.CancellationToken).ConfigureAwait(false);
+            try
+            {
+                await tcs.Task.WaitAsync(downChannel.CancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // 通道被正常取消/关闭，安全退出
+            }
         }
     }
 }
