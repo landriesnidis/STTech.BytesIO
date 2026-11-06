@@ -55,14 +55,11 @@ namespace STTech.BytesIO.Mqtt
             var tcs = new TaskCompletionSource<MqttSubAckPacket>(TaskCreationOptions.RunContinuationsAsynchronously);
             _pendingSubAcks[packetId] = tcs;
 
-            // 预先注册路由，防止 Broker 在回复 SUBACK 时并行推送数据导致匹配不到路由
+            // 预先注册路由与 QoS，防止 Broker 在回复 SUBACK 时并行推送数据导致匹配不到路由
             foreach (var sub in subList)
             {
                 Func<MqttApplicationMessage, Task> handler = handlerSelector?.Invoke(sub.TopicFilter, null);
-                if (handler != null)
-                {
-                    Router.AddRoute(sub.TopicFilter, handler);
-                }
+                Router.AddRoute(sub.TopicFilter, handler, sub.QualityOfServiceLevel);
             }
 
             var result = new MqttSubscribeResult { PacketId = packetId };
@@ -225,17 +222,17 @@ namespace STTech.BytesIO.Mqtt
         #region Auto Resubscribe
 
         /// <summary>
-        /// 重新补订所有已知的主题。
+        /// 重新补订所有已知的主题（保留原有的 QoS 服务质量等级）。
         /// </summary>
         private async Task ResubscribeAllAsync()
         {
-            var registeredTopics = Router.GetSubscribedTopicFilters();
-            if (registeredTopics == null || !registeredTopics.Any())
+            var registeredTopics = Router.GetSubscribedTopicsWithQoS();
+            if (registeredTopics == null || registeredTopics.Count == 0)
             {
                 return;
             }
 
-            var subscriptions = registeredTopics.Select(topic => new MqttTopicSubscription(topic, MqttQualityOfServiceLevel.AtLeastOnce)).ToList();
+            var subscriptions = registeredTopics.Select(kv => new MqttTopicSubscription(kv.Key, kv.Value)).ToList();
             try
             {
                 await SubscribeAsync(subscriptions).ConfigureAwait(false);

@@ -17,6 +17,8 @@ namespace STTech.BytesIO.Mqtt
         private volatile bool _isMqttConnected;
         private readonly object _connectLock = new object();
         private TaskCompletionSource<MqttConnAckPacket> _connectTcs;
+        private MqttDisconnectReasonCode? _explicitDisconnectReason;
+        private string _explicitDisconnectReasonString;
 
         // 待确认响应字典 (PacketId -> TaskCompletionSource)
         private readonly ConcurrentDictionary<ushort, TaskCompletionSource<MqttPubAckPacket>> _pendingPubAcks =
@@ -28,6 +30,10 @@ namespace STTech.BytesIO.Mqtt
         private readonly ConcurrentDictionary<ushort, TaskCompletionSource<MqttUnsubAckPacket>> _pendingUnsubAcks =
             new ConcurrentDictionary<ushort, TaskCompletionSource<MqttUnsubAckPacket>>();
         private TaskCompletionSource<MqttPingRespPacket> _pendingPingTcs;
+
+        // QoS 2 入站未决报文跟踪集合（用于接收端报文去重）
+        private readonly ConcurrentDictionary<ushort, byte> _incomingQos2PendingPackets =
+            new ConcurrentDictionary<ushort, byte>();
 
         internal PacketIdManager PacketIdManager { get; } = new PacketIdManager();
 
@@ -97,6 +103,103 @@ namespace STTech.BytesIO.Mqtt
             this.BindUnpacker(Unpacker);
             Unpacker.OnDataParsed += Unpacker_OnDataParsed;
         }
+
+        #region Lifecycle Event Overrides
+
+        /// <inheritdoc/>
+        protected override void RaiseConnectedSuccessfully(object sender, ConnectedSuccessfullyEventArgs e)
+        {
+            // 只有当 MQTT 握手成功（_isMqttConnected == true）时，才向外冒泡 BytesIO 的 ConnectedSuccessfully 事件
+            if (_isMqttConnected)
+            {
+                base.RaiseConnectedSuccessfully(sender, e);
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override void RaiseDisconnected(object sender, DisconnectedEventArgs e)
+        {
+            // 若服务端在发送 DISCONNECT 报文后立即物理断开 TCP，接收队列中的 DISCONNECT 报文可能正在排队解包。
+            // 轮询等待极短时间以优先提取 DISCONNECT 报文中的准确 ReasonCode
+            if (_explicitDisconnectReason == null)
+            {
+                for (int i = 0; i < 5 && _explicitDisconnectReason == null; i++)
+                {
+                    Thread.Sleep(10);
+                }
+            }
+
+            bool wasConnected;
+            MqttDisconnectReasonCode reasonCode;
+            string reasonString;
+
+            lock (_connectLock)
+            {
+                wasConnected = _isMqttConnected;
+                _isMqttConnected = false;
+                reasonCode = _explicitDisconnectReason ?? MqttDisconnectReasonCode.UnspecifiedError;
+                reasonString = _explicitDisconnectReasonString ?? e?.Exception?.Message;
+                _explicitDisconnectReason = null;
+                _explicitDisconnectReasonString = null;
+            }
+
+            StopKeepAlive();
+            PacketIdManager.Reset();
+            FailAllPendingRequests(new MqttCommunicationException("网络连接已断开。", e?.Exception));
+
+            if (wasConnected)
+            {
+                SafelyInvokeCallback(() =>
+                {
+                    OnMqttDisconnected?.Invoke(this, new MqttDisconnectedEventArgs(reasonCode, reasonString));
+                });
+            }
+
+            base.RaiseDisconnected(sender, e);
+        }
+
+        private void FailAllPendingRequests(Exception ex)
+        {
+            lock (_connectLock)
+            {
+                _connectTcs?.TrySetException(ex);
+                _connectTcs = null;
+            }
+
+            lock (_pingLock)
+            {
+                _pendingPingTcs?.TrySetException(ex);
+                _pendingPingTcs = null;
+            }
+
+            foreach (var kvp in _pendingPubAcks)
+            {
+                kvp.Value.TrySetException(ex);
+            }
+            _pendingPubAcks.Clear();
+
+            foreach (var kvp in _pendingPubComps)
+            {
+                kvp.Value.TrySetException(ex);
+            }
+            _pendingPubComps.Clear();
+
+            foreach (var kvp in _pendingSubAcks)
+            {
+                kvp.Value.TrySetException(ex);
+            }
+            _pendingSubAcks.Clear();
+
+            foreach (var kvp in _pendingUnsubAcks)
+            {
+                kvp.Value.TrySetException(ex);
+            }
+            _pendingUnsubAcks.Clear();
+
+            _incomingQos2PendingPackets.Clear();
+        }
+
+        #endregion
 
         #region Connect & Disconnect
 
@@ -222,6 +325,7 @@ namespace STTech.BytesIO.Mqtt
                             _isMqttConnected = false;
                             result.Exception = new MqttCommunicationException($"MQTT 握手被拒绝，原因码: {connAck.ReasonCode}");
                             await InnerClient.DisconnectAsync().ConfigureAwait(false);
+                            RaiseConnectionFailed(this, new ConnectionFailedEventArgs(result.Exception));
                         }
                     }
                 }
@@ -232,6 +336,7 @@ namespace STTech.BytesIO.Mqtt
                 result.ReasonCode = MqttConnectReasonCode.ServerUnavailable;
                 result.Exception = ex;
                 try { await InnerClient.DisconnectAsync().ConfigureAwait(false); } catch { }
+                RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ex));
             }
             finally
             {
@@ -278,16 +383,42 @@ namespace STTech.BytesIO.Mqtt
                 catch { }
             }
 
-            _isMqttConnected = false;
-            PacketIdManager.Reset();
-
-            await InnerClient.DisconnectAsync().ConfigureAwait(false);
-
-            SafelyInvokeCallback(() =>
+            lock (_connectLock)
             {
-                OnMqttDisconnected?.Invoke(this, new MqttDisconnectedEventArgs(reasonCode, reasonString));
+                _explicitDisconnectReason = reasonCode;
+                _explicitDisconnectReasonString = reasonString;
+            }
+
+            if (InnerClient != null && InnerClient.IsConnected)
+            {
+                await InnerClient.DisconnectAsync().ConfigureAwait(false);
+            }
+            else
+            {
                 RaiseDisconnected(this, new DisconnectedEventArgs());
-            });
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void Dispose()
+        {
+            StopKeepAlive();
+
+            if (Unpacker != null)
+            {
+                Unpacker.OnDataParsed -= Unpacker_OnDataParsed;
+            }
+
+            lock (_connectLock)
+            {
+                _isMqttConnected = false;
+            }
+
+            PacketIdManager.Reset();
+            FailAllPendingRequests(new ObjectDisposedException(nameof(MqttClient)));
+            Router.Clear();
+
+            base.Dispose();
         }
 
         #endregion

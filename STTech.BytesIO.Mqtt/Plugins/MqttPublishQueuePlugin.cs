@@ -1,5 +1,4 @@
 using STTech.BytesIO.Mqtt;
-using STTech.CodePlus.Components;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -27,15 +26,14 @@ namespace STTech.BytesIO.Mqtt
 
     /// <summary>
     /// MQTT 消息发送队列与离线缓冲插件。
-    /// 基于 CodePlus.TaskQueue 实现排队执行，支持离线消息自动暂存与重连后自动发送，提供最大容量限制与可配置溢出策略。
+    /// 实现异步排队执行，支持离线消息自动暂存与重连后自动发送，提供最大容量限制与可配置溢出策略。
     /// </summary>
     public class MqttPublishQueuePlugin : MqttClientPlugin
     {
         private readonly object _lock = new object();
         private readonly LinkedList<QueuedPublishItem> _pendingQueue = new LinkedList<QueuedPublishItem>();
         private readonly SemaphoreSlim _capacitySignal;
-        private readonly FloaterTaskQueue<Action> _taskQueue;
-        private volatile bool _isDraining = false;
+        private readonly SemaphoreSlim _drainLock = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// 队列最大消息容量（小于等于 0 表示无限制）。默认 10,000。
@@ -77,14 +75,6 @@ namespace STTech.BytesIO.Mqtt
         public MqttPublishQueuePlugin()
         {
             _capacitySignal = new SemaphoreSlim(0, int.MaxValue);
-            _taskQueue = new FloaterTaskQueue<Action>(action =>
-            {
-                try
-                {
-                    action?.Invoke();
-                }
-                catch { }
-            });
         }
 
         /// <summary>
@@ -194,25 +184,36 @@ namespace STTech.BytesIO.Mqtt
 
         private void TriggerDrain()
         {
-            if (_isDraining) return;
-
-            _taskQueue.Join(() =>
+            _ = Task.Run(async () =>
             {
-                if (_isDraining) return;
-                _isDraining = true;
+                if (!await _drainLock.WaitAsync(0).ConfigureAwait(false))
+                {
+                    return;
+                }
 
                 try
                 {
-                    DrainQueueSync();
+                    await DrainQueueAsync().ConfigureAwait(false);
                 }
                 finally
                 {
-                    _isDraining = false;
+                    _drainLock.Release();
+                }
+
+                // 双重校验：防止在释放锁的微瞬间有新消息入队
+                bool hasPending;
+                lock (_lock)
+                {
+                    hasPending = _pendingQueue.Count > 0;
+                }
+                if (hasPending && Client != null && Client.IsConnected)
+                {
+                    TriggerDrain();
                 }
             });
         }
 
-        private void DrainQueueSync()
+        private async Task DrainQueueAsync()
         {
             while (Client != null && Client.IsConnected)
             {
@@ -243,8 +244,7 @@ namespace STTech.BytesIO.Mqtt
 
                 try
                 {
-                    var publishTask = Client.PublishAsync(currentItem.Message, currentItem.CancellationToken);
-                    var result = publishTask.GetAwaiter().GetResult();
+                    var result = await Client.PublishAsync(currentItem.Message, currentItem.CancellationToken).ConfigureAwait(false);
                     currentItem.CompletionSource.TrySetResult(result);
                 }
                 catch (Exception ex)
@@ -273,7 +273,7 @@ namespace STTech.BytesIO.Mqtt
         public override void Dispose()
         {
             Clear();
-            _taskQueue.Dispose();
+            _drainLock.Dispose();
             _capacitySignal.Dispose();
             base.Dispose();
         }

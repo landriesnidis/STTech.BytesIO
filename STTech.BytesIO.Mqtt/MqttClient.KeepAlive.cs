@@ -158,7 +158,9 @@ namespace STTech.BytesIO.Mqtt
                     break;
 
                 case MqttPubRelPacket pubRel:
-                    // 接收到 Broker 的 PUBREL，客户端应答 PUBCOMP
+                    // QoS 2 阶段：收到 Broker 的 PUBREL，清理去重缓存并应答 PUBCOMP
+                    _incomingQos2PendingPackets.TryRemove(pubRel.PacketId, out _);
+
                     _ = Task.Run(async () =>
                     {
                         try
@@ -203,6 +205,12 @@ namespace STTech.BytesIO.Mqtt
                     break;
 
                 case MqttDisconnectPacket disconnect:
+                    lock (_connectLock)
+                    {
+                        _explicitDisconnectReason = disconnect.ReasonCode;
+                        _explicitDisconnectReasonString = disconnect.Properties?.ReasonString;
+                    }
+
                     _ = Task.Run(async () =>
                     {
                         await DisconnectMqttAsync(disconnect.ReasonCode, disconnect.Properties?.ReasonString).ConfigureAwait(false);
@@ -236,6 +244,8 @@ namespace STTech.BytesIO.Mqtt
             }
             else if (publish.QoS == MqttQualityOfServiceLevel.ExactlyOnce)
             {
+                bool isDuplicate = !_incomingQos2PendingPackets.TryAdd(publish.PacketId, 0);
+
                 _ = Task.Run(async () =>
                 {
                     try
@@ -249,6 +259,12 @@ namespace STTech.BytesIO.Mqtt
                     }
                     catch { }
                 });
+
+                if (isDuplicate)
+                {
+                    // 重复接收的 QoS 2 报文：MQTT v5 规范要求回复 PUBREC，但严禁向业务层再次分发消息
+                    return;
+                }
             }
 
             // 派发给应用消息事件与主题路由

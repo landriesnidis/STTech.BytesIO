@@ -68,6 +68,9 @@ namespace STTech.BytesIO.Mqtt
         public MqttManagedClient(TClient client, MqttProtocolVersion protocolVersion = MqttProtocolVersion.V5)
             : base(client, protocolVersion)
         {
+            // 托管客户端由 AutoResubscribe 插件全权管理断线重订阅，禁用底层的 AutoResubscribe 选项以避免双重补发风暴
+            Options.AutoResubscribe = false;
+
             PublishQueue = new MqttPublishQueuePlugin();
             AutoResubscribe = new MqttAutoResubscribePlugin();
             Reconnect = new ReconnectPlugin();

@@ -11,27 +11,58 @@ namespace STTech.BytesIO.Mqtt
     /// </summary>
     public sealed class TopicRouter
     {
-        private readonly ConcurrentDictionary<string, List<Func<MqttApplicationMessage, Task>>> _routes =
-            new ConcurrentDictionary<string, List<Func<MqttApplicationMessage, Task>>>(StringComparer.Ordinal);
+        private sealed class RouteEntry
+        {
+            public MqttQualityOfServiceLevel QualityOfService { get; set; }
+            public List<Func<MqttApplicationMessage, Task>> Handlers { get; } = new List<Func<MqttApplicationMessage, Task>>();
+        }
+
+        private readonly ConcurrentDictionary<string, RouteEntry> _routes =
+            new ConcurrentDictionary<string, RouteEntry>(StringComparer.Ordinal);
 
         /// <summary>
-        /// 添加或更新主题路由处理器。
+        /// 添加或更新主题路由处理器与服务质量等级。
+        /// </summary>
+        /// <param name="topicFilter">主题过滤器</param>
+        /// <param name="handler">消息处理委托，可为 null（仅记录主题与 QoS 订阅关系）</param>
+        /// <param name="qos">订阅的服务质量等级</param>
+        public void AddRoute(string topicFilter, Func<MqttApplicationMessage, Task> handler, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtMostOnce)
+        {
+            if (string.IsNullOrEmpty(topicFilter)) throw new ArgumentNullException(nameof(topicFilter));
+
+            _routes.AddOrUpdate(topicFilter,
+                filter =>
+                {
+                    var entry = new RouteEntry { QualityOfService = qos };
+                    if (handler != null)
+                    {
+                        entry.Handlers.Add(handler);
+                    }
+                    return entry;
+                },
+                (filter, entry) =>
+                {
+                    lock (entry.Handlers)
+                    {
+                        if (qos > entry.QualityOfService)
+                        {
+                            entry.QualityOfService = qos;
+                        }
+                        if (handler != null && !entry.Handlers.Contains(handler))
+                        {
+                            entry.Handlers.Add(handler);
+                        }
+                    }
+                    return entry;
+                });
+        }
+
+        /// <summary>
+        /// 添加或更新主题路由处理器（默认 QoS 0）。
         /// </summary>
         public void AddRoute(string topicFilter, Func<MqttApplicationMessage, Task> handler)
         {
-            if (string.IsNullOrEmpty(topicFilter)) throw new ArgumentNullException(nameof(topicFilter));
-            if (handler == null) return;
-
-            _routes.AddOrUpdate(topicFilter,
-                filter => new List<Func<MqttApplicationMessage, Task>> { handler },
-                (filter, list) =>
-                {
-                    lock (list)
-                    {
-                        list.Add(handler);
-                    }
-                    return list;
-                });
+            AddRoute(topicFilter, handler, MqttQualityOfServiceLevel.AtMostOnce);
         }
 
         /// <summary>
@@ -60,6 +91,19 @@ namespace STTech.BytesIO.Mqtt
         }
 
         /// <summary>
+        /// 获取所有已注册的主题过滤器与其对应的 QoS 服务质量等级字典。
+        /// </summary>
+        public IReadOnlyDictionary<string, MqttQualityOfServiceLevel> GetSubscribedTopicsWithQoS()
+        {
+            var dict = new Dictionary<string, MqttQualityOfServiceLevel>(_routes.Count, StringComparer.Ordinal);
+            foreach (var kvp in _routes)
+            {
+                dict[kvp.Key] = kvp.Value.QualityOfService;
+            }
+            return dict;
+        }
+
+        /// <summary>
         /// 检索与目标主题匹配的所有处理委托。
         /// </summary>
         public List<Func<MqttApplicationMessage, Task>> MatchHandlers(string topic)
@@ -71,9 +115,9 @@ namespace STTech.BytesIO.Mqtt
             {
                 if (IsTopicMatch(topic, kvp.Key))
                 {
-                    lock (kvp.Value)
+                    lock (kvp.Value.Handlers)
                     {
-                        matches.AddRange(kvp.Value);
+                        matches.AddRange(kvp.Value.Handlers);
                     }
                 }
             }
