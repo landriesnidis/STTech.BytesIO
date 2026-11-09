@@ -25,10 +25,11 @@ namespace STTech.BytesIO.P2P
         public bool EnableQuic { get; set; } = false;
 
         /// <summary>
-        /// 是否启用 Kademlia DHT (分布式哈希表) 用于去中心化节点发现
+        /// 是否启用 Kademlia DHT (分布式哈希表) 用于去中心化节点发现（规划中）
         /// </summary>
+        [Obsolete("Kademlia DHT 节点发现功能目前在当前预览版本中尚未实现，正在规划中。")]
         [Category("节点发现")]
-        [Description("是否启用 Kademlia DHT 用于去中心化节点发现。")]
+        [Description("是否启用 Kademlia DHT 用于去中心化节点发现（规划中）。")]
         public bool EnableDht { get; set; } = false;
 
         /// <summary>
@@ -39,17 +40,19 @@ namespace STTech.BytesIO.P2P
         public bool EnableRelay { get; set; } = false;
 
         /// <summary>
-        /// 是否启用 PubSub (发布/订阅) 功能
+        /// 是否启用 PubSub (发布/订阅) 功能（规划中）
         /// </summary>
+        [Obsolete("PubSub 功能在当前字节流通信版本中尚未提供上层 API，正在规划中。")]
         [Category("功能扩展")]
-        [Description("是否启用 PubSub (发布/订阅) 功能。")]
+        [Description("是否启用 PubSub (发布/订阅) 功能（规划中）。")]
         public bool EnablePubSub { get; set; } = false;
 
         /// <summary>
-        /// 是否启用 mDNS 局域网节点发现
+        /// 是否启用 mDNS 局域网节点发现（规划中）
         /// </summary>
+        [Obsolete("mDNS 局域网节点发现功能目前在当前预览版本中尚未实现，正在规划中。")]
         [Category("节点发现")]
-        [Description("是否启用 mDNS 局域网节点发现。适用于局域网内的自动对等发现。")]
+        [Description("是否启用 mDNS 局域网节点发现（规划中）。")]
         public bool EnableMdns { get; set; } = false;
 
         /// <summary>

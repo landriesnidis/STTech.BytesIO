@@ -71,6 +71,17 @@ namespace STTech.BytesIO.P2P
             }
         }
 
+        /// <summary>
+        /// 通过 Multiaddr 地址异步连接目标对等节点
+        /// </summary>
+        /// <param name="remoteAddress">目标节点的 Multiaddr 字符串</param>
+        /// <param name="timeout">连接超时时间（毫秒），默认 5000ms</param>
+        public async Task<ConnectResult> ConnectAsync(string remoteAddress, int timeout = 5000)
+        {
+            RemoteAddress = remoteAddress;
+            return await ConnectAsync(new ConnectArgument { Timeout = timeout }).ConfigureAwait(false);
+        }
+
         /// <inheritdoc/>
         public override ConnectResult Connect(ConnectArgument? argument = null)
         {
@@ -258,20 +269,24 @@ namespace STTech.BytesIO.P2P
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
-                    byte[] buffer = data.ToArray();
-                    if (buffer.Length == 0)
+                    if (data.IsEmpty)
                     {
                         Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
                         return;
                     }
 
-                    // 使用池化缓冲区
-                    byte[] rentedBuffer = RentBuffer();
-                    int copyLen = Math.Min(buffer.Length, rentedBuffer.Length);
-                    Buffer.BlockCopy(buffer, 0, rentedBuffer, 0, copyLen);
+                    // 循环分块分发，彻底消除大包截断丢失，且免去 data.ToArray() 堆内存分配
+                    var remaining = data;
+                    while (!remaining.IsEmpty)
+                    {
+                        int sliceLen = (int)Math.Min(remaining.Length, (long)ReceiveBufferSize);
+                        byte[] rentedBuffer = RentBuffer();
+                        remaining.Slice(0, sliceLen).CopyTo(rentedBuffer);
+                        remaining = remaining.Slice(sliceLen);
 
-                    var context = CreateReceiveContext(rentedBuffer, 0, copyLen);
-                    InvokeDataReceivedEventCallback(context);
+                        var context = CreateReceiveContext(rentedBuffer, 0, sliceLen);
+                        InvokeDataReceivedEventCallback(context);
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -297,34 +312,11 @@ namespace STTech.BytesIO.P2P
         /// <inheritdoc/>
         public override void Dispose()
         {
-            try
-            {
-                _channel?.CloseAsync().AsTask().GetAwaiter().GetResult();
-            }
-            catch { }
-
-            try
-            {
-                _remoteSession?.DisconnectAsync().GetAwaiter().GetResult();
-            }
-            catch { }
-
-            try
-            {
-                _localPeer?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            }
-            catch { }
-
-            _serviceProvider?.Dispose();
-
-            _channel = null;
-            _remoteSession = null;
-            _localPeer = null;
-            _serviceProvider = null;
+            ResetInternalState();
         }
 
         /// <summary>
-        /// 重置内部连接状态
+        /// 重置内部连接状态并释放 Libp2p 协议栈资源
         /// </summary>
         private void ResetInternalState()
         {
@@ -332,6 +324,18 @@ namespace STTech.BytesIO.P2P
             try { _remoteSession?.DisconnectAsync().GetAwaiter().GetResult(); } catch { }
             _channel = null;
             _remoteSession = null;
+
+            if (_localPeer != null)
+            {
+                try { _localPeer.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+                _localPeer = null;
+            }
+
+            if (_serviceProvider != null)
+            {
+                try { _serviceProvider.Dispose(); } catch { }
+                _serviceProvider = null;
+            }
         }
 
         /// <summary>
@@ -354,11 +358,6 @@ namespace STTech.BytesIO.P2P
                     if (options.EnableRelay)
                     {
                         builder.WithRelay();
-                    }
-
-                    if (options.EnablePubSub)
-                    {
-                        builder.WithPubsub();
                     }
 
                     if (options.EnforcePlaintext)

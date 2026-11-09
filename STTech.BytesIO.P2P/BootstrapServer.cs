@@ -2,11 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Multiformats.Address;
 using Nethermind.Libp2p;
 using Nethermind.Libp2p.Core;
-using Nethermind.Libp2p.Core.Discovery;
 using STTech.BytesIO.Core;
-using System.Buffers;
 using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace STTech.BytesIO.P2P
@@ -15,11 +12,7 @@ namespace STTech.BytesIO.P2P
     /// P2P 引导节点（种子节点）
     /// <para>
     /// 提供基于 Libp2p 的网络引导服务，作为 P2P 网络的入口节点。
-    /// 其他 <see cref="PeerClient"/> 可以通过此节点加入网络并发现其他对等节点。
-    /// </para>
-    /// <para>
-    /// 通过 <see cref="Options"/> 中的布尔开关灵活控制是否启用 TCP/QUIC 传输、
-    /// DHT 节点发现、Relay 中继穿透、PubSub 发布订阅等功能。
+    /// 其他 <see cref="PeerClient"/> 可以通过此节点加入网络并与本节点或其它对等节点进行通信。
     /// </para>
     /// </summary>
     public class BootstrapServer : IBytesServer
@@ -163,9 +156,6 @@ namespace STTech.BytesIO.P2P
                 _localPeer = peerFactory.Create(identity);
                 LocalPeerId = _localPeer.Identity.PeerId.ToString();
 
-                // 注册连接事件
-                _localPeer.OnConnected += OnPeerConnectedAsync;
-
                 State = ServerState.Listening;
             }
 
@@ -191,7 +181,7 @@ namespace STTech.BytesIO.P2P
             // 开始监听
             await _localPeer.StartListenAsync(listenAddrs.ToArray(), _cts.Token).ConfigureAwait(false);
 
-            // 连接到引导节点
+            // 连接到已知引导节点
             foreach (var bootstrapAddr in Options.BootstrapPeers)
             {
                 try
@@ -205,7 +195,7 @@ namespace STTech.BytesIO.P2P
                 }
             }
 
-            Task.Run(() => Started?.Invoke(this, EventArgs.Empty));
+            Started?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -215,26 +205,28 @@ namespace STTech.BytesIO.P2P
         {
             if (!IsRunning) return;
 
+            List<PeerClient> activeClients;
             lock (_stateLocker)
             {
                 if (!IsRunning) return;
 
                 _cts?.Cancel();
 
-                // 断开所有客户端
-                var activeClients = _clients.Keys.ToList();
-                _clients.Clear();
-                foreach (var client in activeClients)
-                {
-                    try
-                    {
-                        client.Disconnect();
-                    }
-                    catch { }
-                }
-
+                // 记录所有在线客户端
+                activeClients = _clients.Keys.ToList();
                 State = ServerState.Closed;
             }
+
+            // 逐个主动断开在线客户端连接，确保 PeerDisconnected 事件能够被正确触发
+            foreach (var client in activeClients)
+            {
+                try
+                {
+                    client.Disconnect();
+                }
+                catch { }
+            }
+            _clients.Clear();
 
             // 清理 Libp2p 资源
             if (_localPeer != null)
@@ -252,11 +244,11 @@ namespace STTech.BytesIO.P2P
 
             LocalPeerId = null;
 
-            Task.Run(() => Closed?.Invoke(this, EventArgs.Empty));
+            Closed?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
-        /// 异步停止监听（Libp2p 中 Stop 和 Close 逻辑相近，此处直接调用 Close）
+        /// 异步停止监听
         /// </summary>
         public Task StopAsync() => CloseAsync();
 
@@ -266,21 +258,11 @@ namespace STTech.BytesIO.P2P
         public IEnumerable<BytesClient> GetClients() => _clients.Keys;
 
         /// <summary>
-        /// 当远端节点连入时
-        /// </summary>
-        private Task OnPeerConnectedAsync(ISession newSession)
-        {
-            // Libp2p 层面的连接回调
-            // 实际的字节流通道在 BytesIOProtocol.ListenAsync 中建立
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
         /// 当字节流通道建立时
         /// </summary>
         private void OnChannelEstablished(IChannel channel, ISessionContext context, bool isDialer)
         {
-            if (isDialer) return; // 引导节点只处理被动接入
+            if (isDialer) return; // 引导节点只接纳远端接入的通道
 
             try
             {
@@ -292,12 +274,12 @@ namespace STTech.BytesIO.P2P
                 {
                     if (sender is PeerClient pc && _clients.TryRemove(pc, out _))
                     {
-                        Task.Run(() => PeerDisconnected?.Invoke(this, new PeerDisconnectedEventArgs(pc, e)));
+                        PeerDisconnected?.Invoke(this, new PeerDisconnectedEventArgs(pc, e));
                     }
                 };
 
                 _clients.TryAdd(client, 0);
-                Task.Run(() => PeerConnected?.Invoke(this, new PeerConnectedEventArgs(client)));
+                PeerConnected?.Invoke(this, new PeerConnectedEventArgs(client));
             }
             catch (Exception ex)
             {
@@ -308,7 +290,10 @@ namespace STTech.BytesIO.P2P
         /// <inheritdoc/>
         public void Dispose()
         {
-            CloseAsync().GetAwaiter().GetResult();
+            if (IsRunning)
+            {
+                CloseAsync().GetAwaiter().GetResult();
+            }
         }
     }
 

@@ -5,7 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>
-		<Version>3.3.3.1-alpha61105</Version>
+		<Version>3.4.0.0-alpha61110</Version>
 
 		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
@@ -14,10 +14,10 @@
 		<PackageIcon>stdiag.png</PackageIcon>
 		<Description>
 			这是一个基于 Libp2p 协议的 .NET P2P 字节流通信库，作为 STTech.BytesIO 的扩展库，提供了统一的编程模型。
-			支持 TCP/QUIC 传输、Noise/TLS 加密、DHT 节点发现、Relay 中继穿透等 P2P 网络特性。
-			通过 PeerClient 和 BootstrapServer 两个核心类，快速构建去中心化点对点通信应用。
+			支持 TCP/QUIC 传输、Noise/TLS 加密以及基于 Multiaddr 的点对点字节流传输。
+			通过 PeerClient 和 BootstrapServer 核心类，实现点对点字节流通信。
 		</Description>
-		<PackageTags>STTech;BytesIO;P2P;Libp2p;PeerToPeer;DHT;Relay;Communication;Protocol;Async;Decentralized</PackageTags>
+		<PackageTags>STTech;BytesIO;P2P;Libp2p;PeerToPeer;Communication;Protocol;Async;Network</PackageTags>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>

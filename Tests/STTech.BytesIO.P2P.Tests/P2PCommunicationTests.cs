@@ -2,9 +2,11 @@ using STTech.BytesIO.Core;
 using STTech.BytesIO.P2P;
 using Nethermind.Libp2p;
 using Multiformats.Address;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Buffers;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +23,6 @@ namespace STTech.BytesIO.P2P.Tests
         {
             _output = output;
         }
-
 
         [Fact]
         public async Task TestDirectTwoWayCommunication()
@@ -57,10 +58,8 @@ namespace STTech.BytesIO.P2P.Tests
                 var session = await peer2.DialAsync(targetAddr, cts.Token);
                 Assert.NotNull(session);
 
-                // 异步发起协议协商，不要 await 它阻塞通道建立
                 var protoDialTask = session.DialAsync<BytesIOProtocol>(cts.Token);
 
-                // 等待双方 channel 建立
                 await Task.WhenAll(ch1Tcs.Task, ch2Tcs.Task);
                 var ch1 = await ch1Tcs.Task;
                 var ch2 = await ch2Tcs.Task;
@@ -71,7 +70,6 @@ namespace STTech.BytesIO.P2P.Tests
                 byte[] sendFrom2 = Encoding.UTF8.GetBytes("Hello from Peer2");
                 await ch2.WriteAsync(new System.Buffers.ReadOnlySequence<byte>(sendFrom2));
 
-                // Peer1 读取数据
                 byte[]? receivedBy1 = null;
                 await foreach (var data in ch1.ReadAllAsync(cts.Token))
                 {
@@ -79,13 +77,11 @@ namespace STTech.BytesIO.P2P.Tests
                     break;
                 }
                 Assert.Equal(sendFrom2, receivedBy1);
-                _output.WriteLine($"Peer1 received: {Encoding.UTF8.GetString(receivedBy1)}");
 
                 // 从 Peer1 发送数据给 Peer2
                 byte[] sendFrom1 = Encoding.UTF8.GetBytes("Hello from Peer1");
                 await ch1.WriteAsync(new System.Buffers.ReadOnlySequence<byte>(sendFrom1));
 
-                // Peer2 读取数据
                 byte[]? receivedBy2 = null;
                 await foreach (var data in ch2.ReadAllAsync(cts.Token))
                 {
@@ -93,7 +89,6 @@ namespace STTech.BytesIO.P2P.Tests
                     break;
                 }
                 Assert.Equal(sendFrom1, receivedBy2);
-                _output.WriteLine($"Peer2 received: {Encoding.UTF8.GetString(receivedBy2)}");
 
                 _output.WriteLine("Two-way communication succeeded!");
             }
@@ -122,13 +117,11 @@ namespace STTech.BytesIO.P2P.Tests
                 serverConnectedTcs.TrySetResult(e.Client);
                 e.Client.OnDataReceived += (s2, e2) =>
                 {
-                    _output.WriteLine($"Server: Received data from client: {Encoding.UTF8.GetString(e2.Data.ToArray())}");
                     serverReceivedTcs.TrySetResult(e2.Data.ToArray());
                 };
             };
 
             await server.StartAsync();
-            _output.WriteLine($"Step 2: Server started, ListenAddresses: {string.Join(", ", server.ListenAddresses)}");
 
             try
             {
@@ -136,54 +129,179 @@ namespace STTech.BytesIO.P2P.Tests
                 Assert.NotEmpty(server.ListenAddresses);
 
                 var client = new PeerClient();
-                // 监听地址本身已包含 /p2p/{PeerId}
-                client.RemoteAddress = server.ListenAddresses.First();
                 client.OnDataReceived += (s, e) =>
                 {
-                    _output.WriteLine($"Client: Received data from server: {Encoding.UTF8.GetString(e.Data.ToArray())}");
                     clientReceivedTcs.TrySetResult(e.Data.ToArray());
                 };
 
-                _output.WriteLine($"Step 3: Client connecting to {client.RemoteAddress}");
-
-                var connectResult = await client.ConnectAsync(new ConnectArgument { Timeout = 10000 });
-                _output.WriteLine($"Step 4: Client connected result: {connectResult.IsSuccess}, ErrorCode: {connectResult.ErrorCode}");
-
+                // 测试便捷重载 ConnectAsync(string)
+                var connectResult = await client.ConnectAsync(server.ListenAddresses.First(), 10000);
                 Assert.True(connectResult.IsSuccess, $"Client connection failed: {connectResult.ErrorCode}, ex: {connectResult.Exception}");
                 Assert.True(client.IsConnected, "Client should be connected");
 
-                // 等待服务端建立连接
                 var acceptedClient = await serverConnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.NotNull(acceptedClient);
                 Assert.True(acceptedClient.IsConnected, "Server-side accepted client should be connected");
 
-                // 客户端向服务端发送数据
+                // 客户端发给服务端
                 byte[] clientSendData = Encoding.UTF8.GetBytes("Hello Libp2p Server from Client");
-                _output.WriteLine("Step 5: Client sending data");
                 await client.SendAsync(clientSendData);
-
-                _output.WriteLine("Step 6: Waiting for server to receive data");
                 var serverReceived = await serverReceivedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.Equal(clientSendData, serverReceived);
 
-                // 服务端向客户端发送数据
+                // 服务端发给客户端
                 byte[] serverSendData = Encoding.UTF8.GetBytes("Hello Libp2p Client from Server");
-                _output.WriteLine("Step 7: Server sending data to client");
                 await acceptedClient.SendAsync(serverSendData);
-
-                _output.WriteLine("Step 8: Waiting for client to receive data");
                 var clientReceived = await clientReceivedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.Equal(serverSendData, clientReceived);
 
-                _output.WriteLine("Step 9: Disconnecting client");
                 client.Disconnect();
                 Assert.False(client.IsConnected, "Client should be disconnected");
             }
             finally
             {
-                _output.WriteLine("Step 10: Closing server");
                 await server.CloseAsync();
-                _output.WriteLine("Step 11: Server closed");
+            }
+        }
+
+        [Fact]
+        public async Task TestLargeDataTransferWithoutTruncation()
+        {
+            // 验证单次大于 64KB（例如 128KB）的数据包不会被静默截断丢弃
+            var server = new BootstrapServer();
+            server.Options.ListenAddress = "127.0.0.1";
+            server.Options.TcpPort = 48890;
+
+            const int dataSize = 128 * 1024; // 128 KB
+            byte[] largeData = new byte[dataSize];
+            new Random(42).NextBytes(largeData);
+
+            using var receivedStream = new MemoryStream();
+            var allDataReceivedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            server.PeerConnected += (s, e) =>
+            {
+                e.Client.OnDataReceived += (s2, e2) =>
+                {
+                    lock (receivedStream)
+                    {
+                        receivedStream.Write(e2.Data.ToArray());
+                        if (receivedStream.Length >= dataSize)
+                        {
+                            allDataReceivedTcs.TrySetResult(true);
+                        }
+                    }
+                };
+            };
+
+            await server.StartAsync();
+
+            try
+            {
+                var client = new PeerClient();
+                var connectResult = await client.ConnectAsync(server.ListenAddresses.First(), 10000);
+                Assert.True(connectResult.IsSuccess);
+
+                // 发送 128KB 的大数据
+                await client.SendAsync(largeData);
+
+                // 等待服务端完全接收
+                await allDataReceivedTcs.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+                byte[] receivedBytes;
+                lock (receivedStream)
+                {
+                    receivedBytes = receivedStream.ToArray();
+                }
+
+                Assert.Equal(dataSize, receivedBytes.Length);
+                Assert.True(largeData.SequenceEqual(receivedBytes), "接收到的大数据内容必须与发送数据完全一致");
+
+                client.Disconnect();
+            }
+            finally
+            {
+                await server.CloseAsync();
+            }
+        }
+
+        [Fact]
+        public async Task TestServerCloseDisconnectEvent()
+        {
+            // 验证服务端 CloseAsync 时不会吞掉客户端的 PeerDisconnected 事件
+            var server = new BootstrapServer();
+            server.Options.ListenAddress = "127.0.0.1";
+            server.Options.TcpPort = 48891;
+
+            var disconnectedTcs = new TaskCompletionSource<PeerDisconnectedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            server.PeerDisconnected += (s, e) =>
+            {
+                disconnectedTcs.TrySetResult(e);
+            };
+
+            await server.StartAsync();
+
+            try
+            {
+                var client = new PeerClient();
+                var connectResult = await client.ConnectAsync(server.ListenAddresses.First(), 10000);
+                Assert.True(connectResult.IsSuccess);
+
+                // 服务端直接关闭
+                await server.CloseAsync();
+
+                // 验证 PeerDisconnected 被正确捕获
+                var disconnectedEvent = await disconnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.NotNull(disconnectedEvent);
+                Assert.NotNull(disconnectedEvent.Client);
+            }
+            finally
+            {
+                await server.CloseAsync();
+            }
+        }
+
+        [Fact]
+        public async Task TestClientReconnectWithoutLeak()
+        {
+            // 验证客户端断开重连能力及容器无泄漏正常工作
+            var server = new BootstrapServer();
+            server.Options.ListenAddress = "127.0.0.1";
+            server.Options.TcpPort = 48892;
+
+            await server.StartAsync();
+
+            try
+            {
+                var client = new PeerClient();
+
+                // 第一次连接
+                var res1 = await client.ConnectAsync(server.ListenAddresses.First(), 10000);
+                Assert.True(res1.IsSuccess);
+                Assert.True(client.IsConnected);
+
+                // 断开连接
+                client.Disconnect();
+                Assert.False(client.IsConnected);
+
+                // 延时确保底层完全清理
+                await Task.Delay(200);
+
+                // 第二次重连
+                var res2 = await client.ConnectAsync(server.ListenAddresses.First(), 10000);
+                Assert.True(res2.IsSuccess, $"第二次重连失败: {res2.ErrorCode}, ex: {res2.Exception}");
+                Assert.True(client.IsConnected);
+
+                // 发送数据验证信道正常
+                byte[] testMsg = Encoding.UTF8.GetBytes("Reconnect ping");
+                await client.SendAsync(testMsg);
+
+                client.Disconnect();
+            }
+            finally
+            {
+                await server.CloseAsync();
             }
         }
     }
