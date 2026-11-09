@@ -8,6 +8,9 @@ namespace STTech.BytesIO.Bluetooth.Entity
     /// </summary>
     public class BluetoothDeviceInfo
     {
+        private readonly object _serviceUuidsLock = new object();
+        private readonly List<Guid> _serviceUuids = new List<Guid>();
+
         /// <summary>
         /// 蓝牙设备地址数值 (48位 MAC 地址)
         /// </summary>
@@ -49,9 +52,44 @@ namespace STTech.BytesIO.Bluetooth.Entity
         public short Rssi { get; set; }
 
         /// <summary>
-        /// 发现或广播的服务 UUID 列表
+        /// 发现或广播的服务 UUID 列表 (返回线程安全的只读快照，避免多线程枚举时集合修改崩溃)
         /// </summary>
-        public List<Guid> ServiceUuids { get; set; } = new List<Guid>();
+        public IReadOnlyList<Guid> ServiceUuids
+        {
+            get
+            {
+                lock (_serviceUuidsLock)
+                {
+                    return _serviceUuids.ToArray();
+                }
+            }
+            set
+            {
+                lock (_serviceUuidsLock)
+                {
+                    _serviceUuids.Clear();
+                    if (value != null)
+                    {
+                        _serviceUuids.AddRange(value);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 线程安全添加服务 UUID
+        /// </summary>
+        /// <param name="uuid">服务 UUID</param>
+        public void AddServiceUuid(Guid uuid)
+        {
+            lock (_serviceUuidsLock)
+            {
+                if (!_serviceUuids.Contains(uuid))
+                {
+                    _serviceUuids.Add(uuid);
+                }
+            }
+        }
 
         /// <summary>
         /// 最近一次发现或广播的时间

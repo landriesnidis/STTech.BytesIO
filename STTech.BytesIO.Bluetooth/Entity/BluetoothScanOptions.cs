@@ -14,6 +14,11 @@ namespace STTech.BytesIO.Bluetooth.Entity
         public BluetoothScanMode Mode { get; set; } = BluetoothScanMode.All;
 
         /// <summary>
+        /// 经典蓝牙扫描是否包含空中未配对设备 (默认为 true：同时发现附近空中未配对与已配对的经典蓝牙设备；若设为 false，则仅枚举系统中已配对的设备)
+        /// </summary>
+        public bool ClassicScanUnpairedDevices { get; set; } = true;
+
+        /// <summary>
         /// 扫描超时时间 (为 null 表示持续扫描直至显式调用 StopScan)
         /// </summary>
         public TimeSpan? Timeout { get; set; }

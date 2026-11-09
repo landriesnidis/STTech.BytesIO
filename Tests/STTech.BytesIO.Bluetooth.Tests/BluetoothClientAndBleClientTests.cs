@@ -283,5 +283,119 @@ namespace STTech.BytesIO.Bluetooth.Tests
             Assert.True(info.IsConnected);
             Assert.Equal(2, info.ServiceUuids.Count);
         }
+
+        [Fact]
+        public void BleClient_IndustrialProperties_DefaultAndCustomValues()
+        {
+            var client = new BleClient();
+
+            // 默认值验证
+            Assert.Equal(0, client.MaxPayloadSize);
+            Assert.Equal(2, client.WriteWithoutResponseIntervalMs);
+
+            // 自定义设值
+            client.MaxPayloadSize = 244;
+            client.WriteWithoutResponseIntervalMs = 5;
+
+            Assert.Equal(244, client.MaxPayloadSize);
+            Assert.Equal(5, client.WriteWithoutResponseIntervalMs);
+        }
+
+        [Fact]
+        public void BluetoothScanOptions_ServiceUuids_CanBeConfigured()
+        {
+            var targetUuid = Guid.NewGuid();
+            var options = new BluetoothScanOptions
+            {
+                Mode = BluetoothScanMode.Ble,
+                RssiFilter = -70,
+                Timeout = TimeSpan.FromSeconds(5)
+            };
+            options.ServiceUuids.Add(targetUuid);
+
+            Assert.Single(options.ServiceUuids);
+            Assert.Equal(targetUuid, options.ServiceUuids[0]);
+            Assert.Equal((short)-70, options.RssiFilter);
+            Assert.Equal(TimeSpan.FromSeconds(5), options.Timeout);
+        }
+
+        [Fact]
+        public void BleClient_Disconnect_ShouldGracefullyResetInternalStatus()
+        {
+            var client = new BleClient("00:11:22:33:44:55");
+            var result = client.Disconnect();
+
+            // 未连接时 Disconnect 返回 NoConnection 状态
+            Assert.False(result.IsSuccess);
+            Assert.Equal(Core.DisconnectErrorCode.NoConnection, result.ErrorCode);
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task BluetoothDeviceInfo_ServiceUuids_ThreadSafeConcurrencyTest()
+        {
+            var device = new BluetoothDeviceInfo
+            {
+                Name = "ConcurrencySensor",
+                Address = 0xAABBCCDDEEFF,
+                AddressString = "AA:BB:CC:DD:EE:FF",
+                Type = BluetoothType.Ble
+            };
+
+            // 预设基础服务 UUID
+            device.AddServiceUuid(Guid.NewGuid());
+
+            var exceptions = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+            var cts = new System.Threading.CancellationTokenSource();
+
+            // 启动 5 个并发写入任务 (不休眠持续高频添加新 UUID)
+            var writeTasks = System.Linq.Enumerable.Range(0, 5).Select(_ => System.Threading.Tasks.Task.Run(() =>
+            {
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    device.AddServiceUuid(Guid.NewGuid());
+                    System.Threading.Thread.SpinWait(100);
+                }
+            })).ToArray();
+
+            // 启动 10 个并发读取枚举任务
+            var readTasks = System.Linq.Enumerable.Range(0, 10).Select(_ => System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    for (int i = 0; i < 500; i++)
+                    {
+                        int count = 0;
+                        foreach (var uuid in device.ServiceUuids)
+                        {
+                            count++;
+                            var str = uuid.ToString();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    exceptions.Add(ex);
+                }
+            })).ToArray();
+
+            // 异步等待读取线程全部完成
+            await System.Threading.Tasks.Task.WhenAll(readTasks);
+            cts.Cancel();
+            try { await System.Threading.Tasks.Task.WhenAll(writeTasks); } catch { }
+
+            // 验证在强并发读写下绝无 Collection was modified 异常
+            Assert.Empty(exceptions);
+            Assert.True(device.ServiceUuids.Count > 0);
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task BluetoothClient_PairAsync_WithoutAddress_ShouldThrowInvalidOperationException()
+        {
+            var client = new BluetoothClient();
+            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            {
+                await client.PairAsync();
+            });
+        }
     }
 }
