@@ -147,6 +147,7 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public override void Dispose()
         {
+            base.Dispose();
             InnerClient?.Disconnect();
             InnerClient?.Dispose();
         }

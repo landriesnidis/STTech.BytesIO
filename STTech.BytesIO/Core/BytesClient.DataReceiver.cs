@@ -87,7 +87,9 @@ namespace STTech.BytesIO.Core
         /// </summary>
         protected virtual void CancelReceiveDataTask()
         {
-            ReceiveTaskCancellationTokenSource?.Cancel();
+            try { ReceiveTaskCancellationTokenSource?.Cancel(); } catch { }
+            try { ReceiveTaskCancellationTokenSource?.Dispose(); } catch { }
+            ReceiveTaskCancellationTokenSource = null;
         }
 
         /// <summary>
@@ -115,12 +117,17 @@ namespace STTech.BytesIO.Core
 
         private void DataReceiveTaskQueueHandler(DataReceivedEventArgs e)
         {
-            // 执行接收到数据的回调事件
-            RaiseDataReceived(this, e);
-
-            // 回调完成后自动释放 ReceiveContext
-            // 如果用户在回调中需要保留数据，应调用 ToArray() 复制数据
-            e.Data.Dispose();
+            try
+            {
+                // 执行接收到数据的回调事件
+                RaiseDataReceived(this, e);
+            }
+            finally
+            {
+                // 回调完成后自动释放 ReceiveContext
+                // 如果用户在回调中需要保留数据，应调用 ToArray() 复制数据
+                e.Data?.Dispose();
+            }
         }
     }
 }

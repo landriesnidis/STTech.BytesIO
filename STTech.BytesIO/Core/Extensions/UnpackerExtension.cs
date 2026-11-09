@@ -97,7 +97,7 @@ namespace STTech.BytesIO.Core
 
             try
             {
-                client.Send(request.GetBytes(), options);
+                await client.SendAsync(request.GetBytes(), options).ConfigureAwait(false);
 
                 if (timeout > 0 && timeout != Timeout.Infinite)
                 {

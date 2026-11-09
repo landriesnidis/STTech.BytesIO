@@ -58,8 +58,16 @@ namespace STTech.BytesIO.Core.Component
 
         private void Unpacker_OnDataParsed(object sender, DataParsedEventArgs e)
         {
-            var resp = ResponseSerializeHandler(e.Data);
-            OnDataParsed?.Invoke(this, new DataParsedEventArgs<T>(resp));
+            try
+            {
+                var resp = ResponseSerializeHandler(e.Data);
+                OnDataParsed?.Invoke(this, new DataParsedEventArgs<T>(resp));
+            }
+            finally
+            {
+                // 解析完成后及时显式释放 UnpackContext，归还底层段引用并注销终结器，杜绝依赖 Finalizer 堆积导致 ArrayPool 穿透
+                e.Data?.Dispose();
+            }
         }
 
         protected override int CalculatePacketLength(ReadOnlySequence<byte> buffer)

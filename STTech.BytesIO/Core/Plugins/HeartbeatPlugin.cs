@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Timers;
 
 namespace STTech.BytesIO.Core
@@ -12,7 +13,7 @@ namespace STTech.BytesIO.Core
     {
         // ==================== 心跳发送 ====================
 
-        private Timer _heartbeatTimer;
+        private System.Timers.Timer _heartbeatTimer;
         private Action<BytesClient> _sendHeartbeatHandler;
 
         /// <summary>
@@ -36,30 +37,42 @@ namespace STTech.BytesIO.Core
                 return;
             }
 
-            _heartbeatTimer = new Timer(interval);
+            _heartbeatTimer = new System.Timers.Timer(interval) { AutoReset = true };
             _heartbeatTimer.Elapsed += (s, e) =>
             {
                 if (Client != null && Client.IsConnected)
                 {
-                    _sendHeartbeatHandler?.Invoke(Client);
+                    try
+                    {
+                        _sendHeartbeatHandler?.Invoke(Client);
+                    }
+                    catch (Exception ex)
+                    {
+                        Client?.RaiseExceptionOccurs(ex);
+                    }
                 }
             };
-            _heartbeatTimer.Enabled = true;
+
+            if (Client != null && Client.IsConnected)
+            {
+                _heartbeatTimer.Start();
+            }
         }
 
         private void StopHeartbeatTimer()
         {
             if (_heartbeatTimer != null)
             {
-                _heartbeatTimer.Stop();
-                _heartbeatTimer.Dispose();
+                try { _heartbeatTimer.Stop(); } catch { }
+                try { _heartbeatTimer.Dispose(); } catch { }
                 _heartbeatTimer = null;
             }
         }
 
         // ==================== 心跳超时检测 ====================
 
-        private TimeoutTimer _timeoutTimer;
+        private System.Timers.Timer _timeoutCheckTimer;
+        private long _lastReceivedTimeMs = MonotonicClock.NowMs;
 
         /// <summary>
         /// 心跳超时时间（毫秒）
@@ -80,13 +93,15 @@ namespace STTech.BytesIO.Core
                 return;
             }
 
-            if (_timeoutTimer == null)
+            int checkInterval = Math.Max(100, Math.Min(timeout / 2, 1000));
+            if (_timeoutCheckTimer == null)
             {
-                _timeoutTimer = new TimeoutTimer(timeout, OnHeartbeatTimeout);
+                _timeoutCheckTimer = new System.Timers.Timer(checkInterval) { AutoReset = true };
+                _timeoutCheckTimer.Elapsed += OnTimeoutCheckTimerElapsed;
             }
             else
             {
-                _timeoutTimer.Interval = timeout;
+                _timeoutCheckTimer.Interval = checkInterval;
             }
 
             if (Client != null && Client.IsConnected)
@@ -95,10 +110,24 @@ namespace STTech.BytesIO.Core
             }
         }
 
+        private void OnTimeoutCheckTimerElapsed(object sender, ElapsedEventArgs e)
+        {
+            if (Client == null || !Client.IsConnected || HeartbeatTimeout <= 0)
+            {
+                return;
+            }
+
+            long elapsed = MonotonicClock.NowMs - Interlocked.Read(ref _lastReceivedTimeMs);
+            if (elapsed >= HeartbeatTimeout)
+            {
+                OnHeartbeatTimeout();
+            }
+        }
+
         private void OnHeartbeatTimeout()
         {
-            Client?.Disconnect(new DisconnectArgument(DisconnectionReasonCode.Timeout));
             PauseTimeoutTimer();
+            Client?.Disconnect(new DisconnectArgument(DisconnectionReasonCode.Timeout));
         }
 
         /// <summary>
@@ -106,14 +135,10 @@ namespace STTech.BytesIO.Core
         /// </summary>
         private void StartTimeoutTimer()
         {
-            if (HeartbeatTimeout > 0)
+            if (HeartbeatTimeout > 0 && _timeoutCheckTimer != null)
             {
-                if (_timeoutTimer == null)
-                {
-                    _timeoutTimer = new TimeoutTimer(HeartbeatTimeout, OnHeartbeatTimeout);
-                }
-                _timeoutTimer.Interval = HeartbeatTimeout;
-                _timeoutTimer.Start();
+                Interlocked.Exchange(ref _lastReceivedTimeMs, MonotonicClock.NowMs);
+                _timeoutCheckTimer.Start();
             }
         }
 
@@ -122,7 +147,7 @@ namespace STTech.BytesIO.Core
         /// </summary>
         private void PauseTimeoutTimer()
         {
-            _timeoutTimer?.Stop();
+            _timeoutCheckTimer?.Stop();
         }
 
         /// <summary>
@@ -130,11 +155,11 @@ namespace STTech.BytesIO.Core
         /// </summary>
         private void DestroyTimeoutTimer()
         {
-            if (_timeoutTimer != null)
+            if (_timeoutCheckTimer != null)
             {
-                _timeoutTimer.Stop();
-                _timeoutTimer.Dispose();
-                _timeoutTimer = null;
+                try { _timeoutCheckTimer.Stop(); } catch { }
+                try { _timeoutCheckTimer.Dispose(); } catch { }
+                _timeoutCheckTimer = null;
             }
         }
 
@@ -143,28 +168,31 @@ namespace STTech.BytesIO.Core
         /// <inheritdoc/>
         protected internal override void OnConnectedSuccessfully(ConnectedSuccessfullyEventArgs e)
         {
-            // 连接成功后启动超时计时器
+            // 连接成功后启动超时计时器与心跳发送
+            Interlocked.Exchange(ref _lastReceivedTimeMs, MonotonicClock.NowMs);
             StartTimeoutTimer();
+
+            if (HeartbeatInterval > 0 && _heartbeatTimer != null)
+            {
+                _heartbeatTimer.Start();
+            }
         }
 
         /// <inheritdoc/>
         protected internal override void OnDisconnected(DisconnectedEventArgs e)
         {
-            // 断开连接后暂停超时检测（保留计时器实例，重连后可再次复用）
+            // 断开连接后暂停超时检测与心跳发送，彻底消除后台空转
             PauseTimeoutTimer();
+            _heartbeatTimer?.Stop();
         }
 
         /// <inheritdoc/>
         protected internal override void OnDataReceived(DataReceivedEventArgs e)
         {
-            // 收到数据时重置超时计时器
-            if (HeartbeatTimeout > 0 && Client != null)
+            // 收到数据时轻量原子更新单调时间戳，杜绝每包高频重启系统定时器振荡
+            if (HeartbeatTimeout > 0)
             {
-                if (_timeoutTimer == null)
-                {
-                    StartTimeoutTimer();
-                }
-                _timeoutTimer?.Reset(HeartbeatTimeout);
+                Interlocked.Exchange(ref _lastReceivedTimeMs, MonotonicClock.NowMs);
             }
         }
 
@@ -252,9 +280,9 @@ namespace STTech.BytesIO.Core
     }
 
     /// <summary>
-    /// 超时计时器
+    /// 超时计时器（向后兼容保留）
     /// </summary>
-    internal class TimeoutTimer : Timer
+    internal class TimeoutTimer : System.Timers.Timer
     {
         private readonly int _timeout;
         private readonly Action _timeoutCallback;

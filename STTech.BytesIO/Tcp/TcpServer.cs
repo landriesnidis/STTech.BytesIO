@@ -1,4 +1,4 @@
-using STTech.BytesIO.Core;
+﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Tcp.Entity;
 using System;
 using System.Collections.Generic;
@@ -154,9 +154,31 @@ namespace STTech.BytesIO.Tcp
 
             lock (ServerStateLocker)
             {
-                // 初始化监听Socket
-                socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                IPAddress ipAddress = IPAddress.Parse(Host);
+                // 解析 IP 地址（支持 IPv4/IPv6、localhost、域名及通配绑定）
+                IPAddress ipAddress;
+                if (string.IsNullOrWhiteSpace(Host) || Host == "0.0.0.0" || Host == "*")
+                {
+                    ipAddress = IPAddress.Any;
+                }
+                else if (Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+                {
+                    ipAddress = IPAddress.Loopback;
+                }
+                else if (!IPAddress.TryParse(Host, out ipAddress))
+                {
+                    try
+                    {
+                        var addresses = System.Net.Dns.GetHostAddresses(Host);
+                        ipAddress = addresses.Length > 0 ? addresses[0] : IPAddress.Any;
+                    }
+                    catch
+                    {
+                        ipAddress = IPAddress.Any;
+                    }
+                }
+
+                // 初始化监听Socket（自适应 IPv4/IPv6）
+                socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, Port);
                 socket.Bind(ipEndPoint);
                 socket.Listen(Backlog);
@@ -196,6 +218,8 @@ namespace STTech.BytesIO.Tcp
                 catch (Exception ex)
                 {
                     RaiseExceptionOccurs(ex);
+                    // 避免句柄耗尽或瞬态异常时的 CPU 忙轮询
+                    try { await Task.Delay(100).ConfigureAwait(false); } catch { }
                     continue;
                 }
 
@@ -222,11 +246,12 @@ namespace STTech.BytesIO.Tcp
 
         private async Task ProcessNewClientAsync(Socket clientSocket)
         {
+            T client = null;
             try
             {
                 if (ClientConnectionAcceptedHandle(this, new ClientAcceptedEventArgs(clientSocket)))
                 {
-                    T client = EncapsulateSocket(clientSocket);
+                    client = EncapsulateSocket(clientSocket);
 
                     if (client.IsConnected && UseSsl)
                     {
@@ -236,12 +261,12 @@ namespace STTech.BytesIO.Tcp
                             client.SslProtocol = SslProtocol;
                             client.Certificate ??= Certificate;
                             client.ServerCertificateName ??= ServerCertificateName;
-                            // SSL 握手可能导致阻塞或重度耗时，放入后台 Task 中以保障网络核心吞吐量
-                            await Task.Run(() => client.InitializeSslStream()).ConfigureAwait(false);
+                            // 服务端 TLS 身份验证
+                            await client.InitializeSslStreamAsServerAsync(Certificate, SslProtocol).ConfigureAwait(false);
                         }
                         catch (Exception ex)
                         {
-                            throw new Exception($"Description Failed to establish SSL communication between the server and client. (Client RemoteEndPoint: {client.RemoteEndPoint})", ex);
+                            throw new Exception($"Failed to establish SSL communication between the server and client. (Client RemoteEndPoint: {client.RemoteEndPoint})", ex);
                         }
                     }
 
@@ -250,12 +275,22 @@ namespace STTech.BytesIO.Tcp
                 }
                 else
                 {
-                    clientSocket.Disconnect(false);
-                    clientSocket.Dispose();
+                    try { clientSocket.Disconnect(false); } catch { }
+                    try { clientSocket.Close(); } catch { }
+                    try { clientSocket.Dispose(); } catch { }
                 }
             }
             catch (Exception ex)
             {
+                if (client != null)
+                {
+                    try { client.Dispose(); } catch { }
+                }
+                else
+                {
+                    try { clientSocket?.Close(); } catch { }
+                    try { clientSocket?.Dispose(); } catch { }
+                }
                 RaiseExceptionOccurs(ex);
             }
         }

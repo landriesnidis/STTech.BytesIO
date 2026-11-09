@@ -1,4 +1,4 @@
-using STTech.BytesIO.Core;
+﻿using STTech.BytesIO.Core;
 using System;
 using System.Buffers;
 using System.Collections;
@@ -53,38 +53,41 @@ namespace STTech.BytesIO.Serial
             var sw = System.Diagnostics.Stopwatch.StartNew();
             argument ??= new ConnectArgument();
 
-            // 如果串口已经打开了，则此次连接无效
-            if (InnerClient.IsOpen)
+            lock (lockerStatus)
             {
-                sw.Stop();
-                var failedArgs = new ConnectionFailedEventArgs(ConnectErrorCode.IsConnected) { CostTime = sw.Elapsed, State = argument.State };
-                RaiseConnectionFailed(this, failedArgs);
-                return new ConnectResult(ConnectErrorCode.IsConnected) { CostTime = sw.Elapsed };
-            }
+                // 如果串口已经打开了，则此次连接无效
+                if (InnerClient.IsOpen)
+                {
+                    sw.Stop();
+                    var failedArgs = new ConnectionFailedEventArgs(ConnectErrorCode.IsConnected) { CostTime = sw.Elapsed, State = argument.State };
+                    RaiseConnectionFailed(this, failedArgs);
+                    return new ConnectResult(ConnectErrorCode.IsConnected) { CostTime = sw.Elapsed };
+                }
 
-            try
-            {
-                InnerClient.Open();
+                try
+                {
+                    InnerClient.Open();
 
-                // 注册系统级流转 ID
-                GenerateNewConnectionId();
+                    // 注册系统级流转 ID
+                    GenerateNewConnectionId();
 
-                sw.Stop();
-                // 执行连接成功回调事件
-                RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs() { CostTime = sw.Elapsed, State = argument.State });
+                    sw.Stop();
+                    // 执行连接成功回调事件
+                    RaiseConnectedSuccessfully(this, new ConnectedSuccessfullyEventArgs() { CostTime = sw.Elapsed, State = argument.State });
 
-                // 启动接收数据的异步任务
-                StartReceiveDataTask();
+                    // 启动接收数据的异步任务
+                    StartReceiveDataTask();
 
-                return new ConnectResult() { CostTime = sw.Elapsed };
-            }
-            catch (Exception ex)
-            {
-                sw.Stop();
-                // 连接失败
-                var failedArgs = new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed, State = argument.State };
-                RaiseConnectionFailed(this, failedArgs);
-                return new ConnectResult(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed };
+                    return new ConnectResult() { CostTime = sw.Elapsed };
+                }
+                catch (Exception ex)
+                {
+                    sw.Stop();
+                    // 连接失败
+                    var failedArgs = new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed, State = argument.State };
+                    RaiseConnectionFailed(this, failedArgs);
+                    return new ConnectResult(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed };
+                }
             }
         }
 
@@ -175,7 +178,6 @@ namespace STTech.BytesIO.Serial
             SerialPort sp = InnerClient;
 
             int len, offset = 0;
-            DateTime? frameDeadline = null;
             byte[] buffer = null;
             try
             {
@@ -187,8 +189,19 @@ namespace STTech.BytesIO.Serial
                         buffer = RentBuffer();
                     }
 
+                    int maxReadLen = ReceiveBufferSize - offset;
+                    // 缓冲区已满保护：若历史累积已占满整块缓冲区，立即先行派发避免 0 字节死循环或越界
+                    if (maxReadLen <= 0)
+                    {
+                        var fullContext = CreateReceiveContext(buffer, 0, offset);
+                        buffer = null;
+                        InvokeDataReceivedEventCallback(fullContext);
+                        offset = 0;
+                        continue;
+                    }
+
                     // 原生异步获取数据，利用硬件中断恢复线程，释放 CPU
-                    len = await baseStream.ReadAsync(buffer, offset, ReceiveBufferSize - offset, cancellationToken).ConfigureAwait(false);
+                    len = await baseStream.ReadAsync(buffer, offset, maxReadLen, cancellationToken).ConfigureAwait(false);
 
                     if (len == 0 && sp.BytesToRead == 0)
                     {
@@ -197,50 +210,60 @@ namespace STTech.BytesIO.Serial
                         continue;
                     }
 
-                    // 收到首字节时记录本帧的绝对截止时间
-                    if (frameDeadline == null && ReceiveTimeout > 0)
-                    {
-                        frameDeadline = DateTime.Now.AddMilliseconds(ReceiveTimeout);
-                    }
 
-                    // 延迟等待(粘包接收缓冲)
-                    if (ReceiveTimeout > 0 && frameDeadline.HasValue)
+
+                    offset += len;
+
+                    // 延迟等待(基于连续空闲静默时间的工业级串口分帧判定，类似 Modbus 3.5T 规则)
+                    if (ReceiveTimeout > 0 && offset < ReceiveBufferSize)
                     {
-                        var remaining = (frameDeadline.Value - DateTime.Now).TotalMilliseconds;
-                        if (remaining > 0)
+                        long idleDeadline = MonotonicClock.NowMs + ReceiveTimeout;
+                        while (!cancellationToken.IsCancellationRequested && IsConnected && offset < ReceiveBufferSize)
                         {
-                            // 尚未到截止时间：短暂等待后继续累积
-                            await Task.Delay((int)Math.Ceiling(ReceiveTimeout / 10.0), cancellationToken).ConfigureAwait(false);
-                            offset += len;
                             if (sp.BytesToRead > 0)
                             {
-                                continue;
+                                int toRead = Math.Min(sp.BytesToRead, ReceiveBufferSize - offset);
+                                int readBytes = await baseStream.ReadAsync(buffer, offset, toRead, cancellationToken).ConfigureAwait(false);
+                                if (readBytes > 0)
+                                {
+                                    offset += readBytes;
+                                    idleDeadline = MonotonicClock.NowMs + ReceiveTimeout;
+                                    continue;
+                                }
                             }
-                            // 超时期间缓冲区已空，直接派发
-                            len = 0;
-                        }
-                        else
-                        {
-                            // 已超过截止时间，直接派发当前读到的数据
-                            offset += len;
-                            len = 0;
+
+                            long remaining = idleDeadline - MonotonicClock.NowMs;
+                            if (remaining <= 0)
+                            {
+                                break;
+                            }
+
+                            int delayMs = (int)Math.Min(remaining, 5);
+                            if (delayMs > 0)
+                            {
+                                await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+                            }
                         }
                     }
 
-                    // 创建 ReceiveContext（零拷贝）
-                    var context = CreateReceiveContext(buffer, 0, offset + len);
+                    if (offset > 0)
+                    {
+                        // 创建 ReceiveContext（零拷贝，转移 buffer 归属权）
+                        var context = CreateReceiveContext(buffer, 0, offset);
+                        buffer = null; // 所有权已转移至 context
 
-                    InvokeDataReceivedEventCallback(context);
-                    frameDeadline = null;
-                    offset = 0;
+                        InvokeDataReceivedEventCallback(context);
+                        offset = 0;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                // 归还未使用的缓冲区
-                if (buffer != null && offset == 0)
+                // 归还未完成派发或未使用的缓冲区
+                if (buffer != null)
                 {
-                    ArrayPool<byte>.Shared.Return(buffer);
+                    try { ArrayPool<byte>.Shared.Return(buffer); } catch { }
+                    buffer = null;
                 }
 
                 // 如果是主动关闭的连接，则不触发异常回调
@@ -372,6 +395,7 @@ namespace STTech.BytesIO.Serial
         /// </summary>
         public override void Dispose()
         {
+            base.Dispose();
             InnerClient?.Dispose();
         }
     }

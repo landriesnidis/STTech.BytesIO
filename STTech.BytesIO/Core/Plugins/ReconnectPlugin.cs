@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -9,6 +9,7 @@ namespace STTech.BytesIO.Core
     /// </summary>
     public class ReconnectPlugin : BytesClientPlugin
     {
+        private readonly object _timerLock = new object();
         private Timer _timer;
         private int _delay;
         private int _maxTimes;
@@ -33,57 +34,119 @@ namespace STTech.BytesIO.Core
         /// <param name="reconnectFailedHandler">重连失败回调</param>
         public void Configure(int delay, int times = 0, Action<BytesClient> reconnectFailedHandler = null)
         {
-            _delay = delay;
-            _maxTimes = times;
-            _reconnectFailedHandler = reconnectFailedHandler;
-
-            PauseTimer();
-
-            if (delay <= 0)
+            lock (_timerLock)
             {
-                IsEnabled = false;
-                DestroyTimer();
-                return;
-            }
+                _delay = delay;
+                _maxTimes = times;
+                _reconnectFailedHandler = reconnectFailedHandler;
 
-            IsEnabled = true;
-            _remainingTimes = times;
-
-            if (_timer == null)
-            {
-                _timer = new Timer(delay);
-                _timer.Elapsed += OnTimerElapsed;
-            }
-            else
-            {
-                _timer.Interval = delay;
-            }
-        }
-
-        private void OnTimerElapsed(object sender, ElapsedEventArgs e)
-        {
-            if (Client == null || Client.IsConnected)
-            {
                 PauseTimer();
-                return;
-            }
 
-            if (_maxTimes > 0)
-            {
-                if (_remainingTimes > 0)
+                if (delay <= 0)
                 {
-                    _remainingTimes--;
-                    Client.ConnectAsync();
+                    IsEnabled = false;
+                    DestroyTimer();
+                    return;
+                }
+
+                IsEnabled = true;
+                _remainingTimes = times;
+
+                if (_timer == null)
+                {
+                    _timer = new Timer(delay) { AutoReset = false };
+                    _timer.Elapsed += OnTimerElapsed;
                 }
                 else
                 {
-                    PauseTimer();
-                    _reconnectFailedHandler?.Invoke(Client);
+                    _timer.Interval = delay;
+                    _timer.AutoReset = false;
                 }
             }
-            else
+        }
+
+        private async void OnTimerElapsed(object sender, ElapsedEventArgs e)
+        {
+            try
             {
-                Client.ConnectAsync();
+                lock (_timerLock)
+                {
+                    if (Client == null || Client.IsConnected)
+                    {
+                        PauseTimer();
+                        return;
+                    }
+
+                    if (_maxTimes > 0 && _remainingTimes <= 0)
+                    {
+                        PauseTimer();
+                        SafelyInvokeReconnectFailedHandler();
+                        return;
+                    }
+
+                    if (_maxTimes > 0)
+                    {
+                        _remainingTimes--;
+                    }
+                }
+
+                try
+                {
+                    // 等待单次异步连接完成，杜绝未决连接被定时器周期性重入轰炸
+                    var result = await Client.ConnectAsync().ConfigureAwait(false);
+                    if (result.IsSuccess || (Client != null && Client.IsConnected))
+                    {
+                        lock (_timerLock)
+                        {
+                            // 仅当客户端依然处于连接状态时方可暂停定时器；
+                            // 若在此期间客户端已被断开（例如被对端或测试快速断开，已触发 OnDisconnected 重新启动了定时器），
+                            // 则绝不能再次调用 PauseTimer()，否则会误把新一轮重连定时器掐死。
+                            if (Client != null && Client.IsConnected)
+                            {
+                                PauseTimer();
+                            }
+                        }
+                        return;
+                    }
+                }
+                catch
+                {
+                    // 忽略瞬态连接异常，由后续逻辑决定是否继续定时
+                }
+
+                // 若依然未连接且插件未被停用，启动下一轮单次重试
+                lock (_timerLock)
+                {
+                    if (IsEnabled && Client != null && !Client.IsConnected)
+                    {
+                        if (_maxTimes > 0 && _remainingTimes <= 0)
+                        {
+                            PauseTimer();
+                            SafelyInvokeReconnectFailedHandler();
+                        }
+                        else
+                        {
+                            _timer?.Start();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // 确保 async void 内部任何未知异常绝不逃逸致进程崩溃
+                Client?.RaiseExceptionOccurs(ex);
+            }
+        }
+
+        private void SafelyInvokeReconnectFailedHandler()
+        {
+            try
+            {
+                _reconnectFailedHandler?.Invoke(Client);
+            }
+            catch (Exception ex)
+            {
+                Client?.RaiseExceptionOccurs(ex);
             }
         }
 
@@ -93,16 +156,19 @@ namespace STTech.BytesIO.Core
             // 非主动断开时启动重连
             if (!e.IsActively && IsEnabled)
             {
-                if (_timer == null && _delay > 0)
+                lock (_timerLock)
                 {
-                    _timer = new Timer(_delay);
-                    _timer.Elapsed += OnTimerElapsed;
-                }
+                    if (_timer == null && _delay > 0)
+                    {
+                        _timer = new Timer(_delay) { AutoReset = false };
+                        _timer.Elapsed += OnTimerElapsed;
+                    }
 
-                if (_timer != null)
-                {
-                    _remainingTimes = _maxTimes;
-                    _timer.Enabled = true;
+                    if (_timer != null)
+                    {
+                        _remainingTimes = _maxTimes;
+                        _timer.Enabled = true;
+                    }
                 }
             }
         }
@@ -110,8 +176,11 @@ namespace STTech.BytesIO.Core
         /// <inheritdoc/>
         protected internal override void OnConnectedSuccessfully(ConnectedSuccessfullyEventArgs e)
         {
-            PauseTimer();
-            _remainingTimes = _maxTimes;
+            lock (_timerLock)
+            {
+                PauseTimer();
+                _remainingTimes = _maxTimes;
+            }
         }
 
         private void PauseTimer()
@@ -124,12 +193,15 @@ namespace STTech.BytesIO.Core
 
         private void DestroyTimer()
         {
-            if (_timer != null)
+            lock (_timerLock)
             {
-                _timer.Enabled = false;
-                _timer.Elapsed -= OnTimerElapsed;
-                _timer.Dispose();
-                _timer = null;
+                if (_timer != null)
+                {
+                    _timer.Enabled = false;
+                    _timer.Elapsed -= OnTimerElapsed;
+                    _timer.Dispose();
+                    _timer = null;
+                }
             }
         }
 

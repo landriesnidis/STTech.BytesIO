@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
+using System.Security.Authentication;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
@@ -83,7 +84,12 @@ namespace STTech.BytesIO.Tcp
             InnerClient = CreateDefaultSocket();
         }
 
-        private Socket CreateDefaultSocket() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private Socket CreateDefaultSocket()
+        {
+            var s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try { s.NoDelay = true; } catch { }
+            return s;
+        }
 
         /// <summary>
         /// 构造TCP客户端
@@ -107,9 +113,9 @@ namespace STTech.BytesIO.Tcp
         }
 
         /// <summary>
-        /// 异步建立连接
+        /// 原生非阻塞异步建立连接（消除假异步 Sync-over-Async 与线程池饥饿隐患）
         /// </summary>
-        public override ConnectResult Connect(ConnectArgument argument = null)
+        public override async Task<ConnectResult> ConnectAsync(ConnectArgument argument = null)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             argument ??= new ConnectArgument();
@@ -129,7 +135,6 @@ namespace STTech.BytesIO.Tcp
 
                 // 设置内部状态为忙碌
                 innerStatus = InnerStatus.Busy;
-
                 socket = InnerClient;
             }
 
@@ -139,38 +144,56 @@ namespace STTech.BytesIO.Tcp
                 socket.ReceiveBufferSize = ReceiveBufferSize;
                 socket.SendBufferSize = SendBufferSize;
 
-                // 连接是否完成
-                var connectTask = Task.Run(() =>
+                if (localEndPoint != null)
                 {
-                    if (localEndPoint != null)
+                    socket.Bind(localEndPoint);
+                }
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(argument.CancellationToken);
+                if (argument.Timeout > 0 && argument.Timeout != Timeout.Infinite)
+                {
+                    cts.CancelAfter(argument.Timeout);
+                }
+
+                try
+                {
+#if NET5_0_OR_GREATER
+                    await socket.ConnectAsync(Host, Port, cts.Token).ConfigureAwait(false);
+#else
+                    var connectTask = Task.Factory.FromAsync(
+                        (cb, state) => socket.BeginConnect(Host, Port, cb, state),
+                        socket.EndConnect,
+                        null);
+
+                    if (argument.Timeout > 0 && argument.Timeout != Timeout.Infinite)
                     {
-                        socket.Bind(localEndPoint);
+                        var delayTask = Task.Delay(argument.Timeout, cts.Token);
+                        var completed = await Task.WhenAny(connectTask, delayTask).ConfigureAwait(false);
+                        if (completed != connectTask)
+                        {
+                            throw new TimeoutException($"连接服务器超时 ({argument.Timeout}ms)");
+                        }
                     }
-                    socket.Connect(Host, Port);
-                }, argument.CancellationToken);
-
-                var completedTaskIndex = Task.WaitAny(new[] { connectTask, Task.Delay(argument.Timeout, argument.CancellationToken) }, argument.CancellationToken);
-
-                // 如果超时，则返回超时结果
-                if (completedTaskIndex == 1)
+                    await connectTask.ConfigureAwait(false);
+#endif
+                }
+                catch (OperationCanceledException) when (!argument.CancellationToken.IsCancellationRequested)
                 {
-                    // 重置Socket对象
                     ResetInnerClient();
-
-                    // 设置内部状态为空闲
                     innerStatus = InnerStatus.Free;
-
                     sw.Stop();
-                    // 触发连接失败（超时）事件
                     var failedArgs = new ConnectionFailedEventArgs(ConnectErrorCode.Timeout) { CostTime = sw.Elapsed, State = argument.State };
                     RaiseConnectionFailed(this, failedArgs);
                     return new ConnectResult(ConnectErrorCode.Timeout) { CostTime = sw.Elapsed };
                 }
-
-                // 如果连接失败了则抛出异常信息
-                if (connectTask.IsFaulted)
+                catch (TimeoutException)
                 {
-                    throw connectTask.Exception;
+                    ResetInnerClient();
+                    innerStatus = InnerStatus.Free;
+                    sw.Stop();
+                    var failedArgs = new ConnectionFailedEventArgs(ConnectErrorCode.Timeout) { CostTime = sw.Elapsed, State = argument.State };
+                    RaiseConnectionFailed(this, failedArgs);
+                    return new ConnectResult(ConnectErrorCode.Timeout) { CostTime = sw.Elapsed };
                 }
 
                 // 是否使用SSL/TLS通信
@@ -178,7 +201,7 @@ namespace STTech.BytesIO.Tcp
                 {
                     try
                     {
-                        InitializeSslStream();
+                        await InitializeSslStreamAsync().ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -247,27 +270,81 @@ namespace STTech.BytesIO.Tcp
         }
 
         /// <summary>
-        /// 初始化SSL通信流
+        /// 同步建立连接（基于异步管道封装）
         /// </summary>
-        public void InitializeSslStream()
+        public override ConnectResult Connect(ConnectArgument argument = null)
+        {
+            return ConnectAsync(argument).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// 异步初始化客户端SSL通信流
+        /// </summary>
+        public async Task InitializeSslStreamAsync()
         {
             if (SslStream != null)
             {
-                SslStream.Close();
-                SslStream.Dispose();
+                try { SslStream.Close(); } catch { }
+                try { SslStream.Dispose(); } catch { }
                 SslStream = null;
             }
 
             // 创建SSL流
+            var netStream = new NetworkStream(InnerClient, ownsSocket: false);
 #if NET7_0_OR_GREATER
-            SslStream = new SslStream(new NetworkStream(InnerClient), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback);
+            SslStream = new SslStream(netStream, false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback);
 #else
-            SslStream = new SslStream(new NetworkStream(InnerClient), false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
+            SslStream = new SslStream(netStream, false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
 #endif
-            SslStream.AuthenticateAsClient(ServerCertificateName, new X509CertificateCollection(new X509Certificate[] { Certificate }), SslProtocol, false);
+            var clientCertificates = Certificate != null ? new X509CertificateCollection(new[] { Certificate }) : new X509CertificateCollection();
+            await SslStream.AuthenticateAsClientAsync(ServerCertificateName, clientCertificates, SslProtocol, false).ConfigureAwait(false);
 
             // 执行TLS通信验证通过的回调事件
             PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
+        }
+
+        /// <summary>
+        /// 初始化SSL通信流
+        /// </summary>
+        public void InitializeSslStream()
+        {
+            InitializeSslStreamAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// 作为服务端异步初始化SSL通信流
+        /// </summary>
+        /// <param name="serverCertificate">服务端证书</param>
+        /// <param name="sslProtocol">SSL/TLS协议版本</param>
+        public async Task InitializeSslStreamAsServerAsync(X509Certificate serverCertificate, SslProtocols sslProtocol = SslProtocols.Tls12)
+        {
+            if (SslStream != null)
+            {
+                try { SslStream.Close(); } catch { }
+                try { SslStream.Dispose(); } catch { }
+                SslStream = null;
+            }
+
+            var netStream = new NetworkStream(InnerClient, ownsSocket: false);
+#if NET7_0_OR_GREATER
+            SslStream = new SslStream(netStream, false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback);
+#else
+            SslStream = new SslStream(netStream, false, RemoteCertificateValidationHandle ?? RemoteCertificateValidateCallback, LocalCertificateSelectionHandle ?? LocalCertificateSelectionCallback, EncryptionPolicy.AllowNoEncryption);
+#endif
+            await SslStream.AuthenticateAsServerAsync(serverCertificate, false, sslProtocol, false).ConfigureAwait(false);
+
+            // 执行TLS通信验证通过的回调事件
+            PerformTlsVerifySuccessfully(this, new TlsVerifySuccessfullyEventArgs(SslStream));
+        }
+
+        /// <summary>
+        /// 作为服务端初始化SSL通信流
+        /// </summary>
+        /// <param name="serverCertificate">服务端证书</param>
+        /// <param name="sslProtocol">SSL/TLS协议版本</param>
+        public void InitializeSslStreamAsServer(X509Certificate serverCertificate, SslProtocols sslProtocol = SslProtocols.Tls12)
+        {
+            InitializeSslStreamAsServerAsync(serverCertificate, sslProtocol).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -488,6 +565,7 @@ namespace STTech.BytesIO.Tcp
         /// <inheritdoc/>
         public override void Dispose()
         {
+            base.Dispose();
             InnerClient?.Dispose();
             InnerClient = null;
         }
@@ -522,7 +600,20 @@ namespace STTech.BytesIO.Tcp
         private IPEndPoint localEndPoint;
 
         /// <inheritdoc/>
-        public IPEndPoint RemoteEndPoint => (IPEndPoint)InnerClient.RemoteEndPoint;
+        public IPEndPoint RemoteEndPoint
+        {
+            get
+            {
+                try
+                {
+                    return IsConnected ? (IPEndPoint)InnerClient?.RemoteEndPoint : null;
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
 
         /// <inheritdoc/>
         [Obsolete("该属性已过时。请通过 LocalEndPoint 属性获取本地端口号。")]

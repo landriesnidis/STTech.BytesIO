@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Tcp.Entity;
+using STTech.BytesIO.Tcp.Entity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,6 +44,12 @@ namespace STTech.BytesIO.Tcp
         public SslProtocols SslProtocol { get; set; } = SslProtocols.Tls12;
 
         /// <summary>
+        /// 是否危险地接受任何远端服务器证书（跳过所有证书链与域名有效性校验）。
+        /// 默认为 false。仅建议在内网自签名测试环境开启；在生产环境中开启将面临中间人攻击（MITM）风险。
+        /// </summary>
+        public bool DangerousAcceptAnyServerCertificate { get; set; } = false;
+
+        /// <summary>
         /// SSL通信流
         /// </summary>
         public SslStream SslStream { get; private set; }
@@ -75,11 +81,12 @@ namespace STTech.BytesIO.Tcp
         /// <returns>验证是否通过</returns>
         protected virtual bool RemoteCertificateValidateCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            //if (sslPolicyErrors == SslPolicyErrors.None)
-            //    return true;
-            //if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors)
-            //    return true;
-            return true;
+            if (DangerousAcceptAnyServerCertificate)
+            {
+                return true;
+            }
+
+            return sslPolicyErrors == SslPolicyErrors.None;
         }
 
         /// <summary>

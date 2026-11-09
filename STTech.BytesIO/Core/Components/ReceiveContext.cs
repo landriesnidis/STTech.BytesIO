@@ -1,3 +1,4 @@
+﻿using System.Buffers.Binary;
 using System;
 using System.Buffers;
 using System.Collections;
@@ -92,6 +93,18 @@ namespace STTech.BytesIO.Core
             _backing = data ?? throw new ArgumentNullException(nameof(data));
             _offset = 0;
             _length = data.Length;
+            ReceivedTime = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 构造接收上下文 (带自定义释放回调)
+        /// </summary>
+        internal ReceiveContext(byte[] data, int offset, int length, Action release)
+        {
+            _backing = data ?? throw new ArgumentNullException(nameof(data));
+            _offset = offset;
+            _length = length;
+            _release = release;
             ReceivedTime = DateTime.Now;
         }
 
@@ -196,14 +209,11 @@ namespace STTech.BytesIO.Core
 
         #endregion
 
-        #region BitConverter 风格的类型转换方法
+        #region 类型转换方法（零堆分配，硬件级单指令字节序反转）
 
         /// <summary>
-        /// 检查指定范围是否在有效数据内
+        /// 校验请求范围是否在有效数据边界内，返回有效数据视图。
         /// </summary>
-        /// <param name="startIndex">相对于有效数据起始位置的偏移</param>
-        /// <param name="byteCount">需要读取的字节数</param>
-        /// <returns>有效数据视图</returns>
         private ReadOnlyMemory<byte> EnsureRange(int startIndex, int byteCount)
         {
             var mem = Memory;
@@ -214,51 +224,6 @@ namespace STTech.BytesIO.Core
         }
 
         /// <summary>
-        /// 读取指定范围的字节，根据字节序决定是否反转。
-        /// 托管数组后端：无需反转时直接引用原始数组（零拷贝）；
-        /// 原生内存后端：复制不超过 8 字节到临时数组。
-        /// </summary>
-        /// <param name="startIndex">相对于有效数据起始位置的偏移</param>
-        /// <param name="byteCount">需要读取的字节数</param>
-        /// <param name="bigEndian">数据是否为大端序</param>
-        /// <param name="array">输出：用于 BitConverter 的数组</param>
-        /// <param name="index">输出：用于 BitConverter 的起始索引</param>
-        private void ReadBytesWithEndian(int startIndex, int byteCount, bool bigEndian, out byte[] array, out int index)
-        {
-            var mem = EnsureRange(startIndex, byteCount);
-            var span = mem.Span.Slice(startIndex, byteCount);
-
-            // 当请求的字节序与系统字节序不同时，需要反转字节
-            bool needReverse = bigEndian == BitConverter.IsLittleEndian;
-            if (!needReverse)
-            {
-                if (MemoryMarshal.TryGetArray(mem, out var segment))
-                {
-                    array = segment.Array;
-                    index = segment.Offset + startIndex;
-                }
-                else
-                {
-                    // 原生内存后端：复制小段到临时数组
-                    byte[] temp = new byte[byteCount];
-                    span.CopyTo(temp);
-                    array = temp;
-                    index = 0;
-                }
-            }
-            else
-            {
-                byte[] temp = new byte[byteCount];
-                for (int i = 0; i < byteCount; i++)
-                {
-                    temp[i] = span[byteCount - 1 - i];
-                }
-                array = temp;
-                index = 0;
-            }
-        }
-
-        /// <summary>
         /// 从有效数据的指定位置读取一个 Boolean 值（1 字节）。
         /// 单字节值无字节序问题。
         /// </summary>
@@ -266,10 +231,6 @@ namespace STTech.BytesIO.Core
         public bool ToBoolean(int startIndex)
         {
             var mem = EnsureRange(startIndex, 1);
-            if (MemoryMarshal.TryGetArray(mem, out var segment))
-            {
-                return BitConverter.ToBoolean(segment.Array, segment.Offset + startIndex);
-            }
             return mem.Span[startIndex] != 0;
         }
 
@@ -280,8 +241,9 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public char ToChar(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 2, bigEndian, out var arr, out var pos);
-            return BitConverter.ToChar(arr, pos);
+            var span = EnsureRange(startIndex, 2).Span.Slice(startIndex, 2);
+            short val = bigEndian ? BinaryPrimitives.ReadInt16BigEndian(span) : BinaryPrimitives.ReadInt16LittleEndian(span);
+            return (char)val;
         }
 
         /// <summary>
@@ -291,8 +253,8 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public short ToInt16(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 2, bigEndian, out var arr, out var pos);
-            return BitConverter.ToInt16(arr, pos);
+            var span = EnsureRange(startIndex, 2).Span.Slice(startIndex, 2);
+            return bigEndian ? BinaryPrimitives.ReadInt16BigEndian(span) : BinaryPrimitives.ReadInt16LittleEndian(span);
         }
 
         /// <summary>
@@ -302,8 +264,8 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public ushort ToUInt16(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 2, bigEndian, out var arr, out var pos);
-            return BitConverter.ToUInt16(arr, pos);
+            var span = EnsureRange(startIndex, 2).Span.Slice(startIndex, 2);
+            return bigEndian ? BinaryPrimitives.ReadUInt16BigEndian(span) : BinaryPrimitives.ReadUInt16LittleEndian(span);
         }
 
         /// <summary>
@@ -313,8 +275,8 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public int ToInt32(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 4, bigEndian, out var arr, out var pos);
-            return BitConverter.ToInt32(arr, pos);
+            var span = EnsureRange(startIndex, 4).Span.Slice(startIndex, 4);
+            return bigEndian ? BinaryPrimitives.ReadInt32BigEndian(span) : BinaryPrimitives.ReadInt32LittleEndian(span);
         }
 
         /// <summary>
@@ -324,8 +286,8 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public uint ToUInt32(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 4, bigEndian, out var arr, out var pos);
-            return BitConverter.ToUInt32(arr, pos);
+            var span = EnsureRange(startIndex, 4).Span.Slice(startIndex, 4);
+            return bigEndian ? BinaryPrimitives.ReadUInt32BigEndian(span) : BinaryPrimitives.ReadUInt32LittleEndian(span);
         }
 
         /// <summary>
@@ -335,8 +297,8 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public long ToInt64(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 8, bigEndian, out var arr, out var pos);
-            return BitConverter.ToInt64(arr, pos);
+            var span = EnsureRange(startIndex, 8).Span.Slice(startIndex, 8);
+            return bigEndian ? BinaryPrimitives.ReadInt64BigEndian(span) : BinaryPrimitives.ReadInt64LittleEndian(span);
         }
 
         /// <summary>
@@ -346,8 +308,8 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public ulong ToUInt64(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 8, bigEndian, out var arr, out var pos);
-            return BitConverter.ToUInt64(arr, pos);
+            var span = EnsureRange(startIndex, 8).Span.Slice(startIndex, 8);
+            return bigEndian ? BinaryPrimitives.ReadUInt64BigEndian(span) : BinaryPrimitives.ReadUInt64LittleEndian(span);
         }
 
         /// <summary>
@@ -357,8 +319,16 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public float ToSingle(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 4, bigEndian, out var arr, out var pos);
-            return BitConverter.ToSingle(arr, pos);
+            var span = EnsureRange(startIndex, 4).Span.Slice(startIndex, 4);
+            int intBits = bigEndian ? BinaryPrimitives.ReadInt32BigEndian(span) : BinaryPrimitives.ReadInt32LittleEndian(span);
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+            return BitConverter.Int32BitsToSingle(intBits);
+#else
+            unsafe
+            {
+                return *(float*)&intBits;
+            }
+#endif
         }
 
         /// <summary>
@@ -368,12 +338,19 @@ namespace STTech.BytesIO.Core
         /// <param name="bigEndian">数据是否为大端序，默认 false（小端序）</param>
         public double ToDouble(int startIndex, bool bigEndian = false)
         {
-            ReadBytesWithEndian(startIndex, 8, bigEndian, out var arr, out var pos);
-            return BitConverter.ToDouble(arr, pos);
+            var span = EnsureRange(startIndex, 8).Span.Slice(startIndex, 8);
+            long longBits = bigEndian ? BinaryPrimitives.ReadInt64BigEndian(span) : BinaryPrimitives.ReadInt64LittleEndian(span);
+#if NETCOREAPP || NETSTANDARD2_1_OR_GREATER
+            return BitConverter.Int64BitsToDouble(longBits);
+#else
+            unsafe
+            {
+                return *(double*)&longBits;
+            }
+#endif
         }
 
         #endregion
-
         #region ToHexString
 
         /// <summary>
@@ -446,7 +423,26 @@ namespace STTech.BytesIO.Core
         #region 引用计数与资源释放
 
         /// <summary>
-        /// 增加引用计数
+        /// 当前活跃引用计数（诊断用途）
+        /// </summary>
+        public int ReferenceCount => Volatile.Read(ref _referenceCount);
+
+        /// <summary>
+        /// 保持/增加引用计数。
+        /// 在事件回调中进行长周期或异步处理（如跨 await 操作）时，可调用此方法延长生命周期，杜绝 UAF（Use-After-Free）。
+        /// 每次调用 Retain() 必须在处理完毕后配对调用一次 Dispose()；当引用计数归零时底层池化内存才会被真正释放归还。
+        /// </summary>
+        public void Retain()
+        {
+            if (IsDisposed)
+            {
+                throw new ObjectDisposedException(nameof(ReceiveContext), "无法对已释放的 ReceiveContext 增加引用计数。");
+            }
+            Interlocked.Increment(ref _referenceCount);
+        }
+
+        /// <summary>
+        /// 增加引用计数（内部使用）
         /// </summary>
         internal void IncrRef()
         {
