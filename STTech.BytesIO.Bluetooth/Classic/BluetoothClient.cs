@@ -3,12 +3,14 @@ using STTech.BytesIO.Bluetooth.Entity;
 using STTech.BytesIO.Core;
 using System;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
 #if WINDOWS
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Rfcomm;
+using Windows.Devices.Enumeration;
 using Windows.Networking.Sockets;
 #endif
 
@@ -17,6 +19,7 @@ namespace STTech.BytesIO.Bluetooth
     /// <summary>
     /// 经典蓝牙通信客户端 (基于 RFCOMM / SPP 串行端口规范)
     /// </summary>
+    [SupportedOSPlatform("windows10.0.19041.0")]
     public class BluetoothClient : BytesClient, IBluetoothClient
     {
         /// <summary>
@@ -160,6 +163,95 @@ namespace STTech.BytesIO.Bluetooth
         }
 
         /// <inheritdoc/>
+        public Task<bool> PairAsync()
+        {
+            return PairAsync(null, CancellationToken.None);
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> PairAsync(string? pinCode, CancellationToken cancellationToken = default)
+        {
+#if WINDOWS
+            if (DeviceAddress == 0)
+            {
+                throw new InvalidOperationException("未配置有效的蓝牙设备地址 (DeviceAddress)。");
+            }
+
+            var device = DeviceInfo?.NativeDevice as BluetoothDevice;
+            bool isDeviceAllocated = false;
+            if (device == null)
+            {
+                device = await BluetoothDevice.FromBluetoothAddressAsync(DeviceAddress).AsTask(cancellationToken).ConfigureAwait(false);
+                isDeviceAllocated = true;
+            }
+
+            if (device == null)
+            {
+                throw new IOException($"未能发现蓝牙设备: {DeviceAddressString}");
+            }
+
+            try
+            {
+                if (device.DeviceInformation.Pairing.IsPaired)
+                {
+                    return true;
+                }
+
+                var customPairing = device.DeviceInformation.Pairing.Custom;
+                if (customPairing != null)
+                {
+                    void OnPairingRequested(DeviceInformationCustomPairing sender, DevicePairingRequestedEventArgs args)
+                    {
+                        switch (args.PairingKind)
+                        {
+                            case DevicePairingKinds.ConfirmOnly:
+                                args.Accept();
+                                break;
+                            case DevicePairingKinds.ProvidePin:
+                                args.Accept(string.IsNullOrEmpty(pinCode) ? "1234" : pinCode);
+                                break;
+                            case DevicePairingKinds.ConfirmPinMatch:
+                                args.Accept();
+                                break;
+                            case DevicePairingKinds.DisplayPin:
+                                args.Accept();
+                                break;
+                            default:
+                                args.Accept();
+                                break;
+                        }
+                    }
+
+                    customPairing.PairingRequested += OnPairingRequested;
+                    try
+                    {
+                        var kinds = DevicePairingKinds.ConfirmOnly | DevicePairingKinds.ProvidePin | DevicePairingKinds.ConfirmPinMatch | DevicePairingKinds.DisplayPin;
+                        var result = await customPairing.PairAsync(kinds, DevicePairingProtectionLevel.None).AsTask(cancellationToken).ConfigureAwait(false);
+                        return result.Status == DevicePairingResultStatus.Paired || result.Status == DevicePairingResultStatus.AlreadyPaired;
+                    }
+                    finally
+                    {
+                        customPairing.PairingRequested -= OnPairingRequested;
+                    }
+                }
+
+                var res = await device.DeviceInformation.Pairing.PairAsync().AsTask(cancellationToken).ConfigureAwait(false);
+                return res.Status == DevicePairingResultStatus.Paired || res.Status == DevicePairingResultStatus.AlreadyPaired;
+            }
+            finally
+            {
+                if (isDeviceAllocated && !IsConnected)
+                {
+                    try { device.Dispose(); } catch { }
+                }
+            }
+#else
+            await Task.CompletedTask;
+            return false;
+#endif
+        }
+
+        /// <inheritdoc/>
         public override ConnectResult Connect(ConnectArgument? argument = null)
         {
             return ConnectAsync(argument).GetAwaiter().GetResult();
@@ -186,58 +278,90 @@ namespace STTech.BytesIO.Bluetooth
                 return new ConnectResult(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed };
             }
 
+            BluetoothDevice? tempDevice = null;
+            RfcommDeviceService? tempService = null;
+            StreamSocket? tempSocket = null;
+            bool isDeviceAllocated = false;
+
             try
             {
                 using var timeoutCts = argument.Timeout > 0 ? new CancellationTokenSource(argument.Timeout) : null;
                 var ct = timeoutCts?.Token ?? CancellationToken.None;
 
-                // 获取蓝牙设备对象
-                var device = DeviceInfo?.NativeDevice as BluetoothDevice;
-                if (device == null)
+                // 获取原生 BluetoothDevice，防御已被释放的缓存引用以支持可靠断线重连
+                BluetoothDevice? device = null;
+                if (DeviceInfo?.NativeDevice is BluetoothDevice cachedDevice)
                 {
-                    device = await BluetoothDevice.FromBluetoothAddressAsync(DeviceAddress).AsTask(ct).ConfigureAwait(false);
+                    try
+                    {
+                        _ = cachedDevice.ConnectionStatus;
+                        device = cachedDevice;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        DeviceInfo.NativeDevice = null;
+                    }
                 }
 
                 if (device == null)
                 {
-                    throw new IOException($"未能发现或连接到蓝牙设备: {DeviceAddressString} (设备可能已关机或超出距离)");
+                    tempDevice = await BluetoothDevice.FromBluetoothAddressAsync(DeviceAddress).AsTask(ct).ConfigureAwait(false);
+                    device = tempDevice;
+                    isDeviceAllocated = true;
+                    if (device != null && DeviceInfo != null)
+                    {
+                        DeviceInfo.NativeDevice = device;
+                    }
                 }
 
-                // 查询 RFCOMM 服务
+                if (device == null)
+                {
+                    throw new IOException($"未能发现或连接到蓝牙设备: {DeviceAddressString} (设备可能已关机或超出通信范围)");
+                }
+
+                // 前置配对状态校验：Windows 强制要求经典蓝牙必须已完成配对
+                if (device.DeviceInformation?.Pairing != null && !device.DeviceInformation.Pairing.IsPaired)
+                {
+                    throw new InvalidOperationException($"经典蓝牙设备 {DeviceAddressString} [{DeviceName}] 尚未在 Windows 系统中配对。RFCOMM/SPP 串口通信前必须先完成配对 (可调用 client.PairAsync() 或在 Windows 设置中配对)。");
+                }
+
+                // 查询指定的 RFCOMM 服务 (严格匹配，禁止盲目选用未知服务)
                 var rfcommResult = await device.GetRfcommServicesForIdAsync(RfcommServiceId.FromUuid(ServiceUuid)).AsTask(ct).ConfigureAwait(false);
                 RfcommDeviceService? selectedService = null;
 
                 if (rfcommResult.Services != null && rfcommResult.Services.Count > 0)
                 {
                     selectedService = rfcommResult.Services[0];
-                }
-                else
-                {
-                    // 容错: 遍历设备上的所有 RFCOMM 服务，选用首个可用服务
-                    var allServices = await device.GetRfcommServicesAsync().AsTask(ct).ConfigureAwait(false);
-                    if (allServices.Services != null && allServices.Services.Count > 0)
+                    // 释放多余的服务实例
+                    for (int i = 1; i < rfcommResult.Services.Count; i++)
                     {
-                        selectedService = allServices.Services[0];
+                        try { rfcommResult.Services[i].Dispose(); } catch { }
                     }
                 }
 
                 if (selectedService == null)
                 {
-                    throw new IOException($"在蓝牙设备 {DeviceAddressString} 上未找到可用的 RFCOMM/SPP 串口服务。");
+                    throw new IOException($"在经典蓝牙设备 {DeviceAddressString} [{DeviceName}] 上未找到指定的 RFCOMM/SPP 串口服务 ({ServiceUuid})。请确认设备是否开启并支持该串口服务。");
                 }
 
-                var socket = new StreamSocket();
-                await socket.ConnectAsync(selectedService.ConnectionHostName, selectedService.ConnectionServiceName).AsTask(ct).ConfigureAwait(false);
+                tempService = selectedService;
+                tempSocket = new StreamSocket();
+                await tempSocket.ConnectAsync(selectedService.ConnectionHostName, selectedService.ConnectionServiceName).AsTask(ct).ConfigureAwait(false);
 
                 lock (_statusLock)
                 {
                     _device = device;
-                    _service = selectedService;
-                    _socket = socket;
-                    _inStream = socket.InputStream.AsStreamForRead();
-                    _outStream = socket.OutputStream.AsStreamForWrite();
+                    _service = tempService;
+                    _socket = tempSocket;
+                    _inStream = tempSocket.InputStream.AsStreamForRead();
+                    _outStream = tempSocket.OutputStream.AsStreamForWrite();
                     _isConnected = true;
                     _device.ConnectionStatusChanged += OnDeviceConnectionStatusChanged;
+
+                    // 所有权已移交字段，清空暂存防止 finally 清理
+                    tempDevice = null;
+                    tempService = null;
+                    tempSocket = null;
                 }
 
                 GenerateNewConnectionId();
@@ -256,9 +380,29 @@ namespace STTech.BytesIO.Bluetooth
                 RaiseConnectionFailed(this, failedArgs);
                 return new ConnectResult(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed };
             }
+            finally
+            {
+                // 可靠释放未交接的局部资源，杜绝 COM 与 Socket 句柄泄漏
+                if (tempSocket != null)
+                {
+                    try { tempSocket.Dispose(); } catch { }
+                }
+                if (tempService != null)
+                {
+                    try { tempService.Dispose(); } catch { }
+                }
+                if (isDeviceAllocated && tempDevice != null)
+                {
+                    try { tempDevice.Dispose(); } catch { }
+                    if (DeviceInfo != null && ReferenceEquals(DeviceInfo.NativeDevice, tempDevice))
+                    {
+                        DeviceInfo.NativeDevice = null;
+                    }
+                }
+            }
 #else
             sw.Stop();
-            var ex = new PlatformNotSupportedException("STTech.BytesIO.Bluetooth 当前仅在 Windows 10/11 (windows10.0.19041.0+) 平台上支持原生经典蓝牙。");
+            var ex = new PlatformNotSupportedException(GetPlatformNotSupportedMessage());
             RaiseConnectionFailed(this, new ConnectionFailedEventArgs(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed, State = argument.State });
             return new ConnectResult(ConnectErrorCode.Error, ex) { CostTime = sw.Elapsed };
 #endif
@@ -274,9 +418,11 @@ namespace STTech.BytesIO.Bluetooth
                 WaitAndDrainSendQueue(3000);
             }
 
+#if WINDOWS
             lock (_statusLock)
             {
-                if (!IsConnected)
+                // 只要逻辑处于连接状态，或者底层句柄未彻底释放，必须执行断开清理
+                if (!_isConnected && _device == null && _socket == null)
                 {
                     return new DisconnectResult(DisconnectErrorCode.NoConnection);
                 }
@@ -284,9 +430,7 @@ namespace STTech.BytesIO.Bluetooth
                 try
                 {
                     CancelReceiveDataTask();
-#if WINDOWS
                     CleanupResources();
-#endif
                     RaiseDisconnected(this, new DisconnectedEventArgs(argument.ReasonCode, argument.Exception));
                     return new DisconnectResult();
                 }
@@ -295,6 +439,9 @@ namespace STTech.BytesIO.Bluetooth
                     return new DisconnectResult(DisconnectErrorCode.Error, ex);
                 }
             }
+#else
+            return new DisconnectResult(DisconnectErrorCode.NoConnection);
+#endif
         }
 
         /// <inheritdoc/>
@@ -314,7 +461,7 @@ namespace STTech.BytesIO.Bluetooth
 
             RaiseDataSent(this, new DataSentEventArgs(args.Data));
 #else
-            await Task.FromException(new PlatformNotSupportedException("STTech.BytesIO.Bluetooth 当前仅在 Windows 平台上可用。")).ConfigureAwait(false);
+            await Task.FromException(new PlatformNotSupportedException(GetPlatformNotSupportedMessage())).ConfigureAwait(false);
 #endif
         }
 
@@ -360,7 +507,8 @@ namespace STTech.BytesIO.Bluetooth
 #if WINDOWS
         private void OnDeviceConnectionStatusChanged(BluetoothDevice sender, object args)
         {
-            if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected && IsConnected)
+            // 修复逻辑短路：只要底层设备已变为 Disconnected，且本客户端此前处于连接中，立刻触发被动断线
+            if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected && _isConnected)
             {
                 Disconnect(new DisconnectArgument(DisconnectionReasonCode.Passive));
             }
@@ -369,19 +517,6 @@ namespace STTech.BytesIO.Bluetooth
         private void CleanupResources()
         {
             _isConnected = false;
-
-            if (_device != null)
-            {
-                try { _device.ConnectionStatusChanged -= OnDeviceConnectionStatusChanged; } catch { }
-                try { _device.Dispose(); } catch { }
-                _device = null;
-            }
-
-            if (_service != null)
-            {
-                try { _service.Dispose(); } catch { }
-                _service = null;
-            }
 
             if (_inStream != null)
             {
@@ -400,8 +535,32 @@ namespace STTech.BytesIO.Bluetooth
                 try { _socket.Dispose(); } catch { }
                 _socket = null;
             }
+
+            if (_service != null)
+            {
+                try { _service.Dispose(); } catch { }
+                _service = null;
+            }
+
+            if (_device != null)
+            {
+                try { _device.ConnectionStatusChanged -= OnDeviceConnectionStatusChanged; } catch { }
+                try { _device.Dispose(); } catch { }
+
+                if (DeviceInfo != null && ReferenceEquals(DeviceInfo.NativeDevice, _device))
+                {
+                    DeviceInfo.NativeDevice = null;
+                }
+                _device = null;
+            }
         }
 #endif
+
+        private static string GetPlatformNotSupportedMessage()
+        {
+            return "STTech.BytesIO.Bluetooth 原生经典蓝牙通信目前仅在 Windows 10/11 (windows10.0.19041.0+) 环境下受支持。" +
+                   "若项目运行在 Windows 上，请确保消费工程 csproj 指定了带 '-windows10.0.19041.0' 后缀的 TargetFramework (例如 <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>)。";
+        }
 
         /// <inheritdoc/>
         public override void Dispose()
