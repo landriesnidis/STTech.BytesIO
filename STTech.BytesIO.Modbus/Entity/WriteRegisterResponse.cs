@@ -1,7 +1,7 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace STTech.BytesIO.Modbus
 {
@@ -39,48 +39,71 @@ namespace STTech.BytesIO.Modbus
 
         protected internal override void SerializePayloadHandle()
         {
-            List<byte> bytes = new List<byte>();
-            bytes.AddRange(Enumerable.Reverse(BitConverter.GetBytes(WriteAddress)));
-            if (Values != null)
+            byte[] bytes = new byte[2 + (Values?.Length ?? 0)];
+            BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(0, 2), WriteAddress);
+            if (Values != null && Values.Length > 0)
             {
-                bytes.AddRange(Values);
+                Buffer.BlockCopy(Values, 0, bytes, 2, Values.Length);
             }
-            Payload = bytes.ToArray();
+            Payload = bytes;
         }
 
         /// <summary>
         /// 构造写入寄存器响应 (基于字节数组)
         /// </summary>
         /// <param name="bytes">原始报文数据</param>
-        public WriteRegisterResponse(byte[] bytes) : base(bytes)
+        public WriteRegisterResponse(byte[] bytes) : this(bytes, ModbusProtocolFormat.RTU)
         {
-            if (IsSuccess && Payload != null && Payload.Length >= 2)
-            {
-                WriteAddress = BitConverter.ToUInt16(new byte[] { Payload[1], Payload[0] }, 0);
-                Values = Payload.Skip(2).ToArray();
-            }
+        }
+
+        /// <summary>
+        /// 构造写入寄存器响应 (基于字节数组和指定协议格式)
+        /// </summary>
+        /// <param name="bytes">原始报文数据</param>
+        /// <param name="format">协议格式</param>
+        public WriteRegisterResponse(byte[] bytes, ModbusProtocolFormat format) : base(bytes, format)
+        {
+            InitValuesFromPayload();
         }
 
         /// <summary>
         /// 构造写入寄存器响应 (基于解包上下文)
         /// </summary>
         /// <param name="context">解包上下文</param>
-        public WriteRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context) : base(context)
+        public WriteRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context) : this(context, ModbusProtocolFormat.RTU)
+        {
+        }
+
+        /// <summary>
+        /// 构造写入寄存器响应 (基于解包上下文和指定协议格式)
+        /// </summary>
+        /// <param name="context">解包上下文</param>
+        /// <param name="format">协议格式</param>
+        public WriteRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context, ModbusProtocolFormat format) : base(context, format)
+        {
+            InitValuesFromPayload();
+        }
+
+        private void InitValuesFromPayload()
         {
             if (IsSuccess && Payload != null && Payload.Length >= 2)
             {
-                WriteAddress = BitConverter.ToUInt16(new byte[] { Payload[1], Payload[0] }, 0);
-                Values = Payload.Skip(2).ToArray();
+                WriteAddress = BinaryPrimitives.ReadUInt16BigEndian(Payload.AsSpan(0, 2));
+                if (Payload.Length > 2)
+                {
+                    Values = Payload.AsSpan(2).ToArray();
+                }
             }
         }
 
         /// <summary>
-        /// 获取由转数据转换的ushort值
+        /// 获取由转数据转换的ushort值 (零堆分配)
         /// </summary>
         /// <returns></returns>
         public ushort GetUInt16()
         {
-            return BitConverter.ToUInt16([Values[1], Values[0]], 0);
+            if (Values == null || Values.Length < 2) return 0;
+            return BinaryPrimitives.ReadUInt16BigEndian(Values.AsSpan(0, 2));
         }
     }
 }

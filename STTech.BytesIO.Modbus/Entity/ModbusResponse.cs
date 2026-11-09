@@ -1,7 +1,9 @@
 using STTech.BytesIO.Core;
 using System;
 using System.Buffers;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace STTech.BytesIO.Modbus
@@ -11,7 +13,19 @@ namespace STTech.BytesIO.Modbus
         private byte[] payload;
 
         /// <summary>
-        /// 从机地址
+        /// 事务元标识符 (用于 MBAP / Modbus TCP 全双工请求-响应匹配)
+        /// </summary>
+        [Description("事务元标识符")]
+        public ushort TransactionId { get; set; }
+
+        /// <summary>
+        /// 协议标识符 (MBAP 模式下固定为 0x0000)
+        /// </summary>
+        [Description("协议标识符")]
+        public ushort ProtocolId { get; set; } = 0;
+
+        /// <summary>
+        /// 从机地址 / 单元标识符
         /// </summary>
         public ushort SlaveId { get; protected set; }
 
@@ -70,9 +84,6 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// 构造 Modbus 响应对象
         /// </summary>
-        /// <param name="slaveId">从站地址</param>
-        /// <param name="functionCode">功能码</param>
-        /// <param name="format">协议格式</param>
         public ModbusResponse(ushort slaveId, FunctionCode functionCode, ModbusProtocolFormat format) : base(new byte[0])
         {
             SlaveId = slaveId;
@@ -85,10 +96,6 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// 构造 Modbus 响应对象 (含错误码)
         /// </summary>
-        /// <param name="slaveId">从站地址</param>
-        /// <param name="functionCode">功能码</param>
-        /// <param name="format">协议格式</param>
-        /// <param name="errorCode">错误码</param>
         public ModbusResponse(ushort slaveId, FunctionCode functionCode, ModbusProtocolFormat format, ModbusErrorCode errorCode) : base(new byte[0])
         {
             SlaveId = slaveId;
@@ -101,118 +108,156 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// 构造 Modbus 响应对象 (基于字节数组)
         /// </summary>
-        /// <param name="data">原始报文数据</param>
-        public ModbusResponse(byte[] data) : base(data) // 这里的Bytes只当做原始数据保存
+        public ModbusResponse(byte[] data) : base(data ?? new byte[0])
         {
-            var bytes = data.ToArray();
+            if (data == null || data.Length == 0) return;
+            ParseBytes(data, null);
+        }
 
-            ProtocolFormat = bytes.ElementAt(0) == (byte)':' ? ModbusProtocolFormat.ASCII : ModbusProtocolFormat.RTU;
-
-            if (ProtocolFormat == ModbusProtocolFormat.ASCII)
-            {
-                if (bytes.Length < 11) return;
-                string hexString = bytes.Skip(1).Take(bytes.Length - 3).EncodeToString(); // 去除 : 和 CRLF
-
-                SlaveId = Convert.ToByte(hexString.Substring(0, 2), 16);
-                byte codeVal = Convert.ToByte(hexString.Substring(2, 2), 16);
-
-                if (codeVal >= 0x80)
-                {
-                    IsSuccess = false;
-                    FunctionCode = (FunctionCode)(codeVal - 0x80);
-                    ErrorCode = (ModbusErrorCode)Convert.ToByte(hexString.Substring(4, 2), 16);
-                }
-                else
-                {
-                    FunctionCode = (FunctionCode)codeVal;
-                    int payloadHexLen = hexString.Length - 4 - 2; // 去除 SlaveId(2) 和 Func(2) 和 LRC(2)
-                    if (payloadHexLen > 0)
-                    {
-                        payload = hexString.Substring(4, payloadHexLen).HexStringToBytes();
-                    }
-                }
-                Checksum = Convert.ToByte(hexString.Substring(hexString.Length - 2, 2), 16);
-            }
-            else if (ProtocolFormat == ModbusProtocolFormat.RTU)
-            {
-                SlaveId = bytes.ElementAt(0);
-
-                if (bytes.Length == 5 && bytes.ElementAt(1) >= 0x80)
-                {
-                    IsSuccess = false;
-                    FunctionCode = (FunctionCode)(bytes.ElementAt(1) - 0x80);
-                    ErrorCode = (ModbusErrorCode)bytes.ElementAt(2);
-                    Checksum = BitConverter.ToUInt16(bytes, 3);
-                    return;
-                }
-
-                FunctionCode = (FunctionCode)bytes.ElementAt(1);
-                var arr = bytes.Skip(2);
-                var payloadLen = arr.Count() - 2;
-                payload = arr.Take(payloadLen).ToArray();
-                Checksum = (ushort)(bytes[bytes.Length - 2] | (bytes[bytes.Length - 1] << 8));
-            }
+        /// <summary>
+        /// 构造 Modbus 响应对象 (基于字节数组和指定协议格式)
+        /// </summary>
+        public ModbusResponse(byte[] data, ModbusProtocolFormat format) : base(data ?? new byte[0])
+        {
+            ProtocolFormat = format;
+            if (data == null || data.Length == 0) return;
+            ParseBytes(data, format);
         }
 
         /// <summary>
         /// 构造 Modbus 响应对象 (基于解包上下文)
         /// </summary>
-        /// <param name="context">解包上下文</param>
-        public ModbusResponse(STTech.BytesIO.Core.Component.UnpackContext context) : base(context)
+        public ModbusResponse(STTech.BytesIO.Core.Component.UnpackContext context) : this(context, ModbusProtocolFormat.RTU)
+        {
+        }
+
+        /// <summary>
+        /// 构造 Modbus 响应对象 (基于解包上下文和指定协议格式)
+        /// </summary>
+        public ModbusResponse(STTech.BytesIO.Core.Component.UnpackContext context, ModbusProtocolFormat format) : base(context)
         {
             UnpackContext = context;
+            ProtocolFormat = format;
             int len = (int)context.Data.Length;
-            Span<byte> bytes = stackalloc byte[len];
-            context.Data.CopyTo(bytes);
+            if (len <= 0) return;
 
-            ProtocolFormat = bytes[0] == (byte)':' ? ModbusProtocolFormat.ASCII : ModbusProtocolFormat.RTU;
-
-            if (ProtocolFormat == ModbusProtocolFormat.ASCII)
+            const int MaxStackAlloc = 256;
+            byte[] rented = null;
+            Span<byte> bytes = len <= MaxStackAlloc ? stackalloc byte[len] : (rented = ArrayPool<byte>.Shared.Rent(len));
+            try
             {
-                if (bytes.Length < 11) return;
-                string hexString = bytes.Slice(1, bytes.Length - 3).ToArray().EncodeToString(); // 去除 : 和 CRLF
-
-                SlaveId = Convert.ToByte(hexString.Substring(0, 2), 16);
-                byte codeVal = Convert.ToByte(hexString.Substring(2, 2), 16);
-
-                if (codeVal >= 0x80)
-                {
-                    IsSuccess = false;
-                    FunctionCode = (FunctionCode)(codeVal - 0x80);
-                    ErrorCode = (ModbusErrorCode)Convert.ToByte(hexString.Substring(4, 2), 16);
-                }
-                else
-                {
-                    FunctionCode = (FunctionCode)codeVal;
-                    int payloadHexLen = hexString.Length - 4 - 2; // 去除 SlaveId(2) 和 Func(2) 和 LRC(2)
-                    if (payloadHexLen > 0)
-                    {
-                        payload = hexString.Substring(4, payloadHexLen).HexStringToBytes();
-                    }
-                }
-                Checksum = Convert.ToByte(hexString.Substring(hexString.Length - 2, 2), 16);
+                context.Data.CopyTo(bytes);
+                ParseBytes(bytes.Slice(0, len), format);
             }
-            else if (ProtocolFormat == ModbusProtocolFormat.RTU)
+            finally
             {
-                if (bytes.Length < 4) return;
-                SlaveId = bytes[0];
-
-                if (bytes.Length == 5 && bytes[1] >= 0x80)
+                if (rented != null)
                 {
-                    IsSuccess = false;
-                    FunctionCode = (FunctionCode)(bytes[1] - 0x80);
-                    ErrorCode = (ModbusErrorCode)bytes[2];
-                    Checksum = (ushort)(bytes[3] | (bytes[4] << 8));
-                    return;
+                    ArrayPool<byte>.Shared.Return(rented);
                 }
+            }
+        }
 
-                FunctionCode = (FunctionCode)bytes[1];
-                var payloadLen = bytes.Length - 4;
-                if (payloadLen > 0)
-                {
-                    payload = bytes.Slice(2, payloadLen).ToArray();
-                }
-                Checksum = (ushort)(bytes[bytes.Length - 2] | (bytes[bytes.Length - 1] << 8));
+        private void ParseBytes(ReadOnlySpan<byte> bytes, ModbusProtocolFormat? specifiedFormat)
+        {
+            ModbusProtocolFormat fmt;
+            if (specifiedFormat.HasValue)
+            {
+                fmt = specifiedFormat.Value;
+            }
+            else
+            {
+                // 仅在未指定格式时做基础 ASCII 冒号检测，绝不使用魔数盲猜 MBAP
+                fmt = bytes[0] == (byte)':' ? ModbusProtocolFormat.ASCII : ModbusProtocolFormat.RTU;
+            }
+            ProtocolFormat = fmt;
+
+            switch (fmt)
+            {
+                case ModbusProtocolFormat.ASCII:
+                    {
+                        if (bytes.Length < 11) return;
+                        string hexString = bytes.Slice(1, bytes.Length - 3).ToArray().EncodeToString();
+
+                        SlaveId = Convert.ToByte(hexString.Substring(0, 2), 16);
+                        byte codeVal = Convert.ToByte(hexString.Substring(2, 2), 16);
+
+                        if (codeVal >= 0x80)
+                        {
+                            IsSuccess = false;
+                            FunctionCode = (FunctionCode)(codeVal - 0x80);
+                            ErrorCode = (ModbusErrorCode)Convert.ToByte(hexString.Substring(4, 2), 16);
+                        }
+                        else
+                        {
+                            FunctionCode = (FunctionCode)codeVal;
+                            int payloadHexLen = hexString.Length - 4 - 2;
+                            if (payloadHexLen > 0)
+                            {
+                                payload = hexString.Substring(4, payloadHexLen).HexStringToBytes();
+                            }
+                        }
+                        Checksum = Convert.ToByte(hexString.Substring(hexString.Length - 2, 2), 16);
+                        break;
+                    }
+
+                case ModbusProtocolFormat.MBAP:
+                    {
+                        if (bytes.Length < 7) return;
+                        TransactionId = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(0, 2));
+                        ProtocolId = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(2, 2));
+                        SlaveId = bytes[6];
+
+                        if (bytes.Length >= 8)
+                        {
+                            byte codeVal = bytes[7];
+                            if (codeVal >= 0x80)
+                            {
+                                IsSuccess = false;
+                                FunctionCode = (FunctionCode)(codeVal - 0x80);
+                                if (bytes.Length >= 9)
+                                {
+                                    ErrorCode = (ModbusErrorCode)bytes[8];
+                                }
+                            }
+                            else
+                            {
+                                IsSuccess = true;
+                                FunctionCode = (FunctionCode)codeVal;
+                                int payloadLen = bytes.Length - 8;
+                                if (payloadLen > 0)
+                                {
+                                    payload = bytes.Slice(8, payloadLen).ToArray();
+                                }
+                            }
+                        }
+                        break;
+                    }
+
+                case ModbusProtocolFormat.RTU:
+                default:
+                    {
+                        if (bytes.Length < 4) return;
+                        SlaveId = bytes[0];
+
+                        if (bytes.Length == 5 && bytes[1] >= 0x80)
+                        {
+                            IsSuccess = false;
+                            FunctionCode = (FunctionCode)(bytes[1] - 0x80);
+                            ErrorCode = (ModbusErrorCode)bytes[2];
+                            Checksum = (ushort)(bytes[3] | (bytes[4] << 8));
+                            return;
+                        }
+
+                        FunctionCode = (FunctionCode)bytes[1];
+                        int payloadLen = bytes.Length - 4;
+                        if (payloadLen > 0)
+                        {
+                            payload = bytes.Slice(2, payloadLen).ToArray();
+                        }
+                        Checksum = (ushort)(bytes[bytes.Length - 2] | (bytes[bytes.Length - 1] << 8));
+                        break;
+                    }
             }
         }
 
@@ -224,27 +269,66 @@ namespace STTech.BytesIO.Modbus
         {
             switch (ProtocolFormat)
             {
-                case ModbusProtocolFormat.RTU:
+                case ModbusProtocolFormat.MBAP:
                     {
-                        List<byte> bytes = new List<byte>();
-                        bytes.Add((byte)SlaveId);
-
                         if (!IsSuccess)
                         {
-                            bytes.Add((byte)((byte)FunctionCode | 0x80));
-                            bytes.Add((byte)ErrorCode);
+                            byte[] buffer = new byte[6 + 3];
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(0, 2), TransactionId);
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(2, 2), ProtocolId);
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(4, 2), 3);
+                            buffer[6] = (byte)SlaveId;
+                            buffer[7] = (byte)((byte)FunctionCode | 0x80);
+                            buffer[8] = (byte)ErrorCode;
+                            return buffer;
                         }
                         else
                         {
-                            bytes.Add((byte)FunctionCode);
                             SerializePayloadHandle();
-                            if (payload != null)
+                            int payloadLen = payload?.Length ?? 0;
+                            int lengthField = 1 + 1 + payloadLen;
+                            byte[] buffer = new byte[6 + lengthField];
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(0, 2), TransactionId);
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(2, 2), ProtocolId);
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(4, 2), (ushort)lengthField);
+                            buffer[6] = (byte)SlaveId;
+                            buffer[7] = (byte)FunctionCode;
+                            if (payloadLen > 0)
                             {
-                                bytes.AddRange(payload);
+                                Buffer.BlockCopy(payload, 0, buffer, 8, payloadLen);
                             }
+                            return buffer;
                         }
-
-                        return ModbusRequest.CRC16(bytes.ToArray());
+                    }
+                case ModbusProtocolFormat.RTU:
+                    {
+                        if (!IsSuccess)
+                        {
+                            byte[] buffer = new byte[5];
+                            buffer[0] = (byte)SlaveId;
+                            buffer[1] = (byte)((byte)FunctionCode | 0x80);
+                            buffer[2] = (byte)ErrorCode;
+                            ushort crc = ModbusCrc16.Compute(buffer.AsSpan(0, 3));
+                            buffer[3] = (byte)(crc & 0xFF);
+                            buffer[4] = (byte)(crc >> 8);
+                            return buffer;
+                        }
+                        else
+                        {
+                            SerializePayloadHandle();
+                            int payloadLen = payload?.Length ?? 0;
+                            byte[] buffer = new byte[1 + 1 + payloadLen + 2];
+                            buffer[0] = (byte)SlaveId;
+                            buffer[1] = (byte)FunctionCode;
+                            if (payloadLen > 0)
+                            {
+                                Buffer.BlockCopy(payload, 0, buffer, 2, payloadLen);
+                            }
+                            ushort crc = ModbusCrc16.Compute(buffer.AsSpan(0, 2 + payloadLen));
+                            buffer[buffer.Length - 2] = (byte)(crc & 0xFF);
+                            buffer[buffer.Length - 1] = (byte)(crc >> 8);
+                            return buffer;
+                        }
                     }
                 case ModbusProtocolFormat.ASCII:
                     {

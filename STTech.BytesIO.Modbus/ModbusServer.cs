@@ -1,28 +1,29 @@
-using STTech.BytesIO.Core;
+﻿using STTech.BytesIO.Core;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace STTech.BytesIO.Modbus
 {
     /// <summary>
-    /// Modbus 服务端基类 (从站/网关模拟器)
-    /// <para>作为 Modbus 网络中的 Slave 角色，负责响应 Master 的请求，或者作为网关进行透明代理转发。</para>
+    /// Modbus 服务端 (从站模拟器/网关)
     /// </summary>
     public abstract class ModbusServer
     {
         /// <summary>
-        /// 是否正在运行
+        /// 服务端运行状态
         /// </summary>
         public abstract bool IsRunning { get; }
 
         /// <summary>
-        /// 从站站号 (默认: 1)。
-        /// 仅当请求报文的站号与本配置匹配时，才触发本地处理逻辑；非本机站号的报文将通过透明代理原样转发至 DownstreamClient。
+        /// 本机绑定的 Modbus 从站站号 (Slave ID)
+        /// 默认为 1。若接收到的请求站号与此不符，且配置了下游节点，则会自动转发。
         /// </summary>
         public byte SlaveId { get; set; } = 1;
 
         /// <summary>
-        /// 下游客户端 (用于非本机站号报文的透明透明代理)。
-        /// 可挂接 SerialClient 或 TcpClient，配合 UseAutoReconnect 可实现下游网络自动重连。
+        /// 默认下游客户端 (串口或远端从站连接)
+        /// 若配置了此项，所有非本机站号的请求都将转发至此客户端
         /// </summary>
         public BytesClient DownstreamClient
         {
@@ -46,7 +47,7 @@ namespace STTech.BytesIO.Modbus
         /// 下游节点列表 (站号 -> 客户端)
         /// 若配置了此列表，则优先根据站号寻找转发目标；若未找到，则退而求其次寻找默认的 DownstreamClient。
         /// </summary>
-        public System.Collections.Generic.Dictionary<byte, BytesClient> DownstreamNodes { get; } = new System.Collections.Generic.Dictionary<byte, BytesClient>();
+        public ConcurrentDictionary<byte, BytesClient> DownstreamNodes { get; } = new ConcurrentDictionary<byte, BytesClient>();
 
         /// <summary>
         /// 添加下游节点
@@ -56,12 +57,21 @@ namespace STTech.BytesIO.Modbus
         public void AddDownstreamNode(byte slaveId, BytesClient client)
         {
             if (client == null) return;
-            if (DownstreamNodes.TryGetValue(slaveId, out var oldClient))
-            {
-                UnregisterDownstreamEvents(oldClient);
-            }
-            DownstreamNodes[slaveId] = client;
-            RegisterDownstreamEvents(client);
+            DownstreamNodes.AddOrUpdate(slaveId, 
+                addValueFactory: id =>
+                {
+                    RegisterDownstreamEvents(client);
+                    return client;
+                },
+                updateValueFactory: (id, oldClient) =>
+                {
+                    if (oldClient != client)
+                    {
+                        UnregisterDownstreamEvents(oldClient);
+                        RegisterDownstreamEvents(client);
+                    }
+                    return client;
+                });
         }
 
         /// <summary>
@@ -70,10 +80,9 @@ namespace STTech.BytesIO.Modbus
         /// <param name="slaveId">从站站号</param>
         public void RemoveDownstreamNode(byte slaveId)
         {
-            if (DownstreamNodes.TryGetValue(slaveId, out var client))
+            if (DownstreamNodes.TryRemove(slaveId, out var client))
             {
                 UnregisterDownstreamEvents(client);
-                DownstreamNodes.Remove(slaveId);
             }
         }
 
@@ -82,10 +91,49 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public bool IsDownstreamConnected => DownstreamClient?.IsConnected ?? false;
 
+        private class ForwardSession
+        {
+            public BytesClient SourceClient { get; set; }
+            public ushort TransactionId { get; set; }
+            public ushort ProtocolId { get; set; }
+            public ModbusProtocolFormat SourceFormat { get; set; }
+            public DateTime Timestamp { get; set; } = DateTime.Now;
+        }
+
+        private readonly ConcurrentDictionary<byte, ForwardSession> _forwardSessions = new ConcurrentDictionary<byte, ForwardSession>();
+
         private void DownstreamClient_OnDataReceived(object sender, DataReceivedEventArgs e)
         {
-            // 下游返回的数据直接原样抛回给上游
-            BroadcastUpstream(e.Data.ToArray());
+            byte[] raw = e.Data.ToArray();
+            if (raw == null || raw.Length == 0) return;
+
+            // 优先检查从站站号路由 (针对 RTU 报文首字节为 SlaveId)
+            byte slaveId = raw[0];
+            if (_forwardSessions.TryRemove(slaveId, out var session) && session.SourceClient != null && session.SourceClient.IsConnected)
+            {
+                if (session.SourceFormat == ModbusProtocolFormat.MBAP && raw.Length >= 3)
+                {
+                    // 若下游返回的是 RTU 帧，将其转译为上游客户端期望的 MBAP 帧 (剥除末尾 2 字节 CRC，头部拼接 MBAP 帧头)
+                    int pduAndUnitLen = raw.Length >= 4 ? raw.Length - 2 : raw.Length;
+                    byte[] mbapBytes = new byte[6 + pduAndUnitLen];
+                    System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(mbapBytes.AsSpan(0, 2), session.TransactionId);
+                    System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(mbapBytes.AsSpan(2, 2), session.ProtocolId);
+                    System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(mbapBytes.AsSpan(4, 2), (ushort)pduAndUnitLen);
+                    Buffer.BlockCopy(raw, 0, mbapBytes, 6, pduAndUnitLen);
+
+                    session.SourceClient.SendAsync(mbapBytes);
+                    return;
+                }
+                else
+                {
+                    // 同构协议或上游非 MBAP，直接定向返回给来源客户端
+                    session.SourceClient.SendAsync(raw);
+                    return;
+                }
+            }
+
+            // 无会话匹配时，退化为全局广播兜底
+            BroadcastUpstream(raw);
         }
 
         private void RegisterDownstreamEvents(BytesClient client)
@@ -101,58 +149,35 @@ namespace STTech.BytesIO.Modbus
         }
 
         /// <summary>
-        /// 向上游客户端广播数据
+        /// 将下游返回的数据广播回所有上游客户端
         /// </summary>
-        /// <param name="data">需要回传的原始字节数组</param>
+        /// <param name="data">返回的原始报文</param>
         protected abstract void BroadcastUpstream(byte[] data);
-        /// <summary>
-        /// 读取保持寄存器请求事件
-        /// </summary>
-        public EventHandler<ModbusReadRequestedEventArgs<byte[]>> ReadHoldingRegisterRequested;
+
+        #region Events
+        public event EventHandler<ModbusReadRequestedEventArgs<byte[]>> ReadHoldingRegisterRequested;
+        public event EventHandler<ModbusReadRequestedEventArgs<byte[]>> ReadInputRegisterRequested;
+        public event EventHandler<ModbusReadRequestedEventArgs<bool[]>> ReadCoilRegisterRequested;
+        public event EventHandler<ModbusReadRequestedEventArgs<bool[]>> ReadDiscreteInputRegisterRequested;
+
+        public event EventHandler<ModbusWriteRequestedEventArgs<WriteSingleHoldingRegisterRequest>> WriteSingleHoldingRegisterRequested;
+        public event EventHandler<ModbusWriteRequestedEventArgs<WriteMultipleHoldingRegistersRequest>> WriteMultipleHoldingRegistersRequested;
+        public event EventHandler<ModbusWriteRequestedEventArgs<WriteSingleCoilRegisterRequest>> WriteSingleCoilRegisterRequested;
+        public event EventHandler<ModbusWriteRequestedEventArgs<WriteMultipleCoilRegistersRequest>> WriteMultipleCoilRegistersRequested;
+        #endregion
 
         /// <summary>
-        /// 读取输入寄存器请求事件
+        /// 处理接收到的 Modbus 请求
         /// </summary>
-        public EventHandler<ModbusReadRequestedEventArgs<byte[]>> ReadInputRegisterRequested;
-
-        /// <summary>
-        /// 读取线圈寄存器请求事件
-        /// </summary>
-        public EventHandler<ModbusReadRequestedEventArgs<bool[]>> ReadCoilRegisterRequested;
-
-        /// <summary>
-        /// 读取离散输入寄存器请求事件
-        /// </summary>
-        public EventHandler<ModbusReadRequestedEventArgs<bool[]>> ReadDiscreteInputRegisterRequested;
-
-        /// <summary>
-        /// 写入单个保持寄存器请求事件
-        /// </summary>
-        public EventHandler<ModbusWriteRequestedEventArgs<WriteSingleHoldingRegisterRequest>> WriteSingleHoldingRegisterRequested;
-
-        /// <summary>
-        /// 写入多个保持寄存器请求事件
-        /// </summary>
-        public EventHandler<ModbusWriteRequestedEventArgs<WriteMultipleHoldingRegistersRequest>> WriteMultipleHoldingRegistersRequested;
-
-        /// <summary>
-        /// 写入单个线圈寄存器请求事件
-        /// </summary>
-        public EventHandler<ModbusWriteRequestedEventArgs<WriteSingleCoilRegisterRequest>> WriteSingleCoilRegisterRequested;
-
-        /// <summary>
-        /// 写入多个线圈寄存器请求事件
-        /// </summary>
-        public EventHandler<ModbusWriteRequestedEventArgs<WriteMultipleCoilRegistersRequest>> WriteMultipleCoilRegistersRequested;
-
+        /// <param name="request">Modbus 请求实体</param>
+        /// <param name="sender">发送该请求的通信客户端</param>
         protected void HandleRequest(ModbusRequest request, BytesClient sender)
         {
-            // 如果是非本机的转发请求，直接透明传递
+            if (request == null || sender == null) return;
+
+            // 如果是非本机的转发请求，进行协议转译与定向会话路由
             if (request is STTech.BytesIO.Modbus.Entity.ModbusForwardRequest forwardReq)
             {
-                // 路由逻辑：
-                // 1. 优先查找专属于该 SlaveId 的下游节点
-                // 2. 若未找到，则尝试使用默认的全局下游节点
                 BytesClient target = null;
                 if (DownstreamNodes.TryGetValue(forwardReq.SlaveId, out var node))
                 {
@@ -165,7 +190,29 @@ namespace STTech.BytesIO.Modbus
 
                 if (target != null && target.IsConnected)
                 {
-                    target.SendAsync(forwardReq.RawBytes);
+                    _forwardSessions[forwardReq.SlaveId] = new ForwardSession
+                    {
+                        SourceClient = sender,
+                        TransactionId = forwardReq.TransactionId,
+                        ProtocolId = forwardReq.ProtocolId,
+                        SourceFormat = forwardReq.ProtocolFormat
+                    };
+
+                    byte[] dataToSend = forwardReq.RawBytes;
+
+                    // 若上游请求为 MBAP，但下游通常为串口 RTU 设备，需自动完成协议转译 (去除 6 字节 MBAP 头并追加 CRC16)
+                    if (forwardReq.ProtocolFormat == ModbusProtocolFormat.MBAP && forwardReq.RawBytes.Length >= 8)
+                    {
+                        int pduAndUnitLen = forwardReq.RawBytes.Length - 6;
+                        byte[] rtuBytes = new byte[pduAndUnitLen + 2];
+                        Buffer.BlockCopy(forwardReq.RawBytes, 6, rtuBytes, 0, pduAndUnitLen);
+                        var crc = ModbusCrc16.Compute(rtuBytes.AsSpan(0, pduAndUnitLen));
+                        rtuBytes[pduAndUnitLen] = (byte)(crc & 0xFF);
+                        rtuBytes[pduAndUnitLen + 1] = (byte)(crc >> 8);
+                        dataToSend = rtuBytes;
+                    }
+
+                    target.SendAsync(dataToSend);
                 }
                 return;
             }
@@ -260,16 +307,32 @@ namespace STTech.BytesIO.Modbus
                         }
                 }
 
+                // Modbus 标准规范：对于广播写请求 (SlaveId == 0)，从站执行操作但绝不返回任何应答，以防物理总线冲突
+                if (request.SlaveId == 0)
+                {
+                    return;
+                }
+
                 if (response == null) 
                 {
                     response = new ModbusResponse(request.SlaveId, request.FunctionCode, request.ProtocolFormat, ModbusErrorCode.IllegalFunction);
                 }
 
+                // 复制请求的 TransactionId 和 ProtocolId (关键：用于 MBAP 全双工应答匹配)
+                response.TransactionId = request.TransactionId;
+                response.ProtocolId = request.ProtocolId;
+
                 sender.SendAsync(response.GetBytes());
             }
             catch (Exception)
             {
-                var errorResponse = new ModbusResponse(request.SlaveId, request.FunctionCode, request.ProtocolFormat, ModbusErrorCode.SlaveDeviceFailure);
+                if (request.SlaveId == 0) return;
+
+                var errorResponse = new ModbusResponse(request.SlaveId, request.FunctionCode, request.ProtocolFormat, ModbusErrorCode.SlaveDeviceFailure)
+                {
+                    TransactionId = request.TransactionId,
+                    ProtocolId = request.ProtocolId
+                };
                 sender.SendAsync(errorResponse.GetBytes());
             }
         }
@@ -287,30 +350,25 @@ namespace STTech.BytesIO.Modbus
         public ReadRegisterRequest Request { get; }
 
         /// <summary>
-        /// 发送方客户端
+        /// 发起请求的客户端
         /// </summary>
         public BytesClient Client { get; }
 
         /// <summary>
-        /// 准备返回的响应数据
+        /// 要返回的响应数据
         /// </summary>
         public TResponseData ResponseData { get; set; }
 
         /// <summary>
-        /// 是否发生错误
+        /// 是否返回错误响应
         /// </summary>
-        public bool IsError { get; set; }
+        public bool IsError { get; set; } = false;
 
         /// <summary>
-        /// 错误码 (默认为非法数据地址)
+        /// 错误码
         /// </summary>
-        public ModbusErrorCode ErrorCode { get; set; } = ModbusErrorCode.IllegalDataAddress;
+        public ModbusErrorCode ErrorCode { get; set; } = ModbusErrorCode.NoError;
 
-        /// <summary>
-        /// 构造读取请求事件参数
-        /// </summary>
-        /// <param name="request">请求实体</param>
-        /// <param name="client">发送方</param>
         public ModbusReadRequestedEventArgs(ReadRegisterRequest request, BytesClient client)
         {
             Request = request;
@@ -321,34 +379,29 @@ namespace STTech.BytesIO.Modbus
     /// <summary>
     /// Modbus 写入请求事件参数
     /// </summary>
-    /// <typeparam name="TRequest">请求实体类型</typeparam>
+    /// <typeparam name="TRequest">写入请求类型</typeparam>
     public class ModbusWriteRequestedEventArgs<TRequest> : EventArgs where TRequest : ModbusRequest
     {
         /// <summary>
-        /// 原始请求信息
+        /// 原始写入请求信息
         /// </summary>
         public TRequest Request { get; }
 
         /// <summary>
-        /// 发送方客户端
+        /// 发起请求的客户端
         /// </summary>
         public BytesClient Client { get; }
 
         /// <summary>
-        /// 是否发生错误
+        /// 是否返回错误响应
         /// </summary>
-        public bool IsError { get; set; }
+        public bool IsError { get; set; } = false;
 
         /// <summary>
-        /// 错误码 (默认为非法数据值)
+        /// 错误码
         /// </summary>
-        public ModbusErrorCode ErrorCode { get; set; } = ModbusErrorCode.IllegalDataValue;
+        public ModbusErrorCode ErrorCode { get; set; } = ModbusErrorCode.NoError;
 
-        /// <summary>
-        /// 构造写入请求事件参数
-        /// </summary>
-        /// <param name="request">请求实体</param>
-        /// <param name="client">发送方</param>
         public ModbusWriteRequestedEventArgs(TRequest request, BytesClient client)
         {
             Request = request;

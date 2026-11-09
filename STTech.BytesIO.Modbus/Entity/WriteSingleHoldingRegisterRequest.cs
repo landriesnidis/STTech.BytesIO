@@ -1,8 +1,7 @@
+using STTech.BytesIO.Core;
 using System;
-using System.Collections.Generic;
+using System.Buffers.Binary;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
 
 namespace STTech.BytesIO.Modbus
 {
@@ -33,7 +32,16 @@ namespace STTech.BytesIO.Modbus
         /// 构造写单个保持寄存器请求 (基于字节数组)
         /// </summary>
         /// <param name="data">原始报文数据</param>
-        public WriteSingleHoldingRegisterRequest(byte[] data) : base(data)
+        public WriteSingleHoldingRegisterRequest(byte[] data) : this(data, null)
+        {
+        }
+
+        /// <summary>
+        /// 构造写单个保持寄存器请求 (基于字节数组和指定协议格式)
+        /// </summary>
+        /// <param name="data">原始报文数据</param>
+        /// <param name="format">协议格式</param>
+        public WriteSingleHoldingRegisterRequest(byte[] data, ModbusProtocolFormat? format) : base(data, format)
         {
             DeserializePayloadHandle();
         }
@@ -42,7 +50,16 @@ namespace STTech.BytesIO.Modbus
         /// 构造写单个保持寄存器请求 (基于解包上下文)
         /// </summary>
         /// <param name="context">解包上下文</param>
-        public WriteSingleHoldingRegisterRequest(STTech.BytesIO.Core.Component.UnpackContext context) : base(context)
+        public WriteSingleHoldingRegisterRequest(STTech.BytesIO.Core.Component.UnpackContext context) : this(context, null)
+        {
+        }
+
+        /// <summary>
+        /// 构造写单个保持寄存器请求 (基于解包上下文和指定协议格式)
+        /// </summary>
+        /// <param name="context">解包上下文</param>
+        /// <param name="format">协议格式</param>
+        public WriteSingleHoldingRegisterRequest(STTech.BytesIO.Core.Component.UnpackContext context, ModbusProtocolFormat? format) : base(context, format)
         {
             DeserializePayloadHandle();
         }
@@ -50,16 +67,22 @@ namespace STTech.BytesIO.Modbus
         /// <inheritdoc/>
         protected internal override void SerializePayloadHandle()
         {
-            List<byte> bytes = [.. Enumerable.Reverse(BitConverter.GetBytes(WriteAddress)), .. Data];
-            Payload = bytes.ToArray();
+            byte[] bytes = new byte[4];
+            BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(0, 2), WriteAddress);
+            if (Data != null && Data.Length >= 2)
+            {
+                bytes[2] = Data[0];
+                bytes[3] = Data[1];
+            }
+            Payload = bytes;
         }
 
         /// <inheritdoc/>
         protected internal override void DeserializePayloadHandle()
         {
             if (Payload == null || Payload.Length < 4) return;
-            WriteAddress = BitConverter.ToUInt16(Payload.Take(2).Reverse().ToArray(), 0);
-            Data = Payload.Skip(2).Take(2).ToArray();
+            WriteAddress = BinaryPrimitives.ReadUInt16BigEndian(Payload.AsSpan(0, 2));
+            Data = new byte[] { Payload[2], Payload[3] };
         }
     }
 }

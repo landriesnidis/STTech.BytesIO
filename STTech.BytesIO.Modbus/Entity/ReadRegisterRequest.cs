@@ -1,7 +1,7 @@
+using STTech.BytesIO.Core;
 using System;
-using System.Collections.Generic;
+using System.Buffers.Binary;
 using System.ComponentModel;
-using System.Linq;
 
 namespace STTech.BytesIO.Modbus
 {
@@ -22,16 +22,32 @@ namespace STTech.BytesIO.Modbus
         [Description("读取长度")]
         public ushort Length { get; set; } = 1;
 
-        internal ReadRegisterRequest(FunctionCode functionCode) : base(functionCode)
+        public ReadRegisterRequest() : base()
         {
+        }
 
+        /// <summary>
+        /// 构造读取寄存器请求
+        /// </summary>
+        /// <param name="functionCode">功能码</param>
+        public ReadRegisterRequest(FunctionCode functionCode) : base(functionCode)
+        {
         }
 
         /// <summary>
         /// 构造读取寄存器请求 (基于字节数组)
         /// </summary>
         /// <param name="data">原始报文数据</param>
-        public ReadRegisterRequest(byte[] data) : base(data)
+        public ReadRegisterRequest(byte[] data) : this(data, null)
+        {
+        }
+
+        /// <summary>
+        /// 构造读取寄存器请求 (基于字节数组和指定协议格式)
+        /// </summary>
+        /// <param name="data">原始报文数据</param>
+        /// <param name="format">协议格式</param>
+        public ReadRegisterRequest(byte[] data, ModbusProtocolFormat? format) : base(data, format)
         {
             DeserializePayloadHandle();
         }
@@ -40,7 +56,16 @@ namespace STTech.BytesIO.Modbus
         /// 构造读取寄存器请求 (基于解包上下文)
         /// </summary>
         /// <param name="context">解包上下文</param>
-        public ReadRegisterRequest(STTech.BytesIO.Core.Component.UnpackContext context) : base(context)
+        public ReadRegisterRequest(STTech.BytesIO.Core.Component.UnpackContext context) : this(context, null)
+        {
+        }
+
+        /// <summary>
+        /// 构造读取寄存器请求 (基于解包上下文和指定协议格式)
+        /// </summary>
+        /// <param name="context">解包上下文</param>
+        /// <param name="format">协议格式</param>
+        public ReadRegisterRequest(STTech.BytesIO.Core.Component.UnpackContext context, ModbusProtocolFormat? format) : base(context, format)
         {
             DeserializePayloadHandle();
         }
@@ -48,18 +73,18 @@ namespace STTech.BytesIO.Modbus
         /// <inheritdoc/>
         protected internal override void SerializePayloadHandle()
         {
-            List<byte> bytes = new List<byte>();
-            bytes.AddRange(Enumerable.Reverse(BitConverter.GetBytes(StartAddress)));
-            bytes.AddRange(Enumerable.Reverse(BitConverter.GetBytes(Length)));
-            Payload = bytes.ToArray();
+            byte[] bytes = new byte[4];
+            BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(0, 2), StartAddress);
+            BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(2, 2), Length);
+            Payload = bytes;
         }
 
         /// <inheritdoc/>
         protected internal override void DeserializePayloadHandle()
         {
             if (Payload == null || Payload.Length < 4) return;
-            StartAddress = BitConverter.ToUInt16(Payload.Take(2).Reverse().ToArray(), 0);
-            Length = BitConverter.ToUInt16(Payload.Skip(2).Take(2).Reverse().ToArray(), 0);
+            StartAddress = BinaryPrimitives.ReadUInt16BigEndian(Payload.AsSpan(0, 2));
+            Length = BinaryPrimitives.ReadUInt16BigEndian(Payload.AsSpan(2, 2));
         }
     }
 }

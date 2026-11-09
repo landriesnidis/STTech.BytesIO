@@ -67,24 +67,43 @@ namespace STTech.BytesIO.Modbus
         /// 构造读线圈寄存器响应 (基于字节数组)
         /// </summary>
         /// <param name="bytes">原始报文数据</param>
-        public ReadCoilRegisterResponse(byte[] bytes) : base(bytes)
+        public ReadCoilRegisterResponse(byte[] bytes) : this(bytes, ModbusProtocolFormat.RTU)
         {
-            if (IsSuccess && Payload != null && Payload.Length > 0)
-            {
-                Length = Payload.ElementAt(0);
-                Values = ParseBits(Payload, Length);
-            }
+        }
+
+        /// <summary>
+        /// 构造读线圈寄存器响应 (基于字节数组和指定协议格式)
+        /// </summary>
+        /// <param name="bytes">原始报文数据</param>
+        /// <param name="format">协议格式</param>
+        public ReadCoilRegisterResponse(byte[] bytes, ModbusProtocolFormat format) : base(bytes, format)
+        {
+            InitValuesFromPayload();
         }
 
         /// <summary>
         /// 构造读线圈寄存器响应 (基于解包上下文)
         /// </summary>
         /// <param name="context">解包上下文</param>
-        public ReadCoilRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context) : base(context)
+        public ReadCoilRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context) : this(context, ModbusProtocolFormat.RTU)
+        {
+        }
+
+        /// <summary>
+        /// 构造读线圈寄存器响应 (基于解包上下文和指定协议格式)
+        /// </summary>
+        /// <param name="context">解包上下文</param>
+        /// <param name="format">协议格式</param>
+        public ReadCoilRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context, ModbusProtocolFormat format) : base(context, format)
+        {
+            InitValuesFromPayload();
+        }
+
+        private void InitValuesFromPayload()
         {
             if (IsSuccess && Payload != null && Payload.Length > 0)
             {
-                Length = Payload.ElementAt(0);
+                Length = Payload[0];
                 Values = ParseBits(Payload, Length);
             }
         }
@@ -105,5 +124,4 @@ namespace STTech.BytesIO.Modbus
             return values;
         }
     }
-
 }
