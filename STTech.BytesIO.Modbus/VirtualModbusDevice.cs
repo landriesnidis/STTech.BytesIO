@@ -15,6 +15,7 @@ namespace STTech.BytesIO.Modbus
     {
         private readonly ModbusServer _server;
         private readonly List<IModbusRegister> _registers = new List<IModbusRegister>();
+        private readonly object _syncLock = new object();
 
         /// <summary>
         /// 获取或设置 Modbus 服务端
@@ -46,7 +47,10 @@ namespace STTech.BytesIO.Modbus
         public void Mount(IModbusRegister register)
         {
             if (register == null) throw new ArgumentNullException(nameof(register));
-            if (!_registers.Contains(register)) _registers.Add(register);
+            lock (_syncLock)
+            {
+                if (!_registers.Contains(register)) _registers.Add(register);
+            }
         }
 
         /// <summary>
@@ -54,13 +58,20 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public void Unmount(IModbusRegister register)
         {
-            _registers.Remove(register);
+            if (register == null) return;
+            lock (_syncLock)
+            {
+                _registers.Remove(register);
+            }
         }
 
         private T GetRegister<T>(ModbusRegisterType type, ushort address, ushort length) where T : class, IModbusRegister
         {
-            var reg = _registers.FirstOrDefault(r => r.RegisterType == type && r.Contains(address, length));
-            return reg as T;
+            lock (_syncLock)
+            {
+                var reg = _registers.FirstOrDefault(r => r.RegisterType == type && r.Contains(address, length));
+                return reg as T;
+            }
         }
 
         private ushort ParseBigEndianUInt16(byte[] data, int offset)
@@ -75,148 +86,185 @@ namespace STTech.BytesIO.Modbus
 
         private void Server_ReadCoilRegisterRequested(object sender, ModbusReadRequestedEventArgs<bool[]> e)
         {
-            var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.Coil, e.Request.StartAddress, e.Request.Length);
-            if (reg != null)
+            lock (_syncLock)
             {
-                var offset = e.Request.StartAddress - reg.StartAddress;
-                e.ResponseData = new bool[e.Request.Length];
-                Array.Copy(reg.Source, offset, e.ResponseData, 0, e.Request.Length);
-            }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.Coil, e.Request.StartAddress, e.Request.Length);
+                if (reg != null)
+                {
+                    var offset = e.Request.StartAddress - reg.StartAddress;
+                    e.ResponseData = new bool[e.Request.Length];
+                    Array.Copy(reg.Source, offset, e.ResponseData, 0, e.Request.Length);
+                }
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
         }
 
         private void Server_ReadDiscreteInputRegisterRequested(object sender, ModbusReadRequestedEventArgs<bool[]> e)
         {
-            var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.DiscreteInput, e.Request.StartAddress, e.Request.Length);
-            if (reg != null)
+            lock (_syncLock)
             {
-                var offset = e.Request.StartAddress - reg.StartAddress;
-                e.ResponseData = new bool[e.Request.Length];
-                Array.Copy(reg.Source, offset, e.ResponseData, 0, e.Request.Length);
-            }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.DiscreteInput, e.Request.StartAddress, e.Request.Length);
+                if (reg != null)
+                {
+                    var offset = e.Request.StartAddress - reg.StartAddress;
+                    e.ResponseData = new bool[e.Request.Length];
+                    Array.Copy(reg.Source, offset, e.ResponseData, 0, e.Request.Length);
+                }
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
         }
 
         private void Server_ReadHoldingRegisterRequested(object sender, ModbusReadRequestedEventArgs<byte[]> e)
         {
-            var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Holding, e.Request.StartAddress, e.Request.Length);
-            if (reg != null)
+            lock (_syncLock)
             {
-                var offset = e.Request.StartAddress - reg.StartAddress;
-                e.ResponseData = new byte[e.Request.Length * 2];
-                for (int i = 0; i < e.Request.Length; i++)
+                var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Holding, e.Request.StartAddress, e.Request.Length);
+                if (reg != null)
                 {
-                    var valBytes = GetBytesBigEndian(reg.Source[offset + i]);
-                    e.ResponseData[i * 2] = valBytes[0];
-                    e.ResponseData[i * 2 + 1] = valBytes[1];
+                    var offset = e.Request.StartAddress - reg.StartAddress;
+                    e.ResponseData = new byte[e.Request.Length * 2];
+                    for (int i = 0; i < e.Request.Length; i++)
+                    {
+                        var valBytes = GetBytesBigEndian(reg.Source[offset + i]);
+                        e.ResponseData[i * 2] = valBytes[0];
+                        e.ResponseData[i * 2 + 1] = valBytes[1];
+                    }
                 }
-            }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
         }
 
         private void Server_ReadInputRegisterRequested(object sender, ModbusReadRequestedEventArgs<byte[]> e)
         {
-            var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Input, e.Request.StartAddress, e.Request.Length);
-            if (reg != null)
+            lock (_syncLock)
             {
-                var offset = e.Request.StartAddress - reg.StartAddress;
-                e.ResponseData = new byte[e.Request.Length * 2];
-                for (int i = 0; i < e.Request.Length; i++)
+                var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Input, e.Request.StartAddress, e.Request.Length);
+                if (reg != null)
                 {
-                    var valBytes = GetBytesBigEndian(reg.Source[offset + i]);
-                    e.ResponseData[i * 2] = valBytes[0];
-                    e.ResponseData[i * 2 + 1] = valBytes[1];
+                    var offset = e.Request.StartAddress - reg.StartAddress;
+                    e.ResponseData = new byte[e.Request.Length * 2];
+                    for (int i = 0; i < e.Request.Length; i++)
+                    {
+                        var valBytes = GetBytesBigEndian(reg.Source[offset + i]);
+                        e.ResponseData[i * 2] = valBytes[0];
+                        e.ResponseData[i * 2 + 1] = valBytes[1];
+                    }
                 }
-            }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
         }
 
         private void Server_WriteSingleCoilRegisterRequested(object sender, ModbusWriteRequestedEventArgs<WriteSingleCoilRegisterRequest> e)
         {
-            var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.Coil, e.Request.WriteAddress, 1);
-            if (reg != null)
+            Action notifyAction = null;
+            lock (_syncLock)
             {
-                var offset = e.Request.WriteAddress - reg.StartAddress;
-                reg.Source[offset] = e.Request.Data;
-                reg.Notify();
+                var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.Coil, e.Request.WriteAddress, 1);
+                if (reg != null)
+                {
+                    var offset = e.Request.WriteAddress - reg.StartAddress;
+                    reg.Source[offset] = e.Request.Data;
+                    notifyAction = reg.Notify;
+                }
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
-            }
+
+            // 锁外触发用户委托，严防死锁
+            notifyAction?.Invoke();
         }
 
         private void Server_WriteMultipleCoilRegistersRequested(object sender, ModbusWriteRequestedEventArgs<WriteMultipleCoilRegistersRequest> e)
         {
-            ushort length = (ushort)e.Request.Data.Length;
-            var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.Coil, e.Request.WriteAddress, length);
-            if (reg != null)
+            Action notifyAction = null;
+            lock (_syncLock)
             {
-                var offset = e.Request.WriteAddress - reg.StartAddress;
-                for (int i = 0; i < length; i++)
+                var length = (ushort)e.Request.Data.Length;
+                var reg = GetRegister<IModbusRegister<bool>>(ModbusRegisterType.Coil, e.Request.WriteAddress, length);
+                if (reg != null)
                 {
-                    reg.Source[offset + i] = e.Request.Data[i];
+                    var offset = e.Request.WriteAddress - reg.StartAddress;
+                    Array.Copy(e.Request.Data, 0, reg.Source, offset, length);
+                    notifyAction = reg.Notify;
                 }
-                reg.Notify();
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
-            }
+
+            // 锁外触发用户委托，严防死锁
+            notifyAction?.Invoke();
         }
 
         private void Server_WriteSingleHoldingRegisterRequested(object sender, ModbusWriteRequestedEventArgs<WriteSingleHoldingRegisterRequest> e)
         {
-            var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Holding, e.Request.WriteAddress, 1);
-            if (reg != null)
+            Action notifyAction = null;
+            lock (_syncLock)
             {
-                var offset = e.Request.WriteAddress - reg.StartAddress;
-                reg.Source[offset] = ParseBigEndianUInt16(e.Request.Data, 0);
-                reg.Notify();
+                var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Holding, e.Request.WriteAddress, 1);
+                if (reg != null)
+                {
+                    var offset = e.Request.WriteAddress - reg.StartAddress;
+                    reg.Source[offset] = ParseBigEndianUInt16(e.Request.Data, 0);
+                    notifyAction = reg.Notify;
+                }
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
-            }
+
+            // 锁外触发用户委托，严防死锁
+            notifyAction?.Invoke();
         }
 
         private void Server_WriteMultipleHoldingRegistersRequested(object sender, ModbusWriteRequestedEventArgs<WriteMultipleHoldingRegistersRequest> e)
         {
-            ushort length = (ushort)(e.Request.Data.Length / 2);
-            var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Holding, e.Request.WriteAddress, length);
-            if (reg != null)
+            Action notifyAction = null;
+            lock (_syncLock)
             {
-                var offset = e.Request.WriteAddress - reg.StartAddress;
-                for (int i = 0; i < length; i++)
+                var length = (ushort)(e.Request.Data.Length / 2);
+                var reg = GetRegister<IModbusRegister<ushort>>(ModbusRegisterType.Holding, e.Request.WriteAddress, length);
+                if (reg != null)
                 {
-                    reg.Source[offset + i] = ParseBigEndianUInt16(e.Request.Data, i * 2);
+                    var offset = e.Request.WriteAddress - reg.StartAddress;
+                    for (int i = 0; i < length; i++)
+                    {
+                        reg.Source[offset + i] = ParseBigEndianUInt16(e.Request.Data, i * 2);
+                    }
+                    notifyAction = reg.Notify;
                 }
-                reg.Notify();
+                else
+                {
+                    e.IsError = true;
+                    e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
+                }
             }
-            else
-            {
-                e.IsError = true;
-                e.ErrorCode = ModbusErrorCode.IllegalDataAddress;
-            }
+
+            // 锁外触发用户委托，严防死锁
+            notifyAction?.Invoke();
         }
     }
 }

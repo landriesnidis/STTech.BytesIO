@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace STTech.BytesIO.Modbus
 {
@@ -59,24 +58,48 @@ namespace STTech.BytesIO.Modbus
             }
             Payload = bytes.ToArray();
         }
+
         /// <summary>
         /// 构造读离散输入寄存器响应 (基于字节数组)
         /// </summary>
         /// <param name="bytes">原始报文数据</param>
-        public ReadDiscreteInputRegisterResponse(byte[] bytes) : base(bytes)
+        public ReadDiscreteInputRegisterResponse(byte[] bytes) : this(bytes, ModbusProtocolFormat.RTU)
         {
-            if (IsSuccess && Payload != null && Payload.Length > 0)
-            {
-                Length = Payload.ElementAt(0);
-                Values = ParseBits(Payload, Length);
-            }
         }
 
-        public ReadDiscreteInputRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context) : base(context)
+        /// <summary>
+        /// 构造读离散输入寄存器响应 (基于字节数组和指定协议格式)
+        /// </summary>
+        /// <param name="bytes">原始报文数据</param>
+        /// <param name="format">协议格式</param>
+        public ReadDiscreteInputRegisterResponse(byte[] bytes, ModbusProtocolFormat format) : base(bytes, format)
+        {
+            InitValuesFromPayload();
+        }
+
+        /// <summary>
+        /// 构造读离散输入寄存器响应 (基于解包上下文)
+        /// </summary>
+        /// <param name="context">解包上下文</param>
+        public ReadDiscreteInputRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context) : this(context, ModbusProtocolFormat.RTU)
+        {
+        }
+
+        /// <summary>
+        /// 构造读离散输入寄存器响应 (基于解包上下文和指定协议格式)
+        /// </summary>
+        /// <param name="context">解包上下文</param>
+        /// <param name="format">协议格式</param>
+        public ReadDiscreteInputRegisterResponse(STTech.BytesIO.Core.Component.UnpackContext context, ModbusProtocolFormat format) : base(context, format)
+        {
+            InitValuesFromPayload();
+        }
+
+        private void InitValuesFromPayload()
         {
             if (IsSuccess && Payload != null && Payload.Length > 0)
             {
-                Length = Payload.ElementAt(0);
+                Length = Payload[0];
                 Values = ParseBits(Payload, Length);
             }
         }

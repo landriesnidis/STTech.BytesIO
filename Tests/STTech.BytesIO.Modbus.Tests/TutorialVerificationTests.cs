@@ -42,7 +42,8 @@ namespace STTech.BytesIO.Modbus.Tests
                 RtsEnable = true
             };
 
-            Assert.Equal(ModbusProtocolFormat.RTU, tcpClient1.ProtocolFormat);
+            Assert.Equal(ModbusProtocolFormat.MBAP, tcpClient1.ProtocolFormat);
+            Assert.Equal(ModbusProtocolFormat.RTU, tcpClient2.ProtocolFormat);
             Assert.Equal(ModbusProtocolFormat.ASCII, tcpClient3.ProtocolFormat);
         }
 

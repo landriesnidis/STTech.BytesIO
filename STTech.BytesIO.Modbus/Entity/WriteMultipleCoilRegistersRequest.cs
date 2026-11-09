@@ -1,9 +1,7 @@
+using STTech.BytesIO.Core;
 using System;
-using System.Collections;
-using System.Collections.Generic;
+using System.Buffers.Binary;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
 
 namespace STTech.BytesIO.Modbus
 {
@@ -30,14 +28,22 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public WriteMultipleCoilRegistersRequest() : base(FunctionCode.WriteMultipleCoilRegisters)
         {
-
         }
 
         /// <summary>
         /// 构造写多个线圈寄存器请求 (基于字节数组)
         /// </summary>
         /// <param name="data">原始报文数据</param>
-        public WriteMultipleCoilRegistersRequest(byte[] data) : base(data)
+        public WriteMultipleCoilRegistersRequest(byte[] data) : this(data, null)
+        {
+        }
+
+        /// <summary>
+        /// 构造写多个线圈寄存器请求 (基于字节数组和指定协议格式)
+        /// </summary>
+        /// <param name="data">原始报文数据</param>
+        /// <param name="format">协议格式</param>
+        public WriteMultipleCoilRegistersRequest(byte[] data, ModbusProtocolFormat? format) : base(data, format)
         {
             DeserializePayloadHandle();
         }
@@ -46,7 +52,16 @@ namespace STTech.BytesIO.Modbus
         /// 构造写多个线圈寄存器请求 (基于解包上下文)
         /// </summary>
         /// <param name="context">解包上下文</param>
-        public WriteMultipleCoilRegistersRequest(STTech.BytesIO.Core.Component.UnpackContext context) : base(context)
+        public WriteMultipleCoilRegistersRequest(STTech.BytesIO.Core.Component.UnpackContext context) : this(context, null)
+        {
+        }
+
+        /// <summary>
+        /// 构造写多个线圈寄存器请求 (基于解包上下文和指定协议格式)
+        /// </summary>
+        /// <param name="context">解包上下文</param>
+        /// <param name="format">协议格式</param>
+        public WriteMultipleCoilRegistersRequest(STTech.BytesIO.Core.Component.UnpackContext context, ModbusProtocolFormat? format) : base(context, format)
         {
             DeserializePayloadHandle();
         }
@@ -54,49 +69,48 @@ namespace STTech.BytesIO.Modbus
         /// <inheritdoc/>
         protected internal override void SerializePayloadHandle()
         {
-            List<byte> bytes = new List<byte>();
-            bytes.AddRange(Enumerable.Reverse(BitConverter.GetBytes(WriteAddress)));
-            bytes.AddRange(Enumerable.Reverse(BitConverter.GetBytes((ushort)Data.Length)));
+            ushort quantity = (ushort)(Data?.Length ?? 0);
+            byte byteCount = (byte)((quantity + 7) / 8);
+            byte[] payload = new byte[5 + byteCount];
 
-            var bytesArray = Data.Slice(8);
-            var bits = bytesArray.Select(arr =>
+            BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(0, 2), WriteAddress);
+            BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(2, 2), quantity);
+            payload[4] = byteCount;
+
+            if (Data != null)
             {
-                int b = 0;
-                foreach (var c in Enumerable.Reverse(arr))
+                for (int i = 0; i < quantity; i++)
                 {
-                    b = b << 1;
-                    if (c) b++;
+                    if (Data[i])
+                    {
+                        payload[5 + (i / 8)] |= (byte)(1 << (i % 8));
+                    }
                 }
-                return (byte)b;
-            });
+            }
 
-            bytes.Add((byte)bits.Count());
-            bytes.AddRange(bits);
-            Payload = bytes.ToArray();
+            Payload = payload;
         }
 
         /// <inheritdoc/>
         protected internal override void DeserializePayloadHandle()
         {
             if (Payload == null || Payload.Length < 5) return;
-            WriteAddress = BitConverter.ToUInt16(Payload.Take(2).Reverse().ToArray(), 0);
-            var quantity = BitConverter.ToUInt16(Payload.Skip(2).Take(2).Reverse().ToArray(), 0);
-            var byteCount = Payload[4];
+            WriteAddress = BinaryPrimitives.ReadUInt16BigEndian(Payload.AsSpan(0, 2));
+            ushort quantity = BinaryPrimitives.ReadUInt16BigEndian(Payload.AsSpan(2, 2));
+            byte byteCount = Payload[4];
 
             if (Payload.Length >= 5 + byteCount)
             {
-                var bytesArray = Payload.Skip(5).Take(byteCount).ToArray();
-                var boolList = new List<bool>();
-                
-                foreach (var b in bytesArray)
+                bool[] data = new bool[quantity];
+                for (int i = 0; i < quantity; i++)
                 {
-                    for (int i = 0; i < 8; i++)
+                    int byteIndex = 5 + (i / 8);
+                    if (byteIndex < Payload.Length)
                     {
-                        if (boolList.Count >= quantity) break;
-                        boolList.Add((b & (1 << i)) != 0);
+                        data[i] = (Payload[byteIndex] & (1 << (i % 8))) != 0;
                     }
                 }
-                Data = boolList.ToArray();
+                Data = data;
             }
         }
     }

@@ -1,8 +1,10 @@
-using STTech.BytesIO.Core;
+﻿using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace STTech.BytesIO.Modbus
 {
@@ -33,6 +35,32 @@ namespace STTech.BytesIO.Modbus
     public abstract partial class ModbusClient : VirtualClient
     {
         private ModbusProtocolFormat protocolFormat;
+        private readonly SemaphoreSlim _channelLock = new SemaphoreSlim(1, 1);
+        private int _transactionIdCounter = 0;
+
+        /// <summary>
+        /// 默认工业端序格式 (默认为大端模式 ABCD，适用于西门子 PLC 等)
+        /// </summary>
+        public EndianFormat DefaultEndianFormat { get; set; } = EndianFormat.ABCD;
+
+        /// <summary>
+        /// 是否允许 MBAP 模式下的无锁并发流水线 (Pipelining)。
+        /// <para>
+        /// 默认为 <c>false</c>。在工业现场，绝大多数真实 PLC（如西门子 S7-200 SMART/S7-1200、施耐德 M221、汇川及各种串口网关）
+        /// 的 Modbus TCP 协议栈均为单任务串行处理。如果上位机并发下发请求，PLC 会返回 0x06 (Slave Device Busy) 或直接丢弃闪断。
+        /// 因此默认启用请求-响应串行互斥保护。
+        /// 仅当连接高性能高并发软件从站或支持多任务并发握手的设备时，可明确置为 <c>true</c> 以开启无锁并发流水线。
+        /// </para>
+        /// </summary>
+        public bool AllowPipelining { get; set; } = false;
+
+        /// <summary>
+        /// 生成下一个 MBAP 事务元标识符 (原子自增)
+        /// </summary>
+        public ushort GetNextTransactionId()
+        {
+            return (ushort)(Interlocked.Increment(ref _transactionIdCounter) & 0xFFFF);
+        }
 
         /// <inheritdoc/>
         public Unpacker<ModbusResponse> Unpacker { get; }
@@ -66,6 +94,12 @@ namespace STTech.BytesIO.Modbus
             this.BindUnpacker(Unpacker);
             Unpacker.OnDataParsed += Unpacker_OnDataParsed;
         }
+
+        public override void Dispose()
+        {
+            _channelLock?.Dispose();
+            base.Dispose();
+        }
     }
 
     public abstract partial class ModbusClient : IUnpackerSupport<ModbusResponse>
@@ -81,8 +115,159 @@ namespace STTech.BytesIO.Modbus
         public Reply<T> SendModbusRequest<T>(ModbusRequest request, int timeout = 3000, SendOptions options = null) where T : ModbusResponse
         {
             request.ProtocolFormat = ProtocolFormat;
-            var reply = this.Send(request, timeout, ReplyMatchHandle, options);
-            return reply.CastTo<T>();
+
+            // 1. 广播地址检查 (SlaveId == 0)
+            if (request.SlaveId == 0)
+            {
+                // 读请求严禁广播
+                if (request is ReadRegisterRequest || (byte)request.FunctionCode <= 0x04)
+                {
+                    throw new ArgumentException("Modbus 规范严禁向广播地址 (SlaveId = 0) 发起读操作。", nameof(request));
+                }
+
+                // 写请求：全网从站同时执行但严禁返回任何应答。必须获取信道锁保护物理信道避免踩踏！
+                if (!_channelLock.Wait(timeout))
+                {
+                    return new Reply<T>(this, ReplyStatus.Timeout, null);
+                }
+
+                try
+                {
+                    this.Send(request.GetBytes(), options);
+                    // 广播写入后从站需要处理时间，总线增加静默延迟
+                    System.Threading.Thread.Sleep(10);
+                    return new Reply<T>(this, null);
+                }
+                finally
+                {
+                    _channelLock.Release();
+                }
+            }
+
+            // 2. 差异化信道调度
+            if (ProtocolFormat == ModbusProtocolFormat.MBAP && AllowPipelining)
+            {
+                // MBAP 流水线模式：分配事务元 ID，支持全双工高并发多路复用无锁发送
+                request.TransactionId = GetNextTransactionId();
+                var reply = this.Send(request, timeout, ReplyMatchHandle, options);
+                return reply.CastTo<T>();
+            }
+            else
+            {
+                // 工业级默认单问单答串行排队保护 (适用于 RTU / ASCII 以及工业现场真实 PLC 的 MBAP)
+                if (ProtocolFormat == ModbusProtocolFormat.MBAP)
+                {
+                    request.TransactionId = GetNextTransactionId();
+                }
+
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                if (!_channelLock.Wait(timeout))
+                {
+                    return new Reply<T>(this, ReplyStatus.Timeout, null);
+                }
+
+                int remainingTimeout = timeout - (int)sw.ElapsedMilliseconds;
+                if (remainingTimeout <= 0)
+                {
+                    _channelLock.Release();
+                    return new Reply<T>(this, ReplyStatus.Timeout, null);
+                }
+
+                try
+                {
+                    var reply = this.Send(request, remainingTimeout, ReplyMatchHandle, options);
+                    if (reply.IsTimeout && ProtocolFormat != ModbusProtocolFormat.MBAP)
+                    {
+                        // 半双工 RTU/ASCII 超时保护：短暂静默隔离，避免迟到报文与后续请求总线踩踏
+                        System.Threading.Thread.Sleep(50);
+                    }
+                    return reply.CastTo<T>();
+                }
+                finally
+                {
+                    _channelLock.Release();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 异步发送Modbus请求
+        /// </summary>
+        /// <typeparam name="T">Modbus响应类型</typeparam>
+        /// <param name="request">Modbus请求实体</param>
+        /// <param name="timeout">超时时长(ms)</param>
+        /// <param name="options">发送可选参数</param>
+        /// <returns></returns>
+        public async Task<Reply<T>> SendModbusRequestAsync<T>(ModbusRequest request, int timeout = 3000, SendOptions options = null) where T : ModbusResponse
+        {
+            request.ProtocolFormat = ProtocolFormat;
+
+            // 1. 广播地址检查 (SlaveId == 0)
+            if (request.SlaveId == 0)
+            {
+                if (request is ReadRegisterRequest || (byte)request.FunctionCode <= 0x04)
+                {
+                    throw new ArgumentException("Modbus 规范严禁向广播地址 (SlaveId = 0) 发起读操作。", nameof(request));
+                }
+
+                if (!await _channelLock.WaitAsync(timeout).ConfigureAwait(false))
+                {
+                    return new Reply<T>(this, ReplyStatus.Timeout, null);
+                }
+
+                try
+                {
+                    await this.SendAsync(request.GetBytes(), options).ConfigureAwait(false);
+                    await Task.Delay(10).ConfigureAwait(false);
+                    return new Reply<T>(this, null);
+                }
+                finally
+                {
+                    _channelLock.Release();
+                }
+            }
+
+            // 2. 差异化信道调度
+            if (ProtocolFormat == ModbusProtocolFormat.MBAP && AllowPipelining)
+            {
+                request.TransactionId = GetNextTransactionId();
+                var reply = await this.SendAsync(request, timeout, ReplyMatchHandle, options).ConfigureAwait(false);
+                return reply.CastTo<T>();
+            }
+            else
+            {
+                if (ProtocolFormat == ModbusProtocolFormat.MBAP)
+                {
+                    request.TransactionId = GetNextTransactionId();
+                }
+
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                if (!await _channelLock.WaitAsync(timeout).ConfigureAwait(false))
+                {
+                    return new Reply<T>(this, ReplyStatus.Timeout, null);
+                }
+
+                int remainingTimeout = timeout - (int)sw.ElapsedMilliseconds;
+                if (remainingTimeout <= 0)
+                {
+                    _channelLock.Release();
+                    return new Reply<T>(this, ReplyStatus.Timeout, null);
+                }
+
+                try
+                {
+                    var reply = await this.SendAsync(request, remainingTimeout, ReplyMatchHandle, options).ConfigureAwait(false);
+                    if (reply.IsTimeout && ProtocolFormat != ModbusProtocolFormat.MBAP)
+                    {
+                        await Task.Delay(50).ConfigureAwait(false);
+                    }
+                    return reply.CastTo<T>();
+                }
+                finally
+                {
+                    _channelLock.Release();
+                }
+            }
         }
 
         #region ReadCoilRegister
@@ -209,7 +394,19 @@ namespace STTech.BytesIO.Modbus
 
         #endregion
 
-        #region WriteSingleCoilRegister
+        #region WriteRegisterResponse
+
+        /// <summary>
+        /// 发送Modbus写入请求
+        /// </summary>
+        /// <param name="request">Modbus请求实体</param>
+        /// <param name="timeout">超时时长(ms)</param>
+        /// <param name="options">发送可选参数</param>
+        /// <returns></returns>
+        public Reply<WriteRegisterResponse> SendModbusWriteRequest(ModbusRequest request, int timeout = 3000, SendOptions options = null)
+        {
+            return SendModbusRequest<WriteRegisterResponse>(request, timeout, options);
+        }
 
         /// <summary>
         /// 写单个线圈寄存器
@@ -220,28 +417,22 @@ namespace STTech.BytesIO.Modbus
         /// <returns></returns>
         public Reply<WriteRegisterResponse> WriteSingleCoilRegister(WriteSingleCoilRegisterRequest request, int timeout = 3000, SendOptions options = null)
         {
-            request.ProtocolFormat = ProtocolFormat;
-            var reply = this.Send(request, timeout, ReplyMatchHandle, options);
-            return reply.ConvertTo<WriteRegisterResponse>();
+            return SendModbusWriteRequest(request, timeout, options);
         }
 
         /// <summary>
         /// 写单个线圈寄存器
         /// </summary>
-        /// <param name="slaveId">从站地址</param>
+        /// <param name="slaveId">从机地址</param>
         /// <param name="writeAddress">写入地址</param>
-        /// <param name="data">写入值</param>
-        /// <param name="timeout">超长时长(ms)</param>
+        /// <param name="data">写入数据</param>
+        /// <param name="timeout">超时时长(ms)</param>
         /// <param name="options">发送可选参数</param>
         /// <returns></returns>
         public Reply<WriteRegisterResponse> WriteSingleCoilRegister(byte slaveId, ushort writeAddress, bool data, int timeout = 3000, SendOptions options = null)
         {
-            return this.WriteSingleCoilRegister(new WriteSingleCoilRegisterRequest { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
+            return this.WriteSingleCoilRegister(new WriteSingleCoilRegisterRequest() { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
         }
-
-        #endregion
-
-        #region WriteSingleHoldingRegister
 
         /// <summary>
         /// 写单个保持寄存器
@@ -252,42 +443,52 @@ namespace STTech.BytesIO.Modbus
         /// <returns></returns>
         public Reply<WriteRegisterResponse> WriteSingleHoldingRegister(WriteSingleHoldingRegisterRequest request, int timeout = 3000, SendOptions options = null)
         {
-            var reply = SendModbusRequest<WriteRegisterResponse>(request, timeout, options);
-            return reply;
+            return SendModbusWriteRequest(request, timeout, options);
         }
 
         /// <summary>
         /// 写单个保持寄存器
         /// </summary>
-        /// <param name="slaveId">从站地址</param>
+        /// <param name="slaveId">从机地址</param>
         /// <param name="writeAddress">写入地址</param>
-        /// <param name="data">写入值</param>
+        /// <param name="data">写入数据</param>
         /// <param name="timeout">超时时长(ms)</param>
         /// <param name="options">发送可选参数</param>
         /// <returns></returns>
         public Reply<WriteRegisterResponse> WriteSingleHoldingRegister(byte slaveId, ushort writeAddress, byte[] data, int timeout = 3000, SendOptions options = null)
         {
-            return this.WriteSingleHoldingRegister(new WriteSingleHoldingRegisterRequest { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
+            return this.WriteSingleHoldingRegister(new WriteSingleHoldingRegisterRequest() { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
         }
 
         /// <summary>
         /// 写单个保持寄存器
         /// </summary>
-        /// <param name="slaveId">从站地址</param>
+        /// <param name="slaveId">从机地址</param>
         /// <param name="writeAddress">写入地址</param>
-        /// <param name="value">写入的 ushort 值</param>
+        /// <param name="data">写入数据</param>
         /// <param name="timeout">超时时长(ms)</param>
         /// <param name="options">发送可选参数</param>
         /// <returns></returns>
-        public Reply<WriteRegisterResponse> WriteSingleHoldingRegister(byte slaveId, ushort writeAddress, ushort value, int timeout = 3000, SendOptions options = null)
+        public Reply<WriteRegisterResponse> WriteSingleHoldingRegister(byte slaveId, ushort writeAddress, ushort data, int timeout = 3000, SendOptions options = null)
         {
-            var data = Enumerable.Reverse(BitConverter.GetBytes(value)).ToArray();
-            return this.WriteSingleHoldingRegister(new WriteSingleHoldingRegisterRequest { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
+            byte[] bytes = new byte[] { (byte)(data >> 8), (byte)(data & 0xFF) };
+            return this.WriteSingleHoldingRegister(new WriteSingleHoldingRegisterRequest() { SlaveId = slaveId, WriteAddress = writeAddress, Data = bytes, ProtocolFormat = ProtocolFormat }, timeout, options);
         }
 
-        #endregion
-
-        #region WriteMultipleCoilRegisters
+        /// <summary>
+        /// 写单个保持寄存器
+        /// </summary>
+        /// <param name="slaveId">从机地址</param>
+        /// <param name="writeAddress">写入地址</param>
+        /// <param name="data">写入数据</param>
+        /// <param name="timeout">超时时长(ms)</param>
+        /// <param name="options">发送可选参数</param>
+        /// <returns></returns>
+        public Reply<WriteRegisterResponse> WriteSingleHoldingRegister(byte slaveId, ushort writeAddress, short data, int timeout = 3000, SendOptions options = null)
+        {
+            byte[] bytes = new byte[] { (byte)(data >> 8), (byte)(data & 0xFF) };
+            return this.WriteSingleHoldingRegister(new WriteSingleHoldingRegisterRequest() { SlaveId = slaveId, WriteAddress = writeAddress, Data = bytes, ProtocolFormat = ProtocolFormat }, timeout, options);
+        }
 
         /// <summary>
         /// 写多个线圈寄存器
@@ -298,56 +499,56 @@ namespace STTech.BytesIO.Modbus
         /// <returns></returns>
         public Reply<WriteRegisterResponse> WriteMultipleCoilRegisters(WriteMultipleCoilRegistersRequest request, int timeout = 3000, SendOptions options = null)
         {
-            var reply = SendModbusRequest<WriteRegisterResponse>(request, timeout, options);
-            return reply;
+            return SendModbusWriteRequest(request, timeout, options);
         }
 
         /// <summary>
         /// 写多个线圈寄存器
         /// </summary>
-        /// <param name="slaveId">从站地址</param>
+        /// <param name="slaveId">从机地址</param>
         /// <param name="writeAddress">写入地址</param>
-        /// <param name="data">写入值</param>
+        /// <param name="data">写入数据</param>
         /// <param name="timeout">超时时长(ms)</param>
         /// <param name="options">发送可选参数</param>
         /// <returns></returns>
         public Reply<WriteRegisterResponse> WriteMultipleCoilRegisters(byte slaveId, ushort writeAddress, bool[] data, int timeout = 3000, SendOptions options = null)
         {
-            return this.WriteMultipleCoilRegisters(new WriteMultipleCoilRegistersRequest { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
-
+            return this.WriteMultipleCoilRegisters(new WriteMultipleCoilRegistersRequest() { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
         }
 
-        #endregion
-
-        #region WriteMultipleHoldingRegisters
-
         /// <summary>
-        /// 写多个保持寄存器
+        /// 写入多个保持寄存器
         /// </summary>
-        /// <param name="request">写多个保持寄存器的请求实体</param>
+        /// <param name="request">写入多个保持寄存器的请求实体</param>
         /// <param name="timeout">超时时长(ms)</param>
         /// <param name="options">发送可选参数</param>
         /// <returns></returns>
         public Reply<WriteRegisterResponse> WriteMultipleHoldingRegisters(WriteMultipleHoldingRegistersRequest request, int timeout = 3000, SendOptions options = null)
         {
-            var reply = SendModbusRequest<WriteRegisterResponse>(request, timeout, options);
-            return reply;
+            return SendModbusWriteRequest(request, timeout, options);
         }
 
         /// <summary>
-        /// 写多个保持寄存器
+        /// 写入多个保持寄存器
         /// </summary>
-        /// <param name="slaveId">从站地址</param>
+        /// <param name="slaveId">从机地址</param>
         /// <param name="writeAddress">写入地址</param>
-        /// <param name="values">写入的 ushort 数组</param>
+        /// <param name="data">写入数据</param>
         /// <param name="timeout">超时时长(ms)</param>
         /// <param name="options">发送可选参数</param>
         /// <returns></returns>
-        public Reply<WriteRegisterResponse> WriteMultipleHoldingRegisters(byte slaveId, ushort writeAddress, ushort[] values, int timeout = 3000, SendOptions options = null)
+        public Reply<WriteRegisterResponse> WriteMultipleHoldingRegisters(byte slaveId, ushort writeAddress, ushort[] data, int timeout = 3000, SendOptions options = null)
         {
-            var data = values.Select(v => Enumerable.Reverse(BitConverter.GetBytes(v))).SelectMany(v => v).ToArray();
-
-            return this.WriteMultipleHoldingRegisters(new WriteMultipleHoldingRegistersRequest() { SlaveId = slaveId, WriteAddress = writeAddress, Data = data, ProtocolFormat = ProtocolFormat }, timeout, options);
+            byte[] bytes = new byte[(data?.Length ?? 0) * 2];
+            if (data != null)
+            {
+                for (int i = 0; i < data.Length; i++)
+                {
+                    bytes[i * 2] = (byte)(data[i] >> 8);
+                    bytes[i * 2 + 1] = (byte)(data[i] & 0xFF);
+                }
+            }
+            return this.WriteMultipleHoldingRegisters(slaveId, writeAddress, bytes, timeout, options);
         }
 
         /// <summary>
@@ -369,13 +570,16 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// Modbus的请求与响应匹配过程
         /// </summary>
-        /// <param name="req"></param>
-        /// <param name="resp"></param>
-        /// <returns></returns>
         private bool ReplyMatchHandle(ModbusRequest req, ModbusResponse resp)
         {
             try
             {
+                // MBAP 模式下：直接基于事务元标识符 (TransactionId) 精确匹配，支持全双工高并发响应分发
+                if (req.ProtocolFormat == ModbusProtocolFormat.MBAP && resp.ProtocolFormat == ModbusProtocolFormat.MBAP)
+                {
+                    return req.TransactionId == resp.TransactionId;
+                }
+
                 if (req.SlaveId != resp.SlaveId)
                 {
                     return false;
@@ -388,62 +592,50 @@ namespace STTech.BytesIO.Modbus
 
                 if (!resp.IsSuccess)
                 {
-                    // 如果请求失败（非通信失败，从机回复故障码），则返回匹配成功（不需要进一步对比寄存器地址）
+                    // 如果请求失败（从机回复故障码），则匹配成功
                     return true;
                 }
 
                 // 读取类型
+                if (req is ReadRegisterRequest sd)
                 {
-                    if (req is ReadRegisterRequest sd)
+                    switch (req.FunctionCode)
                     {
-                        switch (req.FunctionCode)
-                        {
-                            case FunctionCode.ReadCoilRegister:
-                                {
-                                    if (resp is ReadCoilRegisterResponse rd) return (sd.Length + 7) / 8 == rd.Length;
-                                    break;
-                                }
-                            case FunctionCode.ReadDiscreteInputRegister:
-                                {
-                                    if (resp is ReadDiscreteInputRegisterResponse rd) return (sd.Length + 7) / 8 == rd.Length;
-                                    break;
-                                }
-                            case FunctionCode.ReadHoldingRegister:
-                                {
-                                    if (resp is ReadHoldingRegisterResponse rd) return sd.Length == rd.Length / 2;
-                                    break;
-                                }
-                            case FunctionCode.ReadInputRegister:
-                                {
-                                    if (resp is ReadInputRegisterResponse rd) return sd.Length == rd.Length / 2;
-                                    break;
-                                }
-                        }
+                        case FunctionCode.ReadCoilRegister:
+                            if (resp is ReadCoilRegisterResponse rd1) return (sd.Length + 7) / 8 == rd1.Length;
+                            break;
+                        case FunctionCode.ReadDiscreteInputRegister:
+                            if (resp is ReadDiscreteInputRegisterResponse rd2) return (sd.Length + 7) / 8 == rd2.Length;
+                            break;
+                        case FunctionCode.ReadHoldingRegister:
+                            if (resp is ReadHoldingRegisterResponse rd3) return sd.Length == rd3.Length / 2;
+                            break;
+                        case FunctionCode.ReadInputRegister:
+                            if (resp is ReadInputRegisterResponse rd4) return sd.Length == rd4.Length / 2;
+                            break;
                     }
                 }
 
                 // 写入类型
+                if (req is WriteMultipleHoldingRegistersRequest sd1 && resp is WriteRegisterResponse rdWrite1)
                 {
-                    if (req is WriteMultipleHoldingRegistersRequest sd1 && resp is WriteRegisterResponse rd1)
-                    {
-                        return sd1.WriteAddress == rd1.WriteAddress && sd1.Data != null && rd1.Values != null && rd1.Values.Length >= 2 && (sd1.Data.Length / 2) == rd1.GetUInt16();
-                    }
+                    return sd1.WriteAddress == rdWrite1.WriteAddress && sd1.Data != null && rdWrite1.Values != null && rdWrite1.Values.Length >= 2 && (sd1.Data.Length / 2) == rdWrite1.GetUInt16();
+                }
 
-                    if (req is WriteMultipleCoilRegistersRequest sd2 && resp is WriteRegisterResponse rd2)
-                    {
-                        return sd2.WriteAddress == rd2.WriteAddress && sd2.Data != null && rd2.Values != null && rd2.Values.Length >= 2 && sd2.Data.Length == rd2.GetUInt16();
-                    }
+                if (req is WriteMultipleCoilRegistersRequest sd2 && resp is WriteRegisterResponse rdWrite2)
+                {
+                    return sd2.WriteAddress == rdWrite2.WriteAddress && sd2.Data != null && rdWrite2.Values != null && rdWrite2.Values.Length >= 2 && sd2.Data.Length == rdWrite2.GetUInt16();
+                }
 
-                    if (req is WriteSingleHoldingRegisterRequest sd3 && resp is WriteRegisterResponse rd3)
-                    {
-                        return sd3.WriteAddress == rd3.WriteAddress && rd3.Values != null && rd3.Values.SequenceEqual(sd3.Data);
-                    }
+                if (req is WriteSingleHoldingRegisterRequest sd3 && resp is WriteRegisterResponse rdWrite3)
+                {
+                    return sd3.WriteAddress == rdWrite3.WriteAddress && rdWrite3.Values != null && rdWrite3.Values.SequenceEqual(sd3.Data);
+                }
 
-                    if (req is WriteSingleCoilRegisterRequest sd4 && resp is WriteRegisterResponse rd4)
-                    {
-                        byte[] expectedBytes = sd4.Data ? new byte[] { 0xFF, 0x00 } : new byte[] { 0x00, 0x00 };
-                        return sd4.WriteAddress == rd4.WriteAddress && rd4.Values != null && rd4.Values.SequenceEqual(expectedBytes);
-                    }
+                if (req is WriteSingleCoilRegisterRequest sd4 && resp is WriteRegisterResponse rdWrite4)
+                {
+                    byte[] expectedBytes = sd4.Data ? new byte[] { 0xFF, 0x00 } : new byte[] { 0x00, 0x00 };
+                    return sd4.WriteAddress == rdWrite4.WriteAddress && rdWrite4.Values != null && rdWrite4.Values.SequenceEqual(expectedBytes);
                 }
             }
             catch (Exception ex)
@@ -617,21 +809,26 @@ namespace STTech.BytesIO.Modbus
     }
 
     /// <summary>
-    /// 协议格式
-    /// </summary>
-    /// <summary>
     /// Modbus 协议格式
     /// </summary>
     public enum ModbusProtocolFormat
     {
         /// <summary>
-        /// RTU 格式
+        /// RTU 格式 (带从站站号与 CRC16 校验)
         /// </summary>
+        [Description("RTU 格式")]
         RTU,
 
         /// <summary>
-        /// ASCII 格式
+        /// ASCII 格式 (带冒号起始符、十六进制 ASCII 字符与 LRC 校验)
         /// </summary>
-        ASCII
+        [Description("ASCII 格式")]
+        ASCII,
+
+        /// <summary>
+        /// MBAP 格式 (标准 Modbus TCP，带 7 字节 MBAP 报文头，无末尾 CRC 校验，支持全双工并发)
+        /// </summary>
+        [Description("MBAP 格式 (Modbus TCP)")]
+        MBAP
     }
 }

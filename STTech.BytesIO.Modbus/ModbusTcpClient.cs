@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
 using STTech.BytesIO.Tcp;
@@ -15,8 +15,8 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// 构造 Modbus TCP 客户端
         /// </summary>
-        /// <param name="format">协议格式，默认为 RTU 格式</param>
-        public ModbusTcpClient(ModbusProtocolFormat format = ModbusProtocolFormat.RTU) : base(new TcpClient(), format) { }
+        /// <param name="format">协议格式，默认为标准 Modbus TCP (MBAP 报文头格式)，亦可切换为 RTU 格式 (Modbus RTU over TCP)</param>
+        public ModbusTcpClient(ModbusProtocolFormat format = ModbusProtocolFormat.MBAP) : base(new TcpClient(), format) { }
     }
 
     public partial class ModbusTcpClient : ITcpClient
