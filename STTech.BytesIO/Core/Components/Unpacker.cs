@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +45,10 @@ namespace STTech.BytesIO.Core.Component
         /// <summary>
         /// 计算数据包长度的处理程序
         /// 输入当前缓存的数据
-        /// 输出第一个数据包的长度，若暂无法判断数据包总长度，可返回0
+        /// 输出第一个数据包的长度：
+        /// > 0: 数据包总长度
+        /// == 0: 暂无法判断或数据不足，等待更多数据
+        /// &lt; 0: 检测到坏数据，跳过指定长度的字节进行滑动自愈探测 (如 -1 表示跳过 1 字节)
         /// </summary>
         protected abstract int CalculatePacketLength(ReadOnlySequence<byte> buffer);
 
@@ -55,6 +58,12 @@ namespace STTech.BytesIO.Core.Component
         public byte[] StartMark { get; set; }
 
         /// <summary>
+        /// 最大允许缓存的数据长度（字节），默认 8MB。
+        /// 当缓存堆积超过此上限时触发缓冲区溢出防御，避免恶意输入或坏包导致内存无限增长(OOM)。
+        /// </summary>
+        public int MaxBufferSize { get; set; } = 8 * 1024 * 1024;
+
+        /// <summary>
         /// 中断帧(断包)拼接的超时时长
         /// 单位毫秒
         /// 值为0时不启用超时检查
@@ -62,9 +71,9 @@ namespace STTech.BytesIO.Core.Component
         public int InterruptFrameTimeoutValue { get; set; } = 0;
 
         /// <summary>
-        /// 中断帧(断包头部)的接收时间
+        /// 中断帧(断包头部)的接收单调时间刻度 (Environment.TickCount64)
         /// </summary>
-        private DateTime? _interruptFrameReceivedTime = null;
+        private long? _interruptFrameTimestamp = null;
 
         /// <summary>
         /// 构造解包器
@@ -72,6 +81,33 @@ namespace STTech.BytesIO.Core.Component
         protected Unpacker()
         {
 
+        }
+
+        /// <summary>
+        /// 获取指定长度所覆盖的所有底层段上下文，用于对段建立生命周期引用保护
+        /// </summary>
+        private List<ReceiveContext> GetReferencedContexts(int length)
+        {
+            var list = new List<ReceiveContext>();
+            if (_cachedContexts == null || _cachedContexts.Count == 0 || length <= 0)
+                return list;
+
+            int remaining = length;
+            int offset = _cachedStartOffset;
+
+            foreach (var ctx in _cachedContexts)
+            {
+                list.Add(ctx);
+                int available = ctx.Length - offset;
+                if (remaining <= available)
+                {
+                    break;
+                }
+                remaining -= available;
+                offset = 0;
+            }
+
+            return list;
         }
 
         /// <summary>
@@ -121,7 +157,7 @@ namespace STTech.BytesIO.Core.Component
         }
 
         /// <summary>
-        /// 在序列中搜索指定字节数组，返回其首个匹配项的索引
+        /// 在序列中搜索指定字节数组，返回其首个匹配项的索引（零堆分配跨段匹配）
         /// </summary>
         private static int IndexOf(ReadOnlySequence<byte> sequence, byte[] target)
         {
@@ -132,45 +168,122 @@ namespace STTech.BytesIO.Core.Component
             if (totalLength < target.Length)
                 return -1;
 
-            // 将序列线性化以便搜索（对于短序列直接复制，对于长序列分段搜索）
             if (sequence.IsSingleSegment)
             {
                 return IndexOfInSpan(sequence.First.Span, target);
             }
 
-            // 多段情况：先尝试将数据拷贝到临时缓冲区进行搜索
-            // 对于通信协议的 StartMark 搜索，数据量通常不大
-            byte[] buffer = new byte[totalLength];
-            sequence.CopyTo(buffer);
-            return IndexOfInSpan(buffer, target);
+            byte firstByte = target[0];
+            int targetLen = target.Length;
+            long maxSearchIndex = totalLength - targetLen;
+
+            long segmentGlobalOffset = 0;
+            var position = sequence.Start;
+
+            while (sequence.TryGet(ref position, out ReadOnlyMemory<byte> memory, advance: true))
+            {
+                var span = memory.Span;
+                int spanOffset = 0;
+
+                while (spanOffset < span.Length)
+                {
+                    int foundInSpan = span.Slice(spanOffset).IndexOf(firstByte);
+                    if (foundInSpan < 0)
+                    {
+                        break;
+                    }
+
+                    int candInSpan = spanOffset + foundInSpan;
+                    long candGlobal = segmentGlobalOffset + candInSpan;
+
+                    if (candGlobal > maxSearchIndex)
+                    {
+                        return -1;
+                    }
+
+                    // 若目标完全落在当前段内，直接利用 Span 比对
+                    if (candInSpan + targetLen <= span.Length)
+                    {
+                        if (span.Slice(candInSpan, targetLen).SequenceEqual(target))
+                        {
+                            return (int)candGlobal;
+                        }
+                    }
+                    else
+                    {
+                        // 跨段边界时进行切片序列比对
+                        var slice = sequence.Slice(candGlobal, targetLen);
+                        if (Matches(slice, target))
+                        {
+                            return (int)candGlobal;
+                        }
+                    }
+
+                    spanOffset = candInSpan + 1;
+                }
+
+                segmentGlobalOffset += span.Length;
+                if (segmentGlobalOffset > maxSearchIndex)
+                {
+                    break;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool Matches(ReadOnlySequence<byte> slice, byte[] target)
+        {
+            if (slice.IsSingleSegment)
+            {
+                return slice.First.Span.SequenceEqual(target);
+            }
+
+            int idx = 0;
+            foreach (var memory in slice)
+            {
+                var span = memory.Span;
+                for (int j = 0; j < span.Length; j++)
+                {
+                    if (span[j] != target[idx++])
+                        return false;
+                }
+            }
+            return true;
         }
 
         /// <summary>
-        /// 在 byte 数组/Span 中搜索目标字节数组
+        /// 在 byte 数组/Span 中搜索目标字节数组（硬件加速首字节探测）
         /// </summary>
         private static int IndexOfInSpan(ReadOnlySpan<byte> span, byte[] target)
         {
-            for (int i = 0; i <= span.Length - target.Length; i++)
+            if (target.Length == 0) return 0;
+            if (span.Length < target.Length) return -1;
+
+            byte first = target[0];
+            int max = span.Length - target.Length;
+            int offset = 0;
+
+            while (offset <= max)
             {
-                bool match = true;
-                for (int j = 0; j < target.Length; j++)
+                int idx = span.Slice(offset, max - offset + 1).IndexOf(first);
+                if (idx < 0) return -1;
+
+                int cand = offset + idx;
+                if (span.Slice(cand, target.Length).SequenceEqual(target))
                 {
-                    if (span[i + j] != target[j])
-                    {
-                        match = false;
-                        break;
-                    }
+                    return cand;
                 }
-                if (match)
-                    return i;
+                offset = cand + 1;
             }
+
             return -1;
         }
 
         /// <summary>
         /// 跳过缓存中指定长度的数据
         /// </summary>
-        private void SkipCachedBytes(int count)
+        protected internal void SkipCachedBytes(int count)
         {
             _cachedTotalLength -= count;
 
@@ -232,10 +345,10 @@ namespace STTech.BytesIO.Core.Component
                 }
                 else
                 {
-                    // 是否启用断包拼包的超时限制
+                    // 是否启用断包拼包的超时限制 (基于单调时钟 Environment.TickCount64 判定)
                     if (InterruptFrameTimeoutValue > 0 &&
-                        _interruptFrameReceivedTime != null &&
-                        _interruptFrameReceivedTime.Value.AddMilliseconds(InterruptFrameTimeoutValue) < DateTime.Now)
+                        _interruptFrameTimestamp != null &&
+                        MonotonicClock.NowMs - _interruptFrameTimestamp.Value > InterruptFrameTimeoutValue)
                     {
                         // 直接替换缓存数据（丢弃断包头部）
                         ClearCachedContexts();
@@ -243,7 +356,7 @@ namespace STTech.BytesIO.Core.Component
                         _cachedContexts = new List<ReceiveContext> { context };
                         _cachedTotalLength = context.Length;
                         _cachedStartOffset = 0;
-                        _interruptFrameReceivedTime = null;
+                        _interruptFrameTimestamp = null;
                     }
                     else
                     {
@@ -252,6 +365,18 @@ namespace STTech.BytesIO.Core.Component
                         _cachedContexts.Add(context);
                         _cachedTotalLength += context.Length;
                     }
+                }
+
+                // 缓冲区溢出防御：防止恶意或脏数据流导致无界缓存增长(OOM)
+                if (_cachedTotalLength > MaxBufferSize)
+                {
+                    if (ErrorOccurHandler?.Invoke(ErrorCode.BufferOverflow) == true)
+                    {
+                        ClearCachedContexts();
+                        return;
+                    }
+                    ClearCachedContexts();
+                    return;
                 }
 
                 while (_cachedContexts != null && _cachedContexts.Count > 0)
@@ -279,7 +404,11 @@ namespace STTech.BytesIO.Core.Component
                             if (idx == -1)
                             {
                                 // 未找到起始位则只保留起始标识长度-1位的数据
-                                ErrorOccurHandler?.Invoke(ErrorCode.StartMarkNotMatch);
+                                if (ErrorOccurHandler?.Invoke(ErrorCode.StartMarkNotMatch) == true)
+                                {
+                                    ClearCachedContexts();
+                                    return;
+                                }
 
                                 int keepLen = StartMark.Length - 1;
                                 int skipLen = cacheLen - keepLen;
@@ -304,24 +433,40 @@ namespace STTech.BytesIO.Core.Component
                     // 通过回调提供的方法计算该包的长度(根据具体协议)
                     int packetLen = CalculatePacketLength(sequence);
 
-                    // 当返回的数据包长度计算结果小于等于0时，标识当前缓存中的数据无法判断出数据包的长度
+                    // 当返回的数据包长度小于0时，表示检测到坏数据，跳过指定长度的字节进行滑动自愈探测
+                    if (packetLen < 0)
+                    {
+                        if (ErrorOccurHandler?.Invoke(ErrorCode.InvalidPacket) == true)
+                        {
+                            ClearCachedContexts();
+                            return;
+                        }
+                        int discardCount = -packetLen;
+                        if (discardCount > cacheLen) discardCount = cacheLen;
+                        SkipCachedBytes(discardCount);
+                        continue;
+                    }
+
+                    // 当返回的数据包长度等于0时，表示当前缓存中的数据无法判断出数据包的长度
                     // 当返回的数据包长度计算结果大于缓存数据长度时，则结束本次处理
-                    if (packetLen <= 0 || packetLen > cacheLen)
+                    if (packetLen == 0 || packetLen > cacheLen)
                     {
                         if (InterruptFrameTimeoutValue > 0)
                         {
-                            _interruptFrameReceivedTime = DateTime.Now;
+                            _interruptFrameTimestamp = MonotonicClock.NowMs;
                         }
                         return;
                     }
 
                     // 取出解包数据（零拷贝切片）
                     var data = sequence.Slice(0, packetLen);
+                    var referenced = GetReferencedContexts(packetLen);
+                    var unpackContext = new UnpackContext(data, referenced);
 
-                    // 将拆粘包的结果通过回调同步返回（通过上下文包装）
-                    OnDataParsed?.Invoke(this, new DataParsedEventArgs(new UnpackContext(data)));
+                    // 将拆粘包的结果通过回调同步返回（通过具备引用保护的上下文包装）
+                    OnDataParsed?.Invoke(this, new DataParsedEventArgs(unpackContext));
 
-                    // 处理结束后跳过已消费字节（此操作可能触发废弃段的 Dispose 回收）
+                    // 处理结束后跳过已消费字节（此时即使废弃段被解包器 Dispose，由于 UnpackContext 保持了引用，底层内存绝对安全）
                     SkipCachedBytes(packetLen);
 
                     // 如果缓存已清空
@@ -355,6 +500,16 @@ namespace STTech.BytesIO.Core.Component
             /// 起始标记不匹配
             /// </summary>
             StartMarkNotMatch,
+
+            /// <summary>
+            /// 数据包无效或校验失败
+            /// </summary>
+            InvalidPacket,
+
+            /// <summary>
+            /// 缓冲区超出最大长度限制
+            /// </summary>
+            BufferOverflow,
         }
     }
 

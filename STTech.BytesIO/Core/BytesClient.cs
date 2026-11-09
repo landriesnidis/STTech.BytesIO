@@ -56,9 +56,22 @@ namespace STTech.BytesIO.Core
         public string ConnectionId { get; protected set; }
 
         /// <summary>
-        /// <inheritdoc/>
+        /// 对象是否已被释放
         /// </summary>
-        public abstract void Dispose();
+        public bool IsDisposed { get; private set; }
+
+        /// <summary>
+        /// 释放客户端占用的资源
+        /// </summary>
+        public virtual void Dispose()
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
+
+            CancelReceiveDataTask();
+            dataReceiveTaskQueue?.Dispose();
+            dataReceiveTaskQueue = null;
+        }
 
         /// <summary>
         /// 更新最后一次通信的时间戳

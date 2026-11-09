@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -49,7 +49,7 @@ namespace STTech.BytesIO.Core
             IsEnabled = true;
             _remainingTimes = times;
 
-            _timer = new Timer(delay);
+            _timer = new Timer(delay) { AutoReset = false };
             _timer.Elapsed += OnTimerElapsed;
             _timer.Enabled = true;
 
@@ -60,33 +60,76 @@ namespace STTech.BytesIO.Core
             }
         }
 
-        private void OnTimerElapsed(object sender, ElapsedEventArgs e)
+        private async void OnTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            if (Client == null) return;
-
-            if (Client.IsConnected)
+            var client = Client;
+            try
             {
-                Cancel();
-                return;
-            }
+                if (client == null) return;
 
-            if (_maxTimes > 0)
-            {
-                if (_remainingTimes > 0)
+                if (client.IsConnected)
+                {
+                    Cancel();
+                    return;
+                }
+
+                if (_maxTimes > 0 && _remainingTimes <= 0)
+                {
+                    Cancel();
+                    SafelyInvokeConnectFailedHandler(client);
+                    return;
+                }
+
+                if (_maxTimes > 0)
                 {
                     _remainingTimes--;
-                    Client.ConnectAsync();
                 }
-                else
+
+                try
                 {
-                    var handler = _connectFailedHandler;
-                    Cancel();
-                    handler?.Invoke(Client);
+                    var result = await client.ConnectAsync().ConfigureAwait(false);
+                    if (result.IsSuccess || (Client != null && Client.IsConnected))
+                    {
+                        if (Client != null && Client.IsConnected)
+                        {
+                            Cancel();
+                        }
+                        return;
+                    }
+                }
+                catch
+                {
+                }
+
+                if (Client != null && !Client.IsConnected)
+                {
+                    if (_maxTimes > 0 && _remainingTimes <= 0)
+                    {
+                        Cancel();
+                        SafelyInvokeConnectFailedHandler(client);
+                    }
+                    else
+                    {
+                        _timer?.Start();
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                Client.ConnectAsync();
+                // 确保 async void 内部任何未知异常绝不逃逸致进程崩溃
+                client?.RaiseExceptionOccurs(ex);
+            }
+        }
+
+        private void SafelyInvokeConnectFailedHandler(BytesClient client)
+        {
+            try
+            {
+                _connectFailedHandler?.Invoke(client);
+            }
+            catch (Exception ex)
+            {
+                client?.RaiseExceptionOccurs(ex);
             }
         }
 
@@ -102,9 +145,9 @@ namespace STTech.BytesIO.Core
             // 连接参数错误时停止尝试
             if (e.ErrorCode == ConnectErrorCode.ConnectionParameterError)
             {
-                var handler = _connectFailedHandler;
+                var client = Client;
                 Cancel();
-                handler?.Invoke(Client);
+                SafelyInvokeConnectFailedHandler(client);
             }
         }
 

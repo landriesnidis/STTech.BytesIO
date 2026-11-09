@@ -51,5 +51,10 @@ namespace STTech.BytesIO.Core
         /// 记录该包进入队列的初始化时间戳，以便于在 AsyncPump 发送前验证存活 TTL 过期时间
         /// </summary>
         public DateTime EnqueueTime { get; }
+
+        /// <summary>
+        /// 记录进入队列时的单调时钟刻度 (Environment.TickCount64)，不受系统时间调时影响
+        /// </summary>
+        public long EnqueueTimestamp { get; } = MonotonicClock.NowMs;
     }
 }

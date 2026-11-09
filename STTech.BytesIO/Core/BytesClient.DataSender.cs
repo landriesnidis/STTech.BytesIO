@@ -60,8 +60,8 @@ namespace STTech.BytesIO.Core
                         continue;
                     }
 
-                    // 检测：是否因为在发送队列堆积过久导致 TTL 超时？
-                    if (args.Options.ExpireTimeout > 0 && (DateTime.Now - args.EnqueueTime).TotalMilliseconds > args.Options.ExpireTimeout)
+                    // 检测：是否因为在发送队列堆积过久导致 TTL 超时？(基于单调递增时钟判定，不受 NTP/系统调时干扰)
+                    if (args.Options.ExpireTimeout > 0 && (MonotonicClock.NowMs - args.EnqueueTimestamp) > args.Options.ExpireTimeout)
                     {
                         args.Tcs?.TrySetException(new TimeoutException($"数据包在队列中等待发送的时间超过了允许的 {args.Options.ExpireTimeout} 毫秒。"));
                         continue;
@@ -239,7 +239,7 @@ namespace STTech.BytesIO.Core
 
             try
             {
-                Send(data, options);
+                await SendAsync(data, options).ConfigureAwait(false);
 
                 if (timeout > 0 && timeout != Timeout.Infinite)
                 {

@@ -286,6 +286,7 @@ namespace STTech.BytesIO.Ipc
         /// <inheritdoc/>
         public override void Dispose()
         {
+            base.Dispose();
             innerClient?.Dispose();
             innerClient = null;
         }

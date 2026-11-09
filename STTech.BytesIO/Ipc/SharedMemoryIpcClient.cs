@@ -1,3 +1,4 @@
+﻿using System.Runtime.Versioning;
 using STTech.BytesIO.Core;
 using STTech.BytesIO.Ipc.Entity;
 using System;
@@ -24,6 +25,9 @@ namespace STTech.BytesIO.Ipc
     /// 注意：共享内存区域容量需要通信双方配置一致（SharedMemoryRegionSize）；
     /// 每个方向的实际可用容量为 SharedMemoryRegionSize 的一半。
     /// </summary>
+#if NET6_0_OR_GREATER
+    [SupportedOSPlatform("windows")]
+#endif
     public class SharedMemoryIpcClient : IpcClient
     {
         /// <summary>
@@ -162,6 +166,11 @@ namespace STTech.BytesIO.Ipc
         private int _ackedCount;
 
         /// <summary>
+        /// 最近一次确认的有效帧序号 (用于过滤重复或超时迟到的幽灵 ACK)
+        /// </summary>
+        private int _lastAckedSequence;
+
+        /// <summary>
         /// 下一次 ACK 到达时的信号 (有发送方等待时创建)
         /// </summary>
         private TaskCompletionSource<bool> _ackSignalTcs;
@@ -211,6 +220,7 @@ namespace STTech.BytesIO.Ipc
                 {
                     _sendSequence = 0;
                     _receiveSequence = 0;
+                    _lastAckedSequence = 0;
                     _publishedCount = 0;
                     _ackedCount = 0;
                     var oldSignal = _ackSignalTcs;
@@ -296,8 +306,8 @@ namespace STTech.BytesIO.Ipc
                     return;
                 }
 
-                // 发送时配置必然已就绪, 确保共享区域已打开
-                EnsureSharedMemoryOpened();
+                // 发送时配置必然已就绪, 异步确保共享区域已打开
+                await EnsureSharedMemoryOpenedAsync().ConfigureAwait(false);
 
                 // 1. 等待共享内存槽位释放 (上一帧的 ACK)
                 await WaitForSlotAsync().ConfigureAwait(false);
@@ -390,6 +400,17 @@ namespace STTech.BytesIO.Ipc
                 if (completedTask != waitTask)
                 {
                     if (!IsConnected) return;
+
+                    // 超时状态恢复：对齐已发布计数与已确认计数，将已确认序列号推进到当前发送序号以作废迟到幽灵 ACK，释放未决 TCS，防止后续发送永久死锁
+                    lock (_slotLocker)
+                    {
+                        _publishedCount = _ackedCount;
+                        _lastAckedSequence = _sendSequence;
+                        var signal = _ackSignalTcs;
+                        _ackSignalTcs = null;
+                        signal?.TrySetCanceled();
+                    }
+
                     throw new TimeoutException($"等待对端确认共享内存槽位释放超时 ({AckTimeoutMs}ms)");
                 }
             }
@@ -435,7 +456,7 @@ namespace STTech.BytesIO.Ipc
                             {
                                 // 服务端封装场景下, 管道名称等配置在构造完成后才赋值, 需等待配置就绪
                                 await WaitUntilConfiguredAsync(cancellationToken).ConfigureAwait(false);
-                                EnsureSharedMemoryOpened();
+                                await EnsureSharedMemoryOpenedAsync().ConfigureAwait(false);
 
                                 if (!IsSharedMemoryReady)
                                 {
@@ -469,10 +490,15 @@ namespace STTech.BytesIO.Ipc
                                 // 槽位释放信号
                                 lock (_slotLocker)
                                 {
-                                    _ackedCount++;
-                                    var signal = _ackSignalTcs;
-                                    _ackSignalTcs = null;
-                                    signal?.TrySetResult(true);
+                                    // 校验 ACK 序列号：仅接受严格大于已确认序号的有效 ACK，丢弃重复或超时迟到的幽灵 ACK
+                                    if (frame.Sequence > _lastAckedSequence)
+                                    {
+                                        _lastAckedSequence = frame.Sequence;
+                                        _ackedCount++;
+                                        var signal = _ackSignalTcs;
+                                        _ackSignalTcs = null;
+                                        signal?.TrySetResult(true);
+                                    }
                                 }
                                 break;
                             }
@@ -629,11 +655,11 @@ namespace STTech.BytesIO.Ipc
         // =====================================================================
 
         /// <summary>
-        /// 确保共享内存区域已打开 (线程安全)
+        /// 确保共享内存区域已打开 (异步线程安全)
         /// </summary>
-        private void EnsureSharedMemoryOpened()
+        private async Task EnsureSharedMemoryOpenedAsync()
         {
-            _regionAccessLock.Wait();
+            await _regionAccessLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 OpenSharedMemoryCore();
@@ -642,6 +668,14 @@ namespace STTech.BytesIO.Ipc
             {
                 _regionAccessLock.Release();
             }
+        }
+
+        /// <summary>
+        /// 确保共享内存区域已打开 (同步线程安全，向后兼容)
+        /// </summary>
+        private void EnsureSharedMemoryOpened()
+        {
+            EnsureSharedMemoryOpenedAsync().GetAwaiter().GetResult();
         }
 
         /// <summary>
