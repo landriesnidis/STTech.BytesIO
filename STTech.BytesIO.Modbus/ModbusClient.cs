@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Component;
 using System;
 using System.ComponentModel;
@@ -570,7 +570,7 @@ namespace STTech.BytesIO.Modbus
         /// <summary>
         /// Modbus的请求与响应匹配过程
         /// </summary>
-        private bool ReplyMatchHandle(ModbusRequest req, ModbusResponse resp)
+        protected virtual bool ReplyMatchHandle(ModbusRequest req, ModbusResponse resp)
         {
             try
             {

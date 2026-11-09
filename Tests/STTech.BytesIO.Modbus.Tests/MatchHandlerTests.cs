@@ -20,15 +20,7 @@ namespace STTech.BytesIO.Modbus.Tests
 
             public bool InvokeReplyMatchHandle(ModbusRequest req, ModbusResponse resp)
             {
-                var method = typeof(ModbusClient).GetMethod(
-                    "ReplyMatchHandle",
-                    BindingFlags.NonPublic | BindingFlags.Instance,
-                    null,
-                    new[] { typeof(ModbusRequest), typeof(ModbusResponse) },
-                    null
-                );
-                Assert.NotNull(method);
-                return (bool)method.Invoke(this, new object[] { req, resp });
+                return ReplyMatchHandle(req, resp);
             }
         }
 

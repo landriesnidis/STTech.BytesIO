@@ -12,80 +12,79 @@ namespace STTech.BytesIO.Modbus.Tests
     public class ModbusUnpackerTests
     {
         [Fact]
-        public void Unpacker_Ascii_FunctionCode0F_ShouldParseSuccessfully_WithoutFormatException()
+        public void Unpacker_Ascii_FunctionCode0F_ShouldParseSuccessfully_ViaPublicContract()
         {
             var unpacker = new ModbusUnpacker(new ModbusTcpClient(ModbusProtocolFormat.ASCII), ModbusProtocolFormat.ASCII);
+            ModbusResponse parsedResponse = null;
+
+            unpacker.OnDataParsed += (s, e) =>
+            {
+                parsedResponse = e.Data;
+            };
 
             // 构造一个 ASCII 写多个线圈响应报文:
             // : 01 0F 0010 000A LRC CRLF
-            // :010F0010000A + LRC + \r\n
             string msg = ":010F0010000A";
             string fullLine = msg + ModbusRequest.LRC(msg) + "\r\n";
             byte[] bytes = Encoding.ASCII.GetBytes(fullLine);
 
-            // 验证长度计算
-            var seq = new ReadOnlySequence<byte>(bytes);
-            var calcMethod = typeof(ModbusUnpacker).GetMethod("CalculateAsciiPacketLengthHandler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            Assert.NotNull(calcMethod);
+            // 通过公有契约 Input 灌入数据
+            using var ctx = new ReceiveContext(bytes);
+            unpacker.Input(ctx);
 
-            object[] args = new object[] { seq };
-            int len = (int)calcMethod.Invoke(null, args);
-            Assert.Equal(17, len);
-
-            // 验证反序列化
-            var context = new UnpackContext(seq);
-            var respMethod = typeof(ModbusUnpacker).GetMethod("ResponseSerializeHandler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            Assert.NotNull(respMethod);
-
-            var resp = (ModbusResponse)respMethod.Invoke(unpacker, new object[] { context });
-            Assert.NotNull(resp);
-            Assert.IsType<WriteRegisterResponse>(resp);
-            Assert.Equal(FunctionCode.WriteMultipleCoilRegisters, resp.FunctionCode);
-            Assert.Equal(1, resp.SlaveId);
+            Assert.NotNull(parsedResponse);
+            Assert.IsType<WriteRegisterResponse>(parsedResponse);
+            Assert.Equal(FunctionCode.WriteMultipleCoilRegisters, parsedResponse.FunctionCode);
+            Assert.Equal(1, parsedResponse.SlaveId);
         }
 
         [Fact]
         public void Unpacker_Ascii_FunctionCode10_ShouldRecognizeWriteMultipleHoldingRegisters()
         {
             var unpacker = new ModbusUnpacker(new ModbusTcpClient(ModbusProtocolFormat.ASCII), ModbusProtocolFormat.ASCII);
+            ModbusResponse parsedResponse = null;
+
+            unpacker.OnDataParsed += (s, e) =>
+            {
+                parsedResponse = e.Data;
+            };
 
             // 构造写多个保持寄存器响应报文: :011000010002 + LRC + \r\n
             string msg = ":011000010002";
             string fullLine = msg + ModbusRequest.LRC(msg) + "\r\n";
             byte[] bytes = Encoding.ASCII.GetBytes(fullLine);
 
-            var seq = new ReadOnlySequence<byte>(bytes);
-            var context = new UnpackContext(seq);
-            var respMethod = typeof(ModbusUnpacker).GetMethod("ResponseSerializeHandler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            Assert.NotNull(respMethod);
+            using var ctx = new ReceiveContext(bytes);
+            unpacker.Input(ctx);
 
-            var resp = (ModbusResponse)respMethod.Invoke(unpacker, new object[] { context });
-            Assert.NotNull(resp);
-            Assert.IsType<WriteRegisterResponse>(resp);
-            Assert.Equal(FunctionCode.WriteMultipleHoldingRegisters, resp.FunctionCode);
+            Assert.NotNull(parsedResponse);
+            Assert.IsType<WriteRegisterResponse>(parsedResponse);
+            Assert.Equal(FunctionCode.WriteMultipleHoldingRegisters, parsedResponse.FunctionCode);
         }
 
         [Fact]
         public void Unpacker_Ascii_ExceptionResponse_ShouldParseCorrectly()
         {
             var unpacker = new ModbusUnpacker(new ModbusTcpClient(ModbusProtocolFormat.ASCII), ModbusProtocolFormat.ASCII);
+            ModbusResponse parsedResponse = null;
+
+            unpacker.OnDataParsed += (s, e) =>
+            {
+                parsedResponse = e.Data;
+            };
 
             // 从机 1，读保持寄存器 0x03 异常应答 (0x83)，错误码 0x02 (IllegalDataAddress)
-            // : 01 83 02 LRC CRLF (总长 11)
             string msg = ":018302";
             string fullLine = msg + ModbusRequest.LRC(msg) + "\r\n";
             byte[] bytes = Encoding.ASCII.GetBytes(fullLine);
 
-            var seq = new ReadOnlySequence<byte>(bytes);
-            var context = new UnpackContext(seq);
-            var respMethod = typeof(ModbusUnpacker).GetMethod("ResponseSerializeHandler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            Assert.NotNull(respMethod);
+            using var ctx = new ReceiveContext(bytes);
+            unpacker.Input(ctx);
 
-            var resp = (ModbusResponse)respMethod.Invoke(unpacker, new object[] { context });
-            Assert.NotNull(resp);
-            Assert.False(resp.IsSuccess);
-            Assert.Equal(FunctionCode.ReadHoldingRegister, resp.FunctionCode);
-            Assert.Equal(ModbusErrorCode.IllegalDataAddress, resp.ErrorCode);
+            Assert.NotNull(parsedResponse);
+            Assert.False(parsedResponse.IsSuccess);
+            Assert.Equal(FunctionCode.ReadHoldingRegister, parsedResponse.FunctionCode);
+            Assert.Equal(ModbusErrorCode.IllegalDataAddress, parsedResponse.ErrorCode);
         }
 
         [Fact]
@@ -93,33 +92,25 @@ namespace STTech.BytesIO.Modbus.Tests
         {
             var client = new TcpClient();
             var unpacker = new ModbusRequestUnpacker(client, ModbusProtocolFormat.ASCII);
+            ModbusRequest parsedRequest = null;
+
+            unpacker.OnDataParsed += (s, e) =>
+            {
+                parsedRequest = e.Data;
+            };
 
             // 从机 0x0A (10), 功能码 0x0F (15), 地址 0x0001, 数量 0x0008, 字节数 0x01, 数据 0xFF
-            // : 0A 0F 0001 0008 01 FF LRC CRLF
             string msg = ":0A0F0001000801FF";
             string fullLine = msg + ModbusRequest.LRC(msg) + "\r\n";
             byte[] bytes = Encoding.ASCII.GetBytes(fullLine);
 
-            var seq = new ReadOnlySequence<byte>(bytes);
+            using var ctx = new ReceiveContext(bytes);
+            unpacker.Input(ctx);
 
-            // 测试长度计算
-            var calcMethod = typeof(ModbusRequestUnpacker).GetMethod("CalculateAsciiPacketLengthHandler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            Assert.NotNull(calcMethod);
-
-            object[] args = new object[] { seq };
-            int len = (int)calcMethod.Invoke(null, args);
-            Assert.Equal(bytes.Length, len);
-
-            // 测试反序列化
-            var context = new UnpackContext(seq);
-            var respMethod = typeof(ModbusRequestUnpacker).GetMethod("ResponseSerializeHandler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            Assert.NotNull(respMethod);
-
-            var req = (ModbusRequest)respMethod.Invoke(unpacker, new object[] { context });
-            Assert.NotNull(req);
-            Assert.Equal(10, req.SlaveId);
-            Assert.Equal(FunctionCode.WriteMultipleCoilRegisters, req.FunctionCode);
-            Assert.IsType<WriteMultipleCoilRegistersRequest>(req);
+            Assert.NotNull(parsedRequest);
+            Assert.Equal(10, parsedRequest.SlaveId);
+            Assert.Equal(FunctionCode.WriteMultipleCoilRegisters, parsedRequest.FunctionCode);
+            Assert.IsType<WriteMultipleCoilRegistersRequest>(parsedRequest);
         }
 
         [Fact]
