@@ -12,7 +12,7 @@ namespace STTech.BytesIO.Modbus.Tests
 {
     public class ModbusServerFixture : IDisposable
     {
-        public int Port { get; } = 50215;
+        public int Port { get; }
         public ModbusTcpServer Server { get; }
         public VirtualModbusDevice Device { get; }
         public CoilRegisterValueMonitor CoilMonitor { get; }
@@ -20,6 +20,8 @@ namespace STTech.BytesIO.Modbus.Tests
 
         public ModbusServerFixture()
         {
+            Port = GetAvailablePort();
+
             Server = new ModbusTcpServer(ModbusProtocolFormat.RTU)
             {
                 Port = Port,
@@ -35,7 +37,15 @@ namespace STTech.BytesIO.Modbus.Tests
             Device.Mount(HoldingMonitor);
 
             Server.Start();
-            Thread.Sleep(100);
+        }
+
+        private static int GetAvailablePort()
+        {
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
         }
 
         public void Dispose()
@@ -66,7 +76,6 @@ namespace STTech.BytesIO.Modbus.Tests
 
             var connectResult = client.Connect();
             Assert.True(connectResult.IsSuccess, $"客户端连接应该成功: {connectResult.ErrorCode}");
-            Thread.Sleep(50);
 
             var reply = client.WriteSingleCoilRegister(1, 0x0002, true, timeout: 8000);
 
@@ -87,7 +96,6 @@ namespace STTech.BytesIO.Modbus.Tests
 
             var connectResult = client.Connect();
             Assert.True(connectResult.IsSuccess, $"客户端连接应该成功: {connectResult.ErrorCode}");
-            Thread.Sleep(50);
 
             _fixture.CoilMonitor.Source[3] = true;
 
@@ -110,7 +118,6 @@ namespace STTech.BytesIO.Modbus.Tests
 
             var connectResult = client.Connect();
             Assert.True(connectResult.IsSuccess, $"客户端连接应该成功: {connectResult.ErrorCode}");
-            Thread.Sleep(50);
 
             bool[] writeData = new bool[] { true, false, true, true, false, false, true, false, true, true };
             
@@ -137,7 +144,6 @@ namespace STTech.BytesIO.Modbus.Tests
 
             var connectResult = client.Connect();
             Assert.True(connectResult.IsSuccess, $"客户端连接应该成功: {connectResult.ErrorCode}");
-            Thread.Sleep(50);
 
             _fixture.CoilMonitor.Source[0] = true;
             _fixture.CoilMonitor.Source[1] = false;
@@ -169,7 +175,6 @@ namespace STTech.BytesIO.Modbus.Tests
 
             var connectResult = client.Connect();
             Assert.True(connectResult.IsSuccess, $"客户端连接应该成功: {connectResult.ErrorCode}");
-            Thread.Sleep(50);
 
             ushort[] writeValues = new ushort[] { 100, 200, 300 };
             var writeReply = client.WriteMultipleHoldingRegisters(1, 20, writeValues, timeout: 8000);

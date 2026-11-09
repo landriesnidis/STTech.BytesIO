@@ -17,7 +17,8 @@ namespace STTech.BytesIO.Tcp.Tests
         public async Task TestClientToServerCommunication()
         {
             var server = new TcpServer();
-            server.Port = 50001;
+            int port = PortHelper.GetAvailablePort();
+            server.Port = port;
             var tcs = new TaskCompletionSource<byte[]>();
 
             server.ClientConnected += (s, e) =>
@@ -34,7 +35,7 @@ namespace STTech.BytesIO.Tcp.Tests
             {
                 var client = new TcpClient();
                 client.Host = "127.0.0.1";
-                client.Port = 50001;
+                client.Port = port;
                 var connectResult = client.Connect(10000);
 
                 Assert.True(connectResult.IsSuccess, $"Connection failed: {connectResult.ErrorCode}");
@@ -62,7 +63,8 @@ namespace STTech.BytesIO.Tcp.Tests
         public async Task TestVirtualClientDelegation()
         {
             var server = new TcpServer();
-            server.Port = 50006;
+            int port = PortHelper.GetAvailablePort();
+            server.Port = port;
             var tcs = new TaskCompletionSource<byte[]>();
 
             server.ClientConnected += (s, e) =>
@@ -79,7 +81,7 @@ namespace STTech.BytesIO.Tcp.Tests
             {
                 var innerClient = new TcpClient();
                 innerClient.Host = "127.0.0.1";
-                innerClient.Port = 50006;
+                innerClient.Port = port;
                 
                 var virtualClient = new VirtualClient(innerClient);
                 var connectResult = virtualClient.Connect(10000);
@@ -109,8 +111,15 @@ namespace STTech.BytesIO.Tcp.Tests
         public async Task TestServerToClientCommunication()
         {
             var server = new TcpServer();
-            server.Port = 50002;
+            int port = PortHelper.GetAvailablePort();
+            server.Port = port;
             var tcs = new TaskCompletionSource<byte[]>();
+            var clientConnectedTcs = new TaskCompletionSource<bool>();
+
+            server.ClientConnected += (s, e) =>
+            {
+                clientConnectedTcs.TrySetResult(true);
+            };
 
             await server.StartAsync();
 
@@ -118,7 +127,7 @@ namespace STTech.BytesIO.Tcp.Tests
             {
                 var client = new TcpClient();
                 client.Host = "127.0.0.1";
-                client.Port = 50002;
+                client.Port = port;
                 
                 client.OnDataReceived += (s, e) =>
                 {
@@ -128,8 +137,8 @@ namespace STTech.BytesIO.Tcp.Tests
                 var connectResult = client.Connect(10000);
                 Assert.True(connectResult.IsSuccess);
 
-                // Wait a bit for the server to process the new client and add it to the list
-                await Task.Delay(200);
+                // 使用事件完成同步，消除死等延时
+                await Task.WhenAny(clientConnectedTcs.Task, Task.Delay(2000));
 
                 byte[] sendData = Encoding.UTF8.GetBytes("Hello Client");
                 
@@ -159,7 +168,8 @@ namespace STTech.BytesIO.Tcp.Tests
         public async Task TestMultipleClientsCommunication()
         {
             var server = new TcpServer();
-            server.Port = 50003;
+            int port = PortHelper.GetAvailablePort();
+            server.Port = port;
             var receivedCounts = new ConcurrentDictionary<TcpClient, int>();
             var allDataReceivedTcs = new TaskCompletionSource<bool>();
             int expectedClients = 5;
@@ -186,7 +196,7 @@ namespace STTech.BytesIO.Tcp.Tests
                 {
                     var client = new TcpClient();
                     client.Host = "127.0.0.1";
-                    client.Port = 50003;
+                    client.Port = port;
                     var res = client.Connect(10000);
                     Assert.True(res.IsSuccess, $"Client {i} 连接失败: {res.ErrorCode}, ex: {res.Exception}");
                     clients.Add(client);
@@ -218,15 +228,17 @@ namespace STTech.BytesIO.Tcp.Tests
         public async Task TestDisconnectionEvents()
         {
             var server = new TcpServer();
-            server.Port = 50004;
+            int port = PortHelper.GetAvailablePort();
+            server.Port = port;
             var serverDisconnectedTcs = new TaskCompletionSource<bool>();
             var clientDisconnectedTcs = new TaskCompletionSource<bool>();
+            var clientConnectedTcs = new TaskCompletionSource<bool>();
+            
             server.ClientConnected += (s, e) => {
-                Console.WriteLine("[DEBUG Test] server.ClientConnected fired");
+                clientConnectedTcs.TrySetResult(true);
                 e.Client.OnDataReceived += (s2, e2) => { }; // Trigger receive loop
             };
             server.ClientDisconnected += (s, e) => {
-                Console.WriteLine("[DEBUG Test] server.ClientDisconnected fired");
                 serverDisconnectedTcs.TrySetResult(true);
             };
 
@@ -236,18 +248,16 @@ namespace STTech.BytesIO.Tcp.Tests
             {
                 var client = new TcpClient();
                 client.Host = "127.0.0.1";
-                client.Port = 50004;
-                client.OnDataReceived += (s, e) => { }; // Trigger receive loop on client side too for symmetry
+                client.Port = port;
+                client.OnDataReceived += (s, e) => { }; // Trigger receive loop on client side too
                 client.OnDisconnected += (s, e) => {
-                    Console.WriteLine("[DEBUG Test] client.OnDisconnected fired");
                     clientDisconnectedTcs.TrySetResult(true);
                 };
                 client.Connect(10000);
                 
-                // Add a small delay to ensure everything is stable
-                await Task.Delay(500);
+                // 等待服务端建立连接就绪
+                await Task.WhenAny(clientConnectedTcs.Task, Task.Delay(2000));
 
-                Console.WriteLine("[DEBUG Test] Calling client.Disconnect()");
                 client.Disconnect();
 
                 var clientTask = clientDisconnectedTcs.Task;
@@ -257,7 +267,7 @@ namespace STTech.BytesIO.Tcp.Tests
                 Assert.True(completedClient == clientTask, "Client disconnect event timed out");
 
                 var completedServer = await Task.WhenAny(serverTask, Task.Delay(2000));
-                Assert.True(await Task.WhenAny(serverDisconnectedTcs.Task, Task.Delay(2000)) == serverDisconnectedTcs.Task, "Server disconnect event timed out");
+                Assert.True(completedServer == serverTask, "Server disconnect event timed out");
             }
             finally
             {
@@ -269,17 +279,16 @@ namespace STTech.BytesIO.Tcp.Tests
         public async Task TestAcceptedClientReceiveLoopStart()
         {
             var server = new TcpServer();
-            server.Port = 50005;
+            int port = PortHelper.GetAvailablePort();
+            server.Port = port;
             var tcs = new TaskCompletionSource<bool>();
+            var serverClientReadyTcs = new TaskCompletionSource<bool>();
 
             server.ClientConnected += (s, e) =>
             {
                 var client = (TcpClient)e.Client;
-                // Add handler with a delay to simulate late binding
-                Task.Delay(100).ContinueWith(_ =>
-                {
-                    client.OnDataReceived += (s2, e2) => tcs.TrySetResult(true);
-                });
+                client.OnDataReceived += (s2, e2) => tcs.TrySetResult(true);
+                serverClientReadyTcs.TrySetResult(true);
             };
 
             await server.StartAsync();
@@ -288,10 +297,10 @@ namespace STTech.BytesIO.Tcp.Tests
             {
                 var client = new TcpClient();
                 client.Host = "127.0.0.1";
-                client.Port = 50005;
+                client.Port = port;
                 client.Connect(10000);
 
-                await Task.Delay(300); // Ensure the server-side handler is added
+                await Task.WhenAny(serverClientReadyTcs.Task, Task.Delay(2000));
                 client.Send(new byte[] { 1 });
 
                 var timeoutTask = Task.Delay(2000);
