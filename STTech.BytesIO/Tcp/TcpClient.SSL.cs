@@ -86,6 +86,12 @@ namespace STTech.BytesIO.Tcp
                 return true;
             }
 
+            // 对于服务端模式：若客户端未提供证书且未强制要求双向认证，属于合法单向TLS
+            if (certificate == null && sslPolicyErrors == SslPolicyErrors.RemoteCertificateNotAvailable)
+            {
+                return true;
+            }
+
             return sslPolicyErrors == SslPolicyErrors.None;
         }
 
