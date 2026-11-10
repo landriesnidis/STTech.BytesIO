@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core;
 using STTech.BytesIO.Tcp.Entity;
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,9 @@ using System.Collections.Concurrent;
 
 namespace STTech.BytesIO.Tcp
 {
+    /// <summary>
+    /// TCP 服务器接口
+    /// </summary>
     public interface ITcpServer : IDisposable
     {
         /// <summary>

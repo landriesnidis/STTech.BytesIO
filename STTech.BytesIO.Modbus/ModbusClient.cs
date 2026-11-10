@@ -95,6 +95,7 @@ namespace STTech.BytesIO.Modbus
             Unpacker.OnDataParsed += Unpacker_OnDataParsed;
         }
 
+        /// <inheritdoc/>
         public override void Dispose()
         {
             _channelLock?.Dispose();
@@ -775,6 +776,11 @@ namespace STTech.BytesIO.Modbus
             SafelyInvokeCallback(() => OnWriteMultipleHoldingRegistersPacketReceived?.Invoke(sender, e));
         }
 
+        /// <summary>
+        /// 解包器解析完成数据时的事件处理函数
+        /// </summary>
+        /// <param name="sender">事件源</param>
+        /// <param name="e">事件参数</param>
         protected void Unpacker_OnDataParsed(object sender, DataParsedEventArgs<ModbusResponse> e)
         {
             RaisePacketReceived(sender, new PacketReceivedEventArgs<ModbusResponse>(e.Data));

@@ -13,6 +13,10 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public TClient Client { get; }
 
+        /// <summary>
+        /// 初始化 <see cref="ServerClientConnectedEventArgs{TClient}"/> 类的新实例。
+        /// </summary>
+        /// <param name="client">客户端对象</param>
         public ServerClientConnectedEventArgs(TClient client)
         {
             Client = client;
@@ -30,6 +34,11 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public TClient Client { get; }
 
+        /// <summary>
+        /// 初始化 <see cref="ServerClientDisconnectedEventArgs{TClient}"/> 类的新实例。
+        /// </summary>
+        /// <param name="client">客户端对象</param>
+        /// <param name="e">断开连接事件参数</param>
         public ServerClientDisconnectedEventArgs(TClient client, DisconnectedEventArgs e) : base(e.ReasonCode, e.Exception)
         {
             Client = client;

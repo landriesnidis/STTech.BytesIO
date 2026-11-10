@@ -10,7 +10,7 @@ namespace STTech.BytesIO.Demo.ActivateAppByIPC
             try
             {
                 // 获取当前正在运行的 exe 的绝对路径
-                string targetPath = Environment.ProcessPath ?? System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                string targetPath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
                 if (string.IsNullOrEmpty(targetPath)) return;
 
                 string dir = Path.GetDirectoryName(targetPath) ?? "";

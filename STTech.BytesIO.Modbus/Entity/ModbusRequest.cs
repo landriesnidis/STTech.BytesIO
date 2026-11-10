@@ -14,6 +14,9 @@ namespace STTech.BytesIO.Modbus
     /// </summary>
     public abstract class ModbusRequest : IRequest
     {
+        /// <summary>
+        /// 初始化 <see cref="ModbusRequest"/> 类的新实例。
+        /// </summary>
         public ModbusRequest() { }
 
         /// <summary>

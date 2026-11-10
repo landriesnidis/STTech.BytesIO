@@ -22,6 +22,9 @@ namespace STTech.BytesIO.Modbus
         [Description("读取长度")]
         public ushort Length { get; set; } = 1;
 
+        /// <summary>
+        /// 初始化 <see cref="ReadRegisterRequest"/> 类的新实例。
+        /// </summary>
         public ReadRegisterRequest() : base()
         {
         }

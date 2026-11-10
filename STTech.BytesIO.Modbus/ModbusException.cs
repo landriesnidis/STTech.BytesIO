@@ -7,8 +7,17 @@ namespace STTech.BytesIO.Modbus
     /// </summary>
     public class ModbusException : Exception
     {
+        /// <summary>
+        /// 初始化 <see cref="ModbusException"/> 类的新实例。
+        /// </summary>
+        /// <param name="message">异常信息</param>
         public ModbusException(string message) : base(message) { }
 
+        /// <summary>
+        /// 初始化 <see cref="ModbusException"/> 类的新实例。
+        /// </summary>
+        /// <param name="message">异常信息</param>
+        /// <param name="innerException">内部异常</param>
         public ModbusException(string message, Exception innerException) : base(message, innerException) { }
     }
 

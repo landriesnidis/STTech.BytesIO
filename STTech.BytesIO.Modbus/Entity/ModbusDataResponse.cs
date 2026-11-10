@@ -18,6 +18,11 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public ReadHoldingRegisterResponse RawResponse { get; }
 
+        /// <summary>
+        /// 初始化 <see cref="ModbusDataResponse{T}"/> 类的新实例。
+        /// </summary>
+        /// <param name="value">强类型业务值</param>
+        /// <param name="raw">原始保持寄存器响应</param>
         public ModbusDataResponse(T value, ReadHoldingRegisterResponse raw) 
             : base(raw?.SlaveId ?? 0, raw?.FunctionCode ?? FunctionCode.ReadHoldingRegister, raw?.ProtocolFormat ?? ModbusProtocolFormat.RTU)
         {
@@ -37,6 +42,7 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public static implicit operator T(ModbusDataResponse<T> response) => response != null ? response.Value : default;
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             return Value?.ToString() ?? string.Empty;

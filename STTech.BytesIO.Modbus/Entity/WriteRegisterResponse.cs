@@ -20,6 +20,9 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public byte[] Values { get; protected set; }
 
+        /// <summary>
+        /// 初始化 <see cref="WriteRegisterResponse"/> 类的新实例。
+        /// </summary>
         public WriteRegisterResponse() { }
 
         /// <summary>
@@ -37,6 +40,7 @@ namespace STTech.BytesIO.Modbus
             Values = values;
         }
 
+        /// <inheritdoc/>
         protected internal override void SerializePayloadHandle()
         {
             byte[] bytes = new byte[2 + (Values?.Length ?? 0)];

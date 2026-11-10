@@ -2,6 +2,9 @@ using System;
 
 namespace STTech.BytesIO.Core
 {
+    /// <summary>
+    /// 客户端连接失败事件参数
+    /// </summary>
     public class ConnectionFailedEventArgs : EventArgs
     {
         private string message;
@@ -31,6 +34,11 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public object State { get; set; }
 
+        /// <summary>
+        /// 初始化 <see cref="ConnectionFailedEventArgs"/> 类的新实例。
+        /// </summary>
+        /// <param name="errorCode">连接错误码</param>
+        /// <param name="exception">异常对象</param>
         public ConnectionFailedEventArgs(ConnectErrorCode errorCode, Exception exception = null)
         {
             ErrorCode = errorCode;
@@ -55,16 +63,29 @@ namespace STTech.BytesIO.Core
             }
         }
 
+        /// <summary>
+        /// 初始化 <see cref="ConnectionFailedEventArgs"/> 类的新实例。
+        /// </summary>
+        /// <param name="msg">错误消息</param>
         public ConnectionFailedEventArgs(string msg)
         {
             message = msg;
         }
 
+        /// <summary>
+        /// 初始化 <see cref="ConnectionFailedEventArgs"/> 类的新实例。
+        /// </summary>
+        /// <param name="exception">异常对象</param>
         public ConnectionFailedEventArgs(Exception exception) : this(exception.Message)
         {
             Exception = exception;
         }
 
+        /// <summary>
+        /// 初始化 <see cref="ConnectionFailedEventArgs"/> 类的新实例。
+        /// </summary>
+        /// <param name="message">错误消息</param>
+        /// <param name="exception">异常对象</param>
         public ConnectionFailedEventArgs(string message, Exception exception) : this(message)
         {
             Exception = exception;

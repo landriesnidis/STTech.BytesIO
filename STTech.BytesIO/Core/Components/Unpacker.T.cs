@@ -70,6 +70,7 @@ namespace STTech.BytesIO.Core.Component
             }
         }
 
+        /// <inheritdoc/>
         protected override int CalculatePacketLength(ReadOnlySequence<byte> buffer)
         {
             if (LengthCalculator != null) return LengthCalculator(buffer);
@@ -91,6 +92,10 @@ namespace STTech.BytesIO.Core.Component
     /// </summary>
     public class DataParsedEventArgs : DataParsedEventArgs<UnpackContext>
     {
+        /// <summary>
+        /// 初始化 <see cref="DataParsedEventArgs"/> 类的新实例。
+        /// </summary>
+        /// <param name="data">解析出的解包上下文</param>
         public DataParsedEventArgs(UnpackContext data) : base(data) { }
     }
 
@@ -104,6 +109,10 @@ namespace STTech.BytesIO.Core.Component
         /// </summary>
         public T Data { get; }
 
+        /// <summary>
+        /// 初始化 <see cref="DataParsedEventArgs{T}"/> 类的新实例。
+        /// </summary>
+        /// <param name="data">解析出的数据实体</param>
         public DataParsedEventArgs(T data)
         {
             Data = data;

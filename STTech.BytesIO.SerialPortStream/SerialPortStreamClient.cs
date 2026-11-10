@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using STTech.BytesIO.Core;
-using STTech.BytesIO.Core;
 using STTech.BytesIO.Serial;
 
 namespace STTech.BytesIO.SerialPortStream
@@ -20,38 +19,61 @@ namespace STTech.BytesIO.SerialPortStream
         /// </summary>
         public new RJCP.IO.Ports.SerialPortStream InnerClient { get; private set; }
 
+        /// <summary>
+        /// 初始化 <see cref="SerialPortStreamClient"/> 类的新实例。
+        /// </summary>
         public SerialPortStreamClient()
         {
             InnerClient = new RJCP.IO.Ports.SerialPortStream();
         }
 
+        /// <inheritdoc/>
         public override bool IsConnected => InnerClient?.IsOpen ?? false;
 
+        /// <inheritdoc/>
         public override int ReceiveBufferSize { get => InnerClient.ReadBufferSize; set => InnerClient.ReadBufferSize = value; }
+        /// <inheritdoc/>
         public override int SendBufferSize { get => InnerClient.WriteBufferSize; set => InnerClient.WriteBufferSize = value; }
 
+        /// <inheritdoc/>
         public override string PortName { get => InnerClient.PortName; set => InnerClient.PortName = value; }
+        /// <inheritdoc/>
         public override int BaudRate { get => InnerClient.BaudRate; set => InnerClient.BaudRate = value; }
+        /// <inheritdoc/>
         public override int DataBits { get => InnerClient.DataBits; set => InnerClient.DataBits = value; }
+        /// <inheritdoc/>
         public override System.IO.Ports.Parity Parity { get => BuildParity(InnerClient.Parity); set => InnerClient.Parity = BuildParity(value); }
+        /// <inheritdoc/>
         public override System.IO.Ports.StopBits StopBits { get => BuildStopBits(InnerClient.StopBits); set => InnerClient.StopBits = BuildStopBits(value); }
+        /// <inheritdoc/>
         public override System.IO.Ports.Handshake Handshake { get => BuildHandshake(InnerClient.Handshake); set => InnerClient.Handshake = BuildHandshake(value); }
+        /// <inheritdoc/>
         public override bool DtrEnable { get => InnerClient.DtrEnable; set => InnerClient.DtrEnable = value; }
+        /// <inheritdoc/>
         public override bool RtsEnable { get => InnerClient.RtsEnable; set => InnerClient.RtsEnable = value; }
+        /// <inheritdoc/>
         public override bool DiscardNull { get => InnerClient.DiscardNull; set => InnerClient.DiscardNull = value; }
+        /// <inheritdoc/>
         public override string NewLine { get => InnerClient.NewLine; set => InnerClient.NewLine = value; }
+        /// <inheritdoc/>
         public override int ReadTimeout { get => InnerClient.ReadTimeout; set => InnerClient.ReadTimeout = value; }
+        /// <inheritdoc/>
         public override int WriteTimeout { get => InnerClient.WriteTimeout; set => InnerClient.WriteTimeout = value; }
+        /// <inheritdoc/>
         public override int ReceivedBytesThreshold { get => InnerClient.ReceivedBytesThreshold; set => InnerClient.ReceivedBytesThreshold = value; }
 
+        /// <inheritdoc/>
         public override void DiscardInBuffer() => InnerClient.DiscardInBuffer();
+        /// <inheritdoc/>
         public override void DiscardOutBuffer() => InnerClient.DiscardOutBuffer();
 
+        /// <inheritdoc/>
         public override ConnectResult Connect(ConnectArgument argument = null)
         {
             return ConnectAsync(argument).GetAwaiter().GetResult();
         }
 
+        /// <inheritdoc/>
         public override DisconnectResult Disconnect(DisconnectArgument argument = null)
         {
             if (argument == null) argument = new DisconnectArgument();
@@ -77,6 +99,7 @@ namespace STTech.BytesIO.SerialPortStream
             }
         }
 
+        /// <inheritdoc/>
         public override async Task<ConnectResult> ConnectAsync(ConnectArgument argument = null)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();

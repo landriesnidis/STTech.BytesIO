@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -155,14 +155,38 @@ namespace STTech.BytesIO.Modbus
         protected abstract void BroadcastUpstream(byte[] data);
 
         #region Events
+        /// <summary>
+        /// 请求读取保持寄存器时触发的事件
+        /// </summary>
         public event EventHandler<ModbusReadRequestedEventArgs<byte[]>> ReadHoldingRegisterRequested;
+        /// <summary>
+        /// 请求读取输入寄存器时触发的事件
+        /// </summary>
         public event EventHandler<ModbusReadRequestedEventArgs<byte[]>> ReadInputRegisterRequested;
+        /// <summary>
+        /// 请求读取线圈寄存器时触发的事件
+        /// </summary>
         public event EventHandler<ModbusReadRequestedEventArgs<bool[]>> ReadCoilRegisterRequested;
+        /// <summary>
+        /// 请求读取离散输入寄存器时触发的事件
+        /// </summary>
         public event EventHandler<ModbusReadRequestedEventArgs<bool[]>> ReadDiscreteInputRegisterRequested;
 
+        /// <summary>
+        /// 请求写单个保持寄存器时触发的事件
+        /// </summary>
         public event EventHandler<ModbusWriteRequestedEventArgs<WriteSingleHoldingRegisterRequest>> WriteSingleHoldingRegisterRequested;
+        /// <summary>
+        /// 请求写多个保持寄存器时触发的事件
+        /// </summary>
         public event EventHandler<ModbusWriteRequestedEventArgs<WriteMultipleHoldingRegistersRequest>> WriteMultipleHoldingRegistersRequested;
+        /// <summary>
+        /// 请求写单个线圈时触发的事件
+        /// </summary>
         public event EventHandler<ModbusWriteRequestedEventArgs<WriteSingleCoilRegisterRequest>> WriteSingleCoilRegisterRequested;
+        /// <summary>
+        /// 请求写多个线圈时触发的事件
+        /// </summary>
         public event EventHandler<ModbusWriteRequestedEventArgs<WriteMultipleCoilRegistersRequest>> WriteMultipleCoilRegistersRequested;
         #endregion
 
@@ -369,6 +393,11 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public ModbusErrorCode ErrorCode { get; set; } = ModbusErrorCode.NoError;
 
+        /// <summary>
+        /// 初始化 <see cref="ModbusReadRequestedEventArgs{TResponseData}"/> 类的新实例。
+        /// </summary>
+        /// <param name="request">读取请求实体</param>
+        /// <param name="client">通信客户端</param>
         public ModbusReadRequestedEventArgs(ReadRegisterRequest request, BytesClient client)
         {
             Request = request;
@@ -402,6 +431,11 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public ModbusErrorCode ErrorCode { get; set; } = ModbusErrorCode.NoError;
 
+        /// <summary>
+        /// 初始化 <see cref="ModbusWriteRequestedEventArgs{TRequest}"/> 类的新实例。
+        /// </summary>
+        /// <param name="request">写入请求实体</param>
+        /// <param name="client">通信客户端</param>
         public ModbusWriteRequestedEventArgs(TRequest request, BytesClient client)
         {
             Request = request;

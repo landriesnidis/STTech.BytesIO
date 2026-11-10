@@ -34,6 +34,9 @@ namespace STTech.BytesIO.Modbus.Monitors
             Length = length;
         }
 
+        /// <summary>
+        /// 获取监视的寄存器类型
+        /// </summary>
         public abstract ModbusRegisterType RegisterType { get; }
 
         /// <summary>
@@ -83,6 +86,7 @@ namespace STTech.BytesIO.Modbus.Monitors
     /// </summary>
     public class DiscreteInputRegisterValueMonitor : BooleanRegisterValueMonitor
     {
+        /// <inheritdoc/>
         public override ModbusRegisterType RegisterType => ModbusRegisterType.DiscreteInput;
 
         /// <summary>
@@ -100,6 +104,7 @@ namespace STTech.BytesIO.Modbus.Monitors
     /// </summary>
     public class CoilRegisterValueMonitor : BooleanRegisterValueMonitor
     {
+        /// <inheritdoc/>
         public override ModbusRegisterType RegisterType => ModbusRegisterType.Coil;
 
         /// <summary>
@@ -117,6 +122,7 @@ namespace STTech.BytesIO.Modbus.Monitors
     /// </summary>
     public class HoldingRegisterValueMonitor : UInt16RegisterValueMonitor
     {
+        /// <inheritdoc/>
         public override ModbusRegisterType RegisterType => ModbusRegisterType.Holding;
 
         /// <summary>
@@ -134,6 +140,7 @@ namespace STTech.BytesIO.Modbus.Monitors
     /// </summary>
     public class InputRegisterValueMonitor : UInt16RegisterValueMonitor
     {
+        /// <inheritdoc/>
         public override ModbusRegisterType RegisterType => ModbusRegisterType.Input;
 
         /// <summary>

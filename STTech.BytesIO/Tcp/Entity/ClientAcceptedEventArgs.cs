@@ -64,6 +64,12 @@ namespace STTech.BytesIO.Tcp
             Client = client;
         }
 
+        /// <summary>
+        /// 构造客户端已断开连接事件参数
+        /// </summary>
+        /// <param name="client">TCP 客户端对象</param>
+        /// <param name="reasonCode">断开原因代码</param>
+        /// <param name="exception">引发断开的内部异常</param>
         public ClientDisconnectedEventArgs(TcpClient client, DisconnectionReasonCode reasonCode, Exception exception = null) : base(reasonCode, exception)
         {
             Client = client;

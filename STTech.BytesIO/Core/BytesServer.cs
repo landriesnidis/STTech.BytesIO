@@ -105,21 +105,37 @@ namespace STTech.BytesIO.Core
             CloseAsync().Wait();
         }
 
+        /// <summary>
+        /// 触发服务器已启动事件
+        /// </summary>
+        /// <param name="e">事件参数</param>
         protected virtual void OnStarted(EventArgs e)
         {
             Task.Run(() => Started?.Invoke(this, e));
         }
 
+        /// <summary>
+        /// 触发服务器已关闭事件
+        /// </summary>
+        /// <param name="e">事件参数</param>
         protected virtual void OnClosed(EventArgs e)
         {
             Task.Run(() => Closed?.Invoke(this, e));
         }
 
+        /// <summary>
+        /// 触发服务器已暂停事件
+        /// </summary>
+        /// <param name="e">事件参数</param>
         protected virtual void OnPaused(EventArgs e)
         {
             Task.Run(() => Paused?.Invoke(this, e));
         }
 
+        /// <summary>
+        /// 客户端连接成功时的处理逻辑并触发相应事件
+        /// </summary>
+        /// <param name="client">客户端对象</param>
         protected virtual void OnClientConnected(TClient client)
         {
             InternalClients.TryAdd(client, 0);
@@ -134,6 +150,11 @@ namespace STTech.BytesIO.Core
             }
         }
 
+        /// <summary>
+        /// 客户端断开连接时的处理逻辑并触发相应事件
+        /// </summary>
+        /// <param name="client">客户端对象</param>
+        /// <param name="e">断开连接事件参数</param>
         protected virtual void OnClientDisconnected(TClient client, DisconnectedEventArgs e)
         {
             InternalClients.TryRemove(client, out _);
@@ -156,6 +177,10 @@ namespace STTech.BytesIO.Core
             }
         }
 
+        /// <summary>
+        /// 触发异常发生事件
+        /// </summary>
+        /// <param name="ex">发生的异常</param>
         public void RaiseExceptionOccurs(Exception ex)
         {
             OnExceptionOccurs?.Invoke(this, new ExceptionOccursEventArgs(ex));
@@ -170,16 +195,43 @@ namespace STTech.BytesIO.Core
     /// </summary>
     public interface IBytesServer : IDisposable
     {
+        /// <summary>
+        /// 服务器运行状态
+        /// </summary>
         ServerState State { get; }
+        /// <summary>
+        /// 是否处于运行状态
+        /// </summary>
         bool IsRunning { get; }
 
+        /// <summary>
+        /// 服务器已启动事件
+        /// </summary>
         event EventHandler Started;
+        /// <summary>
+        /// 服务器已关闭事件
+        /// </summary>
         event EventHandler Closed;
+        /// <summary>
+        /// 服务器已暂停事件
+        /// </summary>
         event EventHandler Paused;
+        /// <summary>
+        /// 异常发生事件
+        /// </summary>
         event EventHandler<ExceptionOccursEventArgs> OnExceptionOccurs;
 
+        /// <summary>
+        /// 异步启动服务器
+        /// </summary>
         Task StartAsync();
+        /// <summary>
+        /// 异步暂停或停止监听
+        /// </summary>
         Task StopAsync();
+        /// <summary>
+        /// 异步关闭服务器并断开所有连接
+        /// </summary>
         Task CloseAsync();
 
         /// <summary>

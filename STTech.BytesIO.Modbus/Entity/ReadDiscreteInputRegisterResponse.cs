@@ -19,6 +19,9 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public bool[] Values { get; protected set; }
 
+        /// <summary>
+        /// 初始化 <see cref="ReadDiscreteInputRegisterResponse"/> 类的新实例。
+        /// </summary>
         public ReadDiscreteInputRegisterResponse() { }
 
         /// <summary>
@@ -34,6 +37,7 @@ namespace STTech.BytesIO.Modbus
             Length = (byte)Math.Ceiling((values?.Length ?? 0) / 8.0);
         }
 
+        /// <inheritdoc/>
         protected internal override void SerializePayloadHandle()
         {
             List<byte> bytes = new List<byte>();

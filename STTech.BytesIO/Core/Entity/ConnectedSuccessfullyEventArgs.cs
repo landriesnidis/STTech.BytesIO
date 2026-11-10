@@ -2,6 +2,9 @@ using System;
 
 namespace STTech.BytesIO.Core
 {
+    /// <summary>
+    /// 客户端连接成功事件参数
+    /// </summary>
     public class ConnectedSuccessfullyEventArgs : EventArgs
     {
         /// <summary>
@@ -19,6 +22,9 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public object State { get; set; }
 
+        /// <summary>
+        /// 初始化 <see cref="ConnectedSuccessfullyEventArgs"/> 类的新实例。
+        /// </summary>
         public ConnectedSuccessfullyEventArgs()
         {
         }

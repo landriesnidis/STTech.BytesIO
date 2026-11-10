@@ -34,6 +34,10 @@ namespace STTech.BytesIO.Core.Component
         /// </summary>
         public bool IsDisposed => _isDisposed != 0;
 
+        /// <summary>
+        /// 初始化 <see cref="UnpackContext"/> 类的新实例。
+        /// </summary>
+        /// <param name="data">只读字节序列数据</param>
         public UnpackContext(ReadOnlySequence<byte> data)
         {
             Data = data;
@@ -71,6 +75,9 @@ namespace STTech.BytesIO.Core.Component
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// 终结器，确保非托管和池化引用得以释放
+        /// </summary>
         ~UnpackContext()
         {
             Dispose();

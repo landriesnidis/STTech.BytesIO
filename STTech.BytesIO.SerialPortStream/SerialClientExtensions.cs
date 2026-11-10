@@ -2,6 +2,9 @@ using STTech.BytesIO.Serial;
 
 namespace STTech.BytesIO.SerialPortStream
 {
+    /// <summary>
+    /// 串口客户端 SerialPortStream 拓展类
+    /// </summary>
     public static class SerialClientExtensions
     {
         /// <summary>

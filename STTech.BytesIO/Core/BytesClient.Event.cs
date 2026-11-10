@@ -1,4 +1,4 @@
-﻿using STTech.BytesIO.Core;
+using STTech.BytesIO.Core;
 using STTech.BytesIO.Core.Exceptions;
 using System;
 using System.Collections.Generic;
@@ -58,18 +58,19 @@ namespace STTech.BytesIO.Core
         }
 
         /// <summary>
-        /// 触发触发异常发生事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        /// <summary>
         /// 触发异常发生事件（内部组件/插件使用）
         /// </summary>
+        /// <param name="ex">异常对象</param>
         internal void RaiseExceptionOccurs(Exception ex)
         {
             RaiseExceptionOccurs(this, new ExceptionOccursEventArgs(ex));
         }
 
+        /// <summary>
+        /// 触发异常发生事件
+        /// </summary>
+        /// <param name="sender">事件源</param>
+        /// <param name="e">事件参数</param>
         protected virtual void RaiseExceptionOccurs(object sender, ExceptionOccursEventArgs e)
         {
             try

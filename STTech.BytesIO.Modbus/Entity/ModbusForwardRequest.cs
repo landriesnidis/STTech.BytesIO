@@ -72,6 +72,7 @@ namespace STTech.BytesIO.Modbus.Entity
             }
         }
 
+        /// <inheritdoc/>
         protected internal override void SerializePayloadHandle()
         {
             // 透传模式下无需序列化

@@ -116,7 +116,9 @@ namespace STTech.BytesIO.P2P
         /// <summary>
         /// 服务器已暂停监听事件（未实现）
         /// </summary>
+#pragma warning disable CS0067
         public event EventHandler? Paused;
+#pragma warning restore CS0067
 
         /// <summary>
         /// 发生异常时发生

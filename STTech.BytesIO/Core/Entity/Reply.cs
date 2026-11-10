@@ -108,6 +108,10 @@ namespace STTech.BytesIO.Core
         /// <param name="data"></param>
         protected BaseReply(IBytesClient client, T data) : base(client, data) { }
 
+        /// <summary>
+        /// 获取强类型的响应数据
+        /// </summary>
+        /// <returns>强类型响应数据</returns>
         protected T GetData() => (T)Value;
     }
 

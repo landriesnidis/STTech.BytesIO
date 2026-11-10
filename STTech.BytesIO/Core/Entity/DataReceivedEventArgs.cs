@@ -2,6 +2,9 @@ using System;
 
 namespace STTech.BytesIO.Core
 {
+    /// <summary>
+    /// 数据已接收事件参数
+    /// </summary>
     public class DataReceivedEventArgs : EventArgs
     {
         /// <summary>
@@ -14,6 +17,9 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public uint FrameId { get; }
 
+        /// <summary>
+        /// 初始化 <see cref="DataReceivedEventArgs"/> 类的新实例。
+        /// </summary>
         protected DataReceivedEventArgs() { }
 
         /// <summary>

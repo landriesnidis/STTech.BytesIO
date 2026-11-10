@@ -8,6 +8,9 @@ using System.Linq;
 
 namespace STTech.BytesIO.Modbus
 {
+    /// <summary>
+    /// Modbus 响应实体基类
+    /// </summary>
     public class ModbusResponse : Response
     {
         private byte[] payload;
@@ -72,6 +75,9 @@ namespace STTech.BytesIO.Modbus
         /// </summary>
         public ModbusErrorCode ErrorCode { get; protected set; }
 
+        /// <summary>
+        /// 初始化 <see cref="ModbusResponse"/> 类的新实例。
+        /// </summary>
         public ModbusResponse() : base(new byte[0])
         { 
         }
@@ -261,10 +267,17 @@ namespace STTech.BytesIO.Modbus
             }
         }
 
+        /// <summary>
+        /// 序列化载荷数据处理
+        /// </summary>
         protected internal virtual void SerializePayloadHandle()
         {
         }
 
+        /// <summary>
+        /// 获取序列化后的完整报文字节数组
+        /// </summary>
+        /// <returns>字节数组</returns>
         public byte[] GetBytes()
         {
             switch (ProtocolFormat)

@@ -9,11 +9,18 @@ namespace STTech.BytesIO.Core
     /// </summary>
     public class VirtualClient : VirtualClient<BytesClient>
     {
+        /// <summary>
+        /// 初始化 <see cref="VirtualClient"/> 类的新实例。
+        /// </summary>
         public VirtualClient()
         {
 
         }
 
+        /// <summary>
+        /// 使用指定的内部客户端初始化 <see cref="VirtualClient"/> 类的新实例。
+        /// </summary>
+        /// <param name="innerClient">内部实际通信客户端</param>
         public VirtualClient(BytesClient innerClient) : this()
         {
             InnerClient = innerClient;

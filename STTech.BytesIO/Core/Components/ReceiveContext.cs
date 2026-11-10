@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System;
 using System.Buffers;
 using System.Collections;
@@ -44,6 +44,9 @@ namespace STTech.BytesIO.Core
 
         private int _referenceCount = 1;
 
+        /// <summary>
+        /// 获取接收到的只读内存数据
+        /// </summary>
         public ReadOnlyMemory<byte> Memory
         {
             get
@@ -66,8 +69,17 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public int Length => _length;
 
+        /// <summary>
+        /// 接收到数据的时间戳
+        /// </summary>
         public DateTime ReceivedTime { get; }
+        /// <summary>
+        /// 上下文是否已被释放
+        /// </summary>
         public bool IsDisposed => _backing == null;
+        /// <summary>
+        /// 关联的自定义属性字典
+        /// </summary>
         public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();
 
         /// <summary>

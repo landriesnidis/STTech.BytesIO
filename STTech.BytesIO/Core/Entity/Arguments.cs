@@ -33,11 +33,19 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public TimeSpan CostTime { get; set; } = TimeSpan.Zero;
 
+        /// <summary>
+        /// 初始化成功的连接结果实例。
+        /// </summary>
         public ConnectResult()
         {
             ErrorCode = ConnectErrorCode.None;
         }
 
+        /// <summary>
+        /// 初始化指定错误码与异常的连接结果实例。
+        /// </summary>
+        /// <param name="errorCode">连接错误码</param>
+        /// <param name="exception">异常对象</param>
         public ConnectResult(ConnectErrorCode errorCode, Exception exception = null)
         {
             ErrorCode = errorCode;
@@ -118,11 +126,19 @@ namespace STTech.BytesIO.Core
         /// </summary>
         public Exception Exception { get; }
 
+        /// <summary>
+        /// 初始化成功的断开连接结果实例。
+        /// </summary>
         public DisconnectResult()
         {
             ErrorCode = DisconnectErrorCode.None;
         }
 
+        /// <summary>
+        /// 初始化指定错误码与异常的断开连接结果实例。
+        /// </summary>
+        /// <param name="errorCode">断开连接错误码</param>
+        /// <param name="exception">异常对象</param>
         public DisconnectResult(DisconnectErrorCode errorCode, Exception exception = null)
         {
             ErrorCode = errorCode;
