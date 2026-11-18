@@ -1,16 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0;net10.0</TargetFrameworks>
-		<LangVersion>latest</LangVersion>
+		<TargetFrameworks>$(BytesIODefaultTargetFrameworks)</TargetFrameworks>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<Version>3.4.0.0-alpha61110</Version>
-
-		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
-		<Authors>Guijie Lee</Authors>
-		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
-		<PackageIcon>stdiag.png</PackageIcon>
-		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<Description>
 			这是一个高性能、轻量级的 .NET 字节流通信框架，集成了 TCP (Socket/SSL)、串口 (SerialPort) 和进程间通信 (IPC/NamedPipe) 等多种基础通信方式。
 			核心特性：
@@ -27,20 +19,9 @@
 			3. Performance Tuning: Deeply integrated System.IO.Pipelines for high-performance zero-copy data processing.
 			4. Simplified API: Provided a more intuitive and consistent interface for all transport types.
 		</PackageReleaseNotes>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<UserSecretsId>3434f4a9-8e31-4feb-8f53-840cb292a3fb</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
 			<_Parameter1>STTech.BytesIO.Core.Tests</_Parameter1>
 		</AssemblyAttribute>
@@ -56,25 +37,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\stdiag.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Include="README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
 		<PackageReference Include="STTech.CodePlus" Version="1.7.7.1" />
 		<PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
 		<PackageReference Include="System.IO.Ports" Version="8.0.0" />

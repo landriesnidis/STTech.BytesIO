@@ -1,0 +1,47 @@
+<Project>
+	<PropertyGroup>
+		<!-- 统一版本号：默认组合为 $(VersionPrefix)-$(VersionSuffix)，子项目可单独覆写 <Version> -->
+		<VersionPrefix>3.4.0.0</VersionPrefix>
+		<VersionSuffix>alpha61110</VersionSuffix>
+
+		<!-- 目标框架模板变量（不直接赋值给 <TargetFrameworks>，避免与单目标 <TargetFramework> 项目冲突） -->
+		<BytesIODefaultTargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0;net10.0</BytesIODefaultTargetFrameworks>
+		<BytesIOModernTargetFrameworks>net8.0;net10.0</BytesIOModernTargetFrameworks>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- 区分库项目与 Demo / Tests 项目（同时兼容不同平台路径分隔符与大小写） -->
+		<_DemoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'Demo'))</_DemoRoot>
+		<_TestsRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'Tests'))</_TestsRoot>
+		<_ProjectDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)'))</_ProjectDir>
+		<_IsNonLibraryProject>false</_IsNonLibraryProject>
+		<_IsNonLibraryProject Condition="$(_ProjectDir.ToLowerInvariant().StartsWith('$(_DemoRoot.ToLowerInvariant())')) Or $(_ProjectDir.ToLowerInvariant().StartsWith('$(_TestsRoot.ToLowerInvariant())'))">true</_IsNonLibraryProject>
+		<_IsBytesIOLibrary Condition="'$(UsingMicrosoftNETSdk)' == 'true' And '$(_IsNonLibraryProject)' != 'true'">true</_IsBytesIOLibrary>
+	</PropertyGroup>
+
+	<!-- 仅对 SDK 风格项目应用公共编译属性（避开传统 .NET Framework 项目如 Demo.Modbus） -->
+	<PropertyGroup Condition="'$(UsingMicrosoftNETSdk)' == 'true'">
+		<LangVersion>latest</LangVersion>
+		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
+		<Authors>Guijie Lee</Authors>
+		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
+	</PropertyGroup>
+
+	<!-- Demo 与 Tests 项目默认不参与 NuGet 打包 -->
+	<PropertyGroup Condition="'$(UsingMicrosoftNETSdk)' == 'true' And '$(_IsNonLibraryProject)' == 'true'">
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<!-- 仅对核心库与各扩展库统一配置 XML 文档与 NuGet 元数据 -->
+	<PropertyGroup Condition="'$(_IsBytesIOLibrary)' == 'true'">
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+		<PackageIcon>stdiag.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
+	</PropertyGroup>
+</Project>

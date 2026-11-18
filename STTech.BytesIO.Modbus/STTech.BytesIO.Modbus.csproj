@@ -1,37 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0;net10.0</TargetFrameworks>
-		<LangVersion>latest</LangVersion>
-		<Version>3.4.0.0-alpha61110</Version>
-
-		<Company>KarFans Industrial Co., LTD (Shenzhen, China)</Company>
-		<Authors>Guijie Lee</Authors>
-		<Copyright>Copyright © 2019-2026 KarFans, All Rights Reserved.</Copyright>
-		<PackageIcon>stdiag.png</PackageIcon>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+		<TargetFrameworks>$(BytesIODefaultTargetFrameworks)</TargetFrameworks>
 		<Description>BytesIO Modbus 通信库，提供 Modbus-SerialPort / Modbus-TCP 通信客户端，支持 ASCII、RTU 协议及多种标准寄存器操作命令。</Description>
 		<PackageTags>STTech;BytesIO;Modbus;TCP;RTU;ASCII;Industrial;Protocol;Automation</PackageTags>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<RepositoryUrl>https://github.com/landriesnidis/STTech.BytesIO</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-		<PackageProjectUrl>https://blog.csdn.net/lgj123xj/category_11758698.html</PackageProjectUrl>
 		<UserSecretsId>c93daaac-ae79-4c54-9352-df592a10ce05</UserSecretsId>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<None Include="README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\stdiag.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-	</ItemGroup>
 
 	<ItemGroup>
 		<Folder Include="Doc\" />
