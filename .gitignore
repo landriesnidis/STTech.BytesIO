@@ -338,10 +338,6 @@ UpgradeLog*.XML
 /STTech.BytesIO.all.sln
 /Test.BytesIO.ServerStressTest
 
-
-# Local release build script
-build-release.ps1
-
 # NuGet package release folder
 [Ii]nstall/
 
